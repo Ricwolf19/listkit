@@ -1,0 +1,40 @@
+{
+	"name": "listkit-monorepo",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Monorepo root for @pibytelabs/listkit",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Ricwolf19/listkit.git"
+	},
+	"license": "MIT",
+	"author": "Ricwolf19 <rhtc19@gmail.com>",
+	"packageManager": "pnpm@11.4.0",
+	"engines": {
+		"node": ">=22"
+	},
+	"scripts": {
+		"dev": "pnpm --filter playground dev",
+		"build": "pnpm --filter @pibytelabs/listkit build",
+		"build:all": "pnpm -r build",
+		"lint": "eslint .",
+		"format": "prettier --write .",
+		"format:check": "prettier --check .",
+		"typecheck": "pnpm -r typecheck",
+		"test": "pnpm -r test",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "pnpm build && changeset publish"
+	},
+	"devDependencies": {
+		"@changesets/cli": "^2.27.10",
+		"@eslint/js": "^9.17.0",
+		"eslint": "^9.17.0",
+		"eslint-config-prettier": "^9.1.0",
+		"eslint-plugin-react": "^7.37.3",
+		"eslint-plugin-react-hooks": "^5.1.0",
+		"prettier": "^3.4.2",
+		"typescript": "^5.7.2",
+		"typescript-eslint": "^8.18.2"
+	}
+}

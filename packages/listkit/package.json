@@ -1,0 +1,93 @@
+{
+	"name": "@pibytelabs/listkit",
+	"version": "0.0.1",
+	"description": "Standardized list views for React — table/cards, search, pagination, advanced filters.",
+	"keywords": [
+		"react",
+		"list",
+		"table",
+		"datatable",
+		"cards",
+		"pagination",
+		"filters",
+		"crud",
+		"nextjs"
+	],
+	"license": "MIT",
+	"author": "Ricwolf19 <rhtc19@gmail.com>",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Ricwolf19/listkit.git",
+		"directory": "packages/listkit"
+	},
+	"homepage": "https://github.com/Ricwolf19/listkit#readme",
+	"bugs": {
+		"url": "https://github.com/Ricwolf19/listkit/issues"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE"
+	],
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"require": "./dist/index.cjs"
+		},
+		"./next": {
+			"types": "./dist/next.d.ts",
+			"import": "./dist/next.js",
+			"require": "./dist/next.cjs"
+		},
+		"./react-router": {
+			"types": "./dist/react-router.d.ts",
+			"import": "./dist/react-router.js",
+			"require": "./dist/react-router.cjs"
+		},
+		"./adapters": {
+			"types": "./dist/adapters.d.ts",
+			"import": "./dist/adapters.js",
+			"require": "./dist/adapters.cjs"
+		},
+		"./package.json": "./package.json"
+	},
+	"scripts": {
+		"build": "tsup",
+		"dev": "tsup --watch",
+		"typecheck": "tsc --noEmit",
+		"clean": "rm -rf dist"
+	},
+	"peerDependencies": {
+		"lucide-react": "^0.400.0",
+		"react": "^18.0.0 || ^19.0.0",
+		"react-dom": "^18.0.0 || ^19.0.0",
+		"tailwindcss": "^4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"lucide-react": {
+			"optional": false
+		},
+		"tailwindcss": {
+			"optional": false
+		}
+	},
+	"dependencies": {
+		"clsx": "^2.1.1",
+		"tailwind-merge": "^2.5.5"
+	},
+	"devDependencies": {
+		"@types/react": "^19.0.2",
+		"@types/react-dom": "^19.0.2",
+		"lucide-react": "^0.575.0",
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0",
+		"tsup": "^8.3.5",
+		"typescript": "^5.7.2"
+	}
+}
