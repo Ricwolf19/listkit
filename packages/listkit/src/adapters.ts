@@ -14,8 +14,6 @@ export function memoryAdapter<T>(_items: T[]): DataAdapter<T> {
 	throw new Error('memoryAdapter is not implemented yet — coming in v1.0.0')
 }
 
-export function fetchAdapter<T>(_config: {
-	url: string
-}): DataAdapter<T> {
+export function fetchAdapter<T>(_config: { url: string }): DataAdapter<T> {
 	throw new Error('fetchAdapter is not implemented yet — coming in v1.0.0')
 }

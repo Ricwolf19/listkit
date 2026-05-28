@@ -1,0 +1,21 @@
+{
+	"$schema": "https://unpkg.com/knip@6/schema.json",
+	"workspaces": {
+		".": {
+			"ignoreDependencies": ["@secretlint/secretlint-rule-preset-recommend"],
+			"ignoreBinaries": ["dot"]
+		},
+		"packages/listkit": {
+			"ignoreDependencies": [
+				"clsx",
+				"tailwind-merge",
+				"react",
+				"react-dom",
+				"lucide-react",
+				"@types/react",
+				"@types/react-dom"
+			]
+		},
+		"playground": {}
+	}
+}

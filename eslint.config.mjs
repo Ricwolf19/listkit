@@ -1,8 +1,10 @@
 import js from '@eslint/js'
-import tseslint from 'typescript-eslint'
+import prettier from 'eslint-config-prettier'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
-import prettier from 'eslint-config-prettier'
+import simpleImportSort from 'eslint-plugin-simple-import-sort'
+import globals from 'globals'
+import tseslint from 'typescript-eslint'
 
 export default tseslint.config(
 	{
@@ -16,6 +18,23 @@ export default tseslint.config(
 	},
 	js.configs.recommended,
 	...tseslint.configs.recommended,
+	{
+		files: ['**/*.cjs', '**/*.config.{js,cjs,mjs,ts}'],
+		languageOptions: {
+			globals: { ...globals.node },
+			sourceType: 'commonjs',
+		},
+	},
+	{
+		files: ['**/*.{ts,tsx,js,jsx,mjs,cjs}'],
+		plugins: {
+			'simple-import-sort': simpleImportSort,
+		},
+		rules: {
+			'simple-import-sort/imports': 'error',
+			'simple-import-sort/exports': 'error',
+		},
+	},
 	{
 		files: ['**/*.{ts,tsx}'],
 		plugins: {

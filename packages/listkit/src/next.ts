@@ -1,10 +1,7 @@
-export type RouterAdapter = {
-	get(key: string): string | null
-	set(key: string, value: string | null): void
-}
+import type { RouterAdapter } from './types/router'
+
+export type { RouterAdapter }
 
 export function nextRouterAdapter(): RouterAdapter {
-	throw new Error(
-		'nextRouterAdapter is not implemented yet — coming in v0.1.0'
-	)
+	throw new Error('nextRouterAdapter is not implemented yet — coming in v0.1.0')
 }

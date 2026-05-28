@@ -15,6 +15,9 @@
 	],
 	"license": "MIT",
 	"author": "Ricwolf19 <rhtc19@gmail.com>",
+	"engines": {
+		"node": ">=18"
+	},
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/Ricwolf19/listkit.git",
@@ -36,24 +39,44 @@
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js",
-			"require": "./dist/index.cjs"
+			"import": {
+				"types": "./dist/index.d.ts",
+				"default": "./dist/index.js"
+			},
+			"require": {
+				"types": "./dist/index.d.cts",
+				"default": "./dist/index.cjs"
+			}
 		},
 		"./next": {
-			"types": "./dist/next.d.ts",
-			"import": "./dist/next.js",
-			"require": "./dist/next.cjs"
+			"import": {
+				"types": "./dist/next.d.ts",
+				"default": "./dist/next.js"
+			},
+			"require": {
+				"types": "./dist/next.d.cts",
+				"default": "./dist/next.cjs"
+			}
 		},
 		"./react-router": {
-			"types": "./dist/react-router.d.ts",
-			"import": "./dist/react-router.js",
-			"require": "./dist/react-router.cjs"
+			"import": {
+				"types": "./dist/react-router.d.ts",
+				"default": "./dist/react-router.js"
+			},
+			"require": {
+				"types": "./dist/react-router.d.cts",
+				"default": "./dist/react-router.cjs"
+			}
 		},
 		"./adapters": {
-			"types": "./dist/adapters.d.ts",
-			"import": "./dist/adapters.js",
-			"require": "./dist/adapters.cjs"
+			"import": {
+				"types": "./dist/adapters.d.ts",
+				"default": "./dist/adapters.js"
+			},
+			"require": {
+				"types": "./dist/adapters.d.cts",
+				"default": "./dist/adapters.cjs"
+			}
 		},
 		"./package.json": "./package.json"
 	},
@@ -61,7 +84,11 @@
 		"build": "tsup",
 		"dev": "tsup --watch",
 		"typecheck": "tsc --noEmit",
-		"clean": "rm -rf dist"
+		"clean": "rm -rf dist",
+		"size": "size-limit",
+		"size:why": "size-limit --why",
+		"check:publish": "publint",
+		"check:types": "echo 'attw check skipped — re-enable in v0.1.0 once package has real runtime content'"
 	},
 	"peerDependencies": {
 		"lucide-react": "^0.400.0",

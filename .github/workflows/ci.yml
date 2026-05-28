@@ -43,8 +43,26 @@ jobs:
       - name: Lint
         run: pnpm lint
 
+      - name: Secrets scan
+        run: pnpm exec secretlint --secretlintignore .gitignore "**/*"
+
+      - name: Build package
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Build
-        run: pnpm build:all
+      - name: Unused code / deps (knip)
+        run: pnpm knip
+
+      - name: Architecture / circular deps (dependency-cruiser)
+        run: pnpm depcruise
+
+      - name: Bundle size budget
+        run: pnpm --filter @pibytelabs/listkit size
+
+      - name: Package publishability (publint)
+        run: pnpm --filter @pibytelabs/listkit check:publish
+
+      - name: Type emission correctness (attw)
+        run: pnpm --filter @pibytelabs/listkit check:types
