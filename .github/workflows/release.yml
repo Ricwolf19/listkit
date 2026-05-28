@@ -18,20 +18,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: ./.github/actions/setup-repo
         with:
           cache: false
 
-      - name: Check for pending changesets
-        id: changesets
-        run: |
-          if pnpm exec changeset status > /dev/null 2>&1; then
-            echo "has_changesets=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_changesets=false" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Build
+        run: pnpm build:all
 
       - name: Configure Verdaccio auth
         run: |
@@ -40,32 +33,23 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Version, Build and Publish
-        if: steps.changesets.outputs.has_changesets == 'true'
+      # Publish with npm (not pnpm/changeset): npm attaches the `readme` field to
+      # the registry manifest, which is what Verdaccio's web UI renders. Skips
+      # versions already on the registry so the workflow stays green on no-op pushes.
+      - name: Publish to Verdaccio and tag
+        run: |
+          cd packages/listkit
+          NAME=$(node -p "require('./package.json').name")
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="$NAME@$VERSION"
+          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
+            echo "$TAG already published — skipping publish & tag."
+            exit 0
+          fi
+          npm publish
+          cd "$GITHUB_WORKSPACE"
+          git tag "$TAG"
+          git push origin "$TAG" || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          # 1. Bump version + generate changelog + consume changesets
-          pnpm exec changeset version
-
-          # 2. Build with bumped version
-          pnpm build:all
-
-          # 3. Publish to registry
-          pnpm exec changeset publish
-
-          # 4. Commit version bump and push back to main
-          #    [skip ci] prevents infinite workflow loops
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git diff --staged --quiet || git commit -m "chore: release [skip ci]"
-          git push origin main
-
-      - name: Back-merge release to development
-        if: steps.changesets.outputs.has_changesets == 'true'
-        run: |
-          git fetch origin development
-          git checkout -B development origin/development
-          git merge main --no-edit --no-ff -m "chore: back-merge release [skip ci]"
-          git push origin development
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
