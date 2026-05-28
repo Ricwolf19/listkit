@@ -13,23 +13,12 @@ jobs:
   changeset:
     name: Verify changeset is present
     runs-on: ubuntu-latest
-    # Skip if PR has the 'skip-changeset' label (for infra/CI/chore PRs)
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-repo
         with:
           fetch-depth: 0
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          cache: false
 
       - name: Check changeset status
         run: pnpm changeset status --since=origin/${{ github.base_ref }}

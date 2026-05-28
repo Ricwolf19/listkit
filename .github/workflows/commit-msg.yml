@@ -13,20 +13,9 @@ jobs:
     name: Validate commit messages
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: ./.github/actions/setup-repo
         with:
           fetch-depth: 0
+          cache: false
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Validate commit messages
-        run: pnpm exec commitlint --from=origin/${{ github.base_ref }} --to=HEAD --verbose
+      - uses: ./.github/actions/commitlint

@@ -35,7 +35,7 @@
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "pnpm build && changeset publish",
-		"prepare": "husky && chmod +x .husky/commit-msg .husky/pre-commit .husky/pre-push 2>/dev/null || true"
+		"prepare": "husky && chmod +x .husky/pre-commit .husky/pre-push 2>/dev/null || true"
 	},
 	"devDependencies": {
 		"@changesets/cli": "^2.31.0",
