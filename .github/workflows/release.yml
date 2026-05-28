@@ -61,3 +61,11 @@ jobs:
           git add .
           git diff --staged --quiet || git commit -m "chore: release [skip ci]"
           git push origin main
+
+      - name: Back-merge release to development
+        if: steps.changesets.outputs.has_changesets == 'true'
+        run: |
+          git fetch origin development
+          git checkout -B development origin/development
+          git merge main --no-edit --no-ff -m "chore: back-merge release [skip ci]"
+          git push origin development
