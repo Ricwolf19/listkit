@@ -1,19 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useListKitRouter } from '../context/ListKitContext'
+import type { DataAdapter, ListQuery } from '../types/data'
 import type { DisplayMode, PaginationState } from '../types/list'
+import { useListData } from './useListData'
 import { useViewType } from './useViewType'
 
 const DEFAULT_PAGE_SIZE = 20
 
 type UseListStateOptions<T> = {
-	data: T[]
+	adapter: DataAdapter<T>
 	pageSize?: number
-	searchFn?: (data: T[], term: string) => T[]
-	sortFn?: (data: T[]) => T[]
 	searchDebounce?: number
-	/** Skip client-side slicing and auto page-reset (data already paginated). */
-	serverPaginationEnabled?: boolean
 	/** Scopes the persisted view-toggle choice (typically the list id). */
 	viewStorageKey?: string
 }
@@ -47,23 +45,10 @@ function useListParams() {
 	return { get, set }
 }
 
-function defaultSearchFn<T>(items: T[], term: string): T[] {
-	if (!term.trim()) return items
-	const q = term.toLowerCase()
-	return items.filter(item =>
-		Object.values(item as Record<string, unknown>).some(
-			value => typeof value === 'string' && value.toLowerCase().includes(q)
-		)
-	)
-}
-
 export function useListState<T>({
-	data,
+	adapter,
 	pageSize = DEFAULT_PAGE_SIZE,
-	searchFn,
-	sortFn,
 	searchDebounce = 400,
-	serverPaginationEnabled = false,
 	viewStorageKey,
 }: UseListStateOptions<T>) {
 	const { get, set } = useListParams()
@@ -91,17 +76,18 @@ export function useListState<T>({
 		}
 	}, [])
 
-	const searchedData = useMemo(() => {
-		const fn = searchFn ?? defaultSearchFn
-		return fn(data, currentSearch)
-	}, [data, currentSearch, searchFn])
+	const query = useMemo<ListQuery>(
+		() => ({
+			page: currentPage,
+			pageSize,
+			search: currentSearch.trim() || undefined,
+		}),
+		[currentPage, pageSize, currentSearch]
+	)
 
-	const sortedData = useMemo(() => {
-		return sortFn ? sortFn([...searchedData]) : searchedData
-	}, [searchedData, sortFn])
+	const { data, total, isLoading, error } = useListData(adapter, query)
 
-	const totalItems = sortedData.length
-	const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+	const totalPages = Math.max(1, Math.ceil(total / pageSize))
 
 	const handlePageChange = useCallback(
 		(newPage: number) => {
@@ -110,23 +96,17 @@ export function useListState<T>({
 		[set]
 	)
 
-	// Snap back to a valid page if the active page falls out of range.
+	// Snap back to a valid page once results reveal the active page is out of range.
 	useEffect(() => {
-		if (!serverPaginationEnabled && currentPage > totalPages) {
+		if (total > 0 && currentPage > totalPages) {
 			handlePageChange(1)
 		}
-	}, [serverPaginationEnabled, currentPage, totalPages, handlePageChange])
-
-	const paginatedData = useMemo(() => {
-		if (serverPaginationEnabled) return sortedData
-		const start = (currentPage - 1) * pageSize
-		return sortedData.slice(start, start + pageSize)
-	}, [serverPaginationEnabled, sortedData, currentPage, pageSize])
+	}, [total, totalPages, currentPage, handlePageChange])
 
 	const pagination: PaginationState = {
 		currentPage,
 		totalPages,
-		totalItems,
+		totalItems: total,
 		itemsPerPage: pageSize,
 		hasNext: currentPage < totalPages,
 		hasPrev: currentPage > 1,
@@ -138,8 +118,7 @@ export function useListState<T>({
 			if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
 			debounceTimerRef.current = setTimeout(() => {
 				isInternalChange.current = true
-				const trimmed = term.trim()
-				set('search', trimmed || null)
+				set('search', term.trim() || null)
 				set('page', null)
 			}, searchDebounce)
 		},
@@ -152,13 +131,13 @@ export function useListState<T>({
 		viewType === 'table' ? 'show' : viewType === 'cards' ? 'hide' : 'auto'
 
 	return {
-		searchTerm: currentSearch,
 		localSearchTerm,
 		handleSearchChange,
 		pagination,
 		handlePageChange,
-		paginatedData,
-		filteredData: sortedData,
+		data,
+		isLoading,
+		error,
 		viewType,
 		handleViewChange,
 		cardsMode,

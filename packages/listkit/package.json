@@ -35,6 +35,7 @@
 	},
 	"files": [
 		"dist",
+		"tailwind.css",
 		"README.md",
 		"LICENSE",
 		"NOTICE"
@@ -83,6 +84,7 @@
 				"default": "./dist/adapters.cjs"
 			}
 		},
+		"./tailwind.css": "./tailwind.css",
 		"./package.json": "./package.json"
 	},
 	"scripts": {

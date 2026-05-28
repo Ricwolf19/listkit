@@ -1,10 +1,10 @@
 import { type ReactNode, useMemo } from 'react'
 
+import { memoryAdapter } from '../adapters/memory'
 import { useListState } from '../hooks/useListState'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
 import type { CardContext, ListConfig, ToolbarAction } from '../types/config'
-import type { ServerPaginationConfig } from '../types/list'
-import { getPath } from '../utils/getPath'
+import type { DataAdapter } from '../types/data'
 import { Cards } from './Cards'
 import { Pagination } from './Pagination'
 import { Table } from './Table'
@@ -12,7 +12,11 @@ import { Toolbar } from './Toolbar'
 
 export type ListViewProps<T> = {
 	config: ListConfig<T>
-	data: T[]
+	/** In-memory rows. Wrapped in a memoryAdapter using config.search/sort. */
+	data?: T[]
+	/** Async data source. Takes precedence over `data` when provided. */
+	adapter?: DataAdapter<T>
+	/** External loading flag (e.g. server still streaming); ORed with the adapter's. */
 	isLoading?: boolean
 	toolbarActions?: ToolbarAction[]
 	toolbarContent?: ReactNode
@@ -20,80 +24,56 @@ export type ListViewProps<T> = {
 	afterToolbar?: ReactNode
 	beforePagination?: ReactNode
 	portals?: ReactNode
-	/**
-	 * Slot reserved for v1.0 server-driven data. When provided, client-side
-	 * slicing is skipped and pagination reads from the supplied state.
-	 */
-	serverPagination?: ServerPaginationConfig
-}
-
-function buildFieldSearch<T>(fields: string[]) {
-	return (items: T[], term: string): T[] => {
-		if (!term.trim()) return items
-		const q = term.toLowerCase()
-		return items.filter(item =>
-			fields.some(field => {
-				const value = getPath(item, field)
-				return (
-					(typeof value === 'string' || typeof value === 'number') &&
-					String(value).toLowerCase().includes(q)
-				)
-			})
-		)
-	}
+	errorMessage?: string
 }
 
 export function ListView<T>({
 	config,
 	data,
-	isLoading = false,
+	adapter,
+	isLoading: externalLoading = false,
 	toolbarActions,
 	toolbarContent,
 	headerSection,
 	afterToolbar,
 	beforePagination,
 	portals,
-	serverPagination,
+	errorMessage = 'No se pudieron cargar los datos.',
 }: ListViewProps<T>) {
 	const colorTheme = config.colorTheme ?? DEFAULT_COLOR_THEME
 
-	const searchFn = useMemo(() => {
-		if (!config.search) return undefined
-		if ('fn' in config.search && config.search.fn) return config.search.fn
-		if ('fields' in config.search && config.search.fields) {
-			return buildFieldSearch<T>(config.search.fields)
-		}
-		return undefined
-	}, [config.search])
+	const searchConfig =
+		typeof config.search === 'object' ? config.search : undefined
+	const showSearch = !!config.search
+
+	const resolvedAdapter = useMemo(
+		() =>
+			adapter ??
+			memoryAdapter(data ?? [], { search: searchConfig, sort: config.sort }),
+		[adapter, data, searchConfig, config.sort]
+	)
 
 	const {
 		localSearchTerm,
 		handleSearchChange,
 		pagination,
 		handlePageChange,
-		paginatedData,
+		data: rows,
+		isLoading: dataLoading,
+		error,
 		viewType,
 		handleViewChange,
 		cardsMode,
 		tableMode,
 	} = useListState<T>({
-		data,
+		adapter: resolvedAdapter,
 		pageSize: config.pageSize,
-		searchFn,
-		sortFn: config.sort,
-		serverPaginationEnabled: !!serverPagination,
 		viewStorageKey: config.id,
 	})
 
+	const isLoading = externalLoading || dataLoading
 	const getItemKey = config.getItemKey ?? ((_item: T, index: number) => index)
-
-	const cardCtx: CardContext<T> = {
-		actions: config.actions ?? {},
-		colorTheme,
-	}
-
-	const activePagination = serverPagination?.pagination ?? pagination
-	const onPageChange = serverPagination?.onPageChange ?? handlePageChange
+	const cardCtx: CardContext<T> = { actions: config.actions ?? {}, colorTheme }
 
 	return (
 		<div>
@@ -115,51 +95,59 @@ export function ListView<T>({
 				onSearchChange={handleSearchChange}
 				viewType={viewType}
 				onViewChange={handleViewChange}
-				totalResults={activePagination.totalItems}
+				totalResults={pagination.totalItems}
 				placeholder={config.searchPlaceholder}
 				colorTheme={colorTheme}
 				actions={toolbarActions}
-				showSearch={!!config.search}
+				showSearch={showSearch}
 				showViewToggle={!!config.table && !!config.card}
 				customContent={toolbarContent}
 			/>
 
 			{afterToolbar}
 
-			{config.table && (
-				<Table<T>
-					data={paginatedData}
-					columns={config.table.columns}
-					keyExtractor={getItemKey}
-					rowClassName={config.table.rowClassName}
-					compact={config.table.compact}
-					showHeader={config.table.showHeader}
-					emptyMessage={config.emptyMessage}
-					displayMode={config.card ? tableMode : 'show'}
-					loading={isLoading}
-				/>
-			)}
+			{error ? (
+				<div className='rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700'>
+					{errorMessage}
+				</div>
+			) : (
+				<>
+					{config.table && (
+						<Table<T>
+							data={rows}
+							columns={config.table.columns}
+							keyExtractor={getItemKey}
+							rowClassName={config.table.rowClassName}
+							compact={config.table.compact}
+							showHeader={config.table.showHeader}
+							emptyMessage={config.emptyMessage}
+							displayMode={config.card ? tableMode : 'show'}
+							loading={isLoading}
+						/>
+					)}
 
-			{config.card && (
-				<Cards<T>
-					data={paginatedData}
-					renderCard={item => config.card!(item, cardCtx)}
-					keyExtractor={getItemKey}
-					isLoading={isLoading}
-					emptyMessage={config.emptyMessage}
-					displayMode={config.table ? cardsMode : 'show'}
-					gridCols={config.gridCols}
-				/>
+					{config.card && (
+						<Cards<T>
+							data={rows}
+							renderCard={item => config.card!(item, cardCtx)}
+							keyExtractor={getItemKey}
+							isLoading={isLoading}
+							emptyMessage={config.emptyMessage}
+							displayMode={config.table ? cardsMode : 'show'}
+							gridCols={config.gridCols}
+						/>
+					)}
+				</>
 			)}
 
 			{beforePagination}
 
 			<Pagination
-				currentPage={activePagination.currentPage}
-				totalPages={activePagination.totalPages}
-				totalItems={activePagination.totalItems}
-				itemsPerPage={activePagination.itemsPerPage}
-				onPageChange={onPageChange}
+				currentPage={pagination.currentPage}
+				totalPages={pagination.totalPages}
+				totalItems={pagination.totalItems}
+				itemsPerPage={pagination.itemsPerPage}
+				onPageChange={handlePageChange}
 				isLoading={isLoading}
 				colorTheme={colorTheme}
 			/>
