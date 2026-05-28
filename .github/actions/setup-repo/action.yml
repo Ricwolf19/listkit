@@ -1,11 +1,7 @@
 name: 'Setup Repo'
-description: 'Checkout repo, setup Node 22 + pnpm, optionally cache dependencies, and install'
+description: 'Setup Node 22 + pnpm, optionally cache the pnpm store, and install. Assumes the repository is already checked out.'
 
 inputs:
-  fetch-depth:
-    description: 'Git fetch depth'
-    required: false
-    default: '1'
   cache:
     description: 'Enable pnpm store caching'
     required: false
@@ -14,10 +10,6 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: ${{ inputs.fetch-depth }}
-
     - name: Setup Node
       uses: actions/setup-node@v4
       with:

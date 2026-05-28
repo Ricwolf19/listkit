@@ -46,16 +46,18 @@ pnpm verify:full        # full set: + format:check + knip + depcruise
 
 ## Automation
 
-Quality gates run at three moments. Hooks are managed by [Husky](https://typicode.github.io/husky/) and installed automatically via `pnpm install`.
+Quality gates run locally (Husky hooks, installed via `pnpm install`) and in CI (GitHub Actions). Commit-message validation runs **only in CI** — the local `commit-msg` hook is intentionally empty, so a bad message fails the PR, not your local commit.
 
-| When                                       | What runs                                                                         | Auto-fix | Purpose                                                          |
-| ------------------------------------------ | --------------------------------------------------------------------------------- | -------- | ---------------------------------------------------------------- |
-| **pre-commit**                             | `lint-staged`: Prettier + ESLint `--fix` + Secretlint on staged files only        | yes      | Fast cleanup of what you touched; blocks committed secrets       |
-| **commit-msg**                             | `commitlint` against [Conventional Commits](https://www.conventionalcommits.org/) | no       | Enforce `feat:`, `fix:`, `chore:`, etc. for changelog generation |
-| **pre-push**                               | `pnpm verify` (lint + build + typecheck)                                          | no       | Catch failures locally before they reach CI                      |
-| **CI** (PR + push to `main`/`development`) | lint, secretlint, build, typecheck, knip, dependency-cruiser, size-limit, publint | no       | Final gate before merge / publish                                |
-| **CI** (PR only)                           | `changeset status` check                                                          | no       | Reminds contributors to declare a version bump                   |
-| **CI** (push to `main`)                    | `changesets/action`: opens a Release PR, or publishes to Verdaccio on merge       | no       | Automated semver + changelog + publish                           |
+| When                                           | What runs                                                                                                    | Auto-fix | Purpose                                                          |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------- |
+| **pre-commit** (Husky)                         | `lint-staged`: Prettier + ESLint `--fix` + Secretlint on staged files only                                   | yes      | Fast cleanup of what you touched; blocks committed secrets       |
+| **pre-push** (Husky)                           | `pnpm verify` (lint + build + typecheck)                                                                     | no       | Catch failures locally before they reach CI                      |
+| **CI** — `ci.yml` (PR to `main`/`development`) | lint, secretlint, build, typecheck, knip, dependency-cruiser, size-limit, publint, attw                      | no       | Quality gate before merge                                        |
+| **CI** — `commit-msg.yml` (PR)                 | `commitlint` validates every commit in the PR ([Conventional Commits](https://www.conventionalcommits.org/)) | no       | Enforce `feat:`, `fix:`, `chore:`, etc. for changelog generation |
+| **CI** — `changeset-check.yml` (PR)            | `changeset status` — fails if no changeset (skip with the `skip-changeset` label)                            | no       | Reminds contributors to declare a version bump                   |
+| **CI** — `release.yml` (push to `main`)        | `changesets/action`: opens/updates the `chore: release` PR, or publishes to Verdaccio + tags on merge        | no       | Automated semver + changelog + publish                           |
+
+Reusable composite actions live in `.github/actions/` (`setup-repo`: checkout + Node 22 + pnpm + cache + install; `commitlint`: message validation) so the same steps drop into sibling projects.
 
 Skip a hook in an emergency with `git commit --no-verify` or `git push --no-verify`. By convention, never skip on `main` or release branches.
 
@@ -76,15 +78,24 @@ Skip a hook in an emergency with `git commit --no-verify` or `git push --no-veri
 
 ## Releasing
 
-Releases use [changesets](https://github.com/changesets/changesets):
+Releases are automated with [changesets](https://github.com/changesets/changesets) + the [changesets GitHub Action](https://github.com/changesets/action). **You never run `changeset version`, tag, or publish by hand** — the Action owns all of that. There is no tag-based trigger; everything keys off pushes to `main`.
 
-```bash
-pnpm changeset          # describe the change (interactive)
-pnpm changeset version  # bump versions + update changelog
-git commit -am "release: ..."
-git tag v0.1.0
-git push --follow-tags  # CI publishes to Verdaccio
-```
+The cycle:
+
+1. **Per change** — run `pnpm changeset`, pick the bump (`patch`/`minor`/`major`) and write a summary. Commit the generated `.changeset/*.md` **alongside your code**. CI fails any PR with no changeset (unless labeled `skip-changeset`).
+
+   ```bash
+   pnpm changeset
+   git add .changeset/ && git commit -m "feat: ..."   # with your code
+   ```
+
+2. **Merge to `main`** — on every push to `main`, `release.yml` runs the changesets Action:
+   - **If changesets are pending** → it opens (or updates) a **`chore: release` PR** that runs `changeset version` for you: bumps `package.json`, writes `CHANGELOG.md`, deletes the consumed changesets.
+   - **When you merge that Release PR** → the next push to `main` has no pending changesets, so the Action runs `pnpm release` (`build` + `changeset publish`) → publishes to Verdaccio and creates the git tag + GitHub Release automatically.
+
+So the only manual steps are: **write changesets and merge PRs.** The version bump, changelog, tag, and publish are all automated.
+
+> Requires the `NPM_TOKEN` repository secret (a Verdaccio auth token) for the publish step.
 
 ## Contributing
 

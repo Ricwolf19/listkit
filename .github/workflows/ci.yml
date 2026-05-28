@@ -13,9 +13,12 @@ jobs:
     name: Lint, typecheck, build
     runs-on: ubuntu-latest
     steps:
-      - uses: ./.github/actions/setup-repo
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - uses: ./.github/actions/setup-repo
+        with:
           cache: true
 
       - name: Lint
