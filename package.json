@@ -14,7 +14,7 @@
 		"node": ">=22"
 	},
 	"scripts": {
-		"dev": "pnpm --parallel --filter @pibytelabs/listkit dev --filter playground dev",
+		"dev": "pnpm --parallel --filter @pibytelabs/listkit --filter playground run dev",
 		"dev:playground": "pnpm --filter playground dev",
 		"dev:package": "pnpm --filter @pibytelabs/listkit dev",
 		"build": "pnpm --filter @pibytelabs/listkit build",

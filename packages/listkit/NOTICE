@@ -1,0 +1,58 @@
+listkit
+Copyright (c) 2026 Ricwolf19
+
+This product includes software developed by Ricwolf19.
+
+================================================================================
+SCOPE OF THE MIT LICENSE
+================================================================================
+
+The MIT License in the accompanying LICENSE file applies ONLY to the source
+code, build configuration, and tests in this repository — that is, files that
+are technically necessary to compile, run, test, or distribute the software.
+
+================================================================================
+NOT COVERED BY THE MIT LICENSE
+================================================================================
+
+The following are reserved by the author and are NOT licensed for reuse,
+modification, redistribution, or commercial exploitation under the MIT License:
+
+  1. The names "listkit", "@pibytelabs/listkit", and any associated marks,
+     logos, icons, or visual identity.
+
+  2. Documentation prose — including (but not limited to) this NOTICE file,
+     the README, the `docs/` directory, marketing copy, and any narrative
+     content authored for this project.
+
+  3. Screenshots, demo videos, branded illustrations, fonts, and any media
+     assets distributed with this repository.
+
+  4. The arrangement, selection, and presentation of the documentation
+     (the "look and feel"), to the extent protectable under applicable law.
+
+You MAY:
+
+  - Use, fork, modify, and ship the source code under the MIT License terms.
+  - Cite this project by name with attribution (e.g., "powered by listkit"
+    or "based on @pibytelabs/listkit").
+  - Reproduce small excerpts of documentation for review, commentary,
+    education, or interoperability ("fair use" / "fair dealing").
+
+You MAY NOT:
+
+  - Republish this project under a different name while keeping the
+    original brand assets or copied marketing copy.
+  - Use the names or marks above to imply endorsement, affiliation,
+    or origin.
+  - Copy substantial portions of the documentation verbatim into a
+    competing distribution.
+
+================================================================================
+QUESTIONS
+================================================================================
+
+For licensing questions, brand use, partnerships, or commercial inquiries
+that fall outside the MIT License, open an issue at:
+
+    https://github.com/Ricwolf19/listkit/issues

@@ -7,6 +7,9 @@ dist/
 build/
 *.tsbuildinfo
 
+# Packed tarballs (from npm/pnpm pack, publint)
+*.tgz
+
 # Test / coverage
 coverage/
 .nyc_output/

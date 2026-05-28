@@ -29,10 +29,15 @@
 	},
 	"type": "module",
 	"sideEffects": false,
+	"publishConfig": {
+		"registry": "https://registry.alagrandelepusecuca.mx/",
+		"access": "restricted"
+	},
 	"files": [
 		"dist",
 		"README.md",
-		"LICENSE"
+		"LICENSE",
+		"NOTICE"
 	],
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
