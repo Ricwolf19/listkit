@@ -1,0 +1,23 @@
+[
+	{
+		"name": "main entry (ESM)",
+		"path": "dist/index.js",
+		"limit": "15 KB",
+		"import": "*"
+	},
+	{
+		"name": "/next subpath (ESM)",
+		"path": "dist/next.js",
+		"limit": "2 KB"
+	},
+	{
+		"name": "/react-router subpath (ESM)",
+		"path": "dist/react-router.js",
+		"limit": "2 KB"
+	},
+	{
+		"name": "/adapters subpath (ESM)",
+		"path": "dist/adapters.js",
+		"limit": "3 KB"
+	}
+]

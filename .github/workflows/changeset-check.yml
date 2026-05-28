@@ -1,0 +1,27 @@
+name: Changeset check
+
+on:
+  pull_request:
+    branches: [main, development]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  changeset:
+    name: Verify changeset is present
+    runs-on: ubuntu-latest
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-repo
+        with:
+          cache: false
+
+      - name: Check changeset status
+        run: pnpm changeset status --since=origin/${{ github.base_ref }}

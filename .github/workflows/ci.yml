@@ -3,8 +3,6 @@ name: CI
 on:
   pull_request:
     branches: [main, development]
-  push:
-    branches: [main, development]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -16,37 +14,36 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
         with:
-          node-version: 22
+          fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: ./.github/actions/setup-repo
         with:
-          version: 11
-
-      - name: Get pnpm store directory
-        shell: bash
-        run: echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Cache pnpm store
-        uses: actions/cache@v4
-        with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+          cache: true
 
       - name: Lint
         run: pnpm lint
 
+      - name: Secrets scan
+        run: pnpm exec secretlint --secretlintignore .gitignore "**/*"
+
+      - name: Build package
+        run: pnpm build
+
       - name: Typecheck
         run: pnpm typecheck
 
-      - name: Build
-        run: pnpm build:all
+      - name: Unused code / deps (knip)
+        run: pnpm knip
+
+      - name: Architecture / circular deps (dependency-cruiser)
+        run: pnpm depcruise
+
+      - name: Bundle size budget
+        run: pnpm --filter @pibytelabs/listkit size
+
+      - name: Package publishability (publint)
+        run: pnpm --filter @pibytelabs/listkit check:publish
+
+      - name: Type emission correctness (attw)
+        run: pnpm --filter @pibytelabs/listkit check:types

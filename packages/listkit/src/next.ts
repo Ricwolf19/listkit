@@ -1,10 +1,32 @@
-export type RouterAdapter = {
-	get(key: string): string | null
-	set(key: string, value: string | null): void
-}
+import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 
-export function nextRouterAdapter(): RouterAdapter {
-	throw new Error(
-		'nextRouterAdapter is not implemented yet — coming in v0.1.0'
-	)
+import type { RouterAdapter } from './types/router'
+
+export type { RouterAdapter }
+
+/**
+ * Router adapter for Next.js App Router. This is a hook: call it inside a Client
+ * Component (typically where you render `<ListKitProvider>`). It reads the
+ * current query string reactively and writes updates via `router.replace`.
+ */
+export function useNextRouterAdapter(): RouterAdapter {
+	const searchParams = useSearchParams()
+	const router = useRouter()
+	const pathname = usePathname()
+
+	return {
+		get(key) {
+			return searchParams.get(key)
+		},
+		set(key, value) {
+			const params = new URLSearchParams(searchParams.toString())
+			if (value === null || value === '') {
+				params.delete(key)
+			} else {
+				params.set(key, value)
+			}
+			const query = params.toString()
+			router.replace(query ? `${pathname}?${query}` : pathname)
+		},
+	}
 }

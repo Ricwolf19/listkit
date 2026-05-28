@@ -1,0 +1,24 @@
+name: Commit Message Check
+
+on:
+  pull_request:
+    branches: [main, development]
+
+concurrency:
+  group: commitlint-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  commitlint:
+    name: Validate commit messages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: ./.github/actions/setup-repo
+        with:
+          cache: false
+
+      - uses: ./.github/actions/commitlint
