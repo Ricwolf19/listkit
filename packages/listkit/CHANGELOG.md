@@ -1,5 +1,11 @@
 # @pibytelabs/listkit
 
+## 0.1.1
+
+### Patch Changes
+
+- 43ea119: Fix missing README in published package and improve documentation with installation guide, quick-start example, and Tailwind v4 setup instructions.
+
 ## 0.1.0
 
 ### Minor Changes
