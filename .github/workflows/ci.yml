@@ -16,6 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -39,6 +41,10 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Validate commit messages
+        if: github.event_name == 'pull_request'
+        run: pnpm exec commitlint --from=origin/${{ github.base_ref }} --to=HEAD --verbose
 
       - name: Lint
         run: pnpm lint
