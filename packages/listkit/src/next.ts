@@ -1,14 +1,15 @@
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+
 import type { RouterAdapter } from './types/router'
 
 export type { RouterAdapter }
 
 /**
- * Router adapter for Next.js App Router. Call this inside a Client Component
- * (typically where you render `<ListKitProvider>`); it reads the current query
- * string reactively and writes updates via `router.replace`.
+ * Router adapter for Next.js App Router. This is a hook: call it inside a Client
+ * Component (typically where you render `<ListKitProvider>`). It reads the
+ * current query string reactively and writes updates via `router.replace`.
  */
-export function nextRouterAdapter(): RouterAdapter {
+export function useNextRouterAdapter(): RouterAdapter {
 	const searchParams = useSearchParams()
 	const router = useRouter()
 	const pathname = usePathname()

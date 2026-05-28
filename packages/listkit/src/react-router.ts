@@ -1,14 +1,16 @@
 import { useSearchParams } from 'react-router-dom'
+
 import type { RouterAdapter } from './types/router'
 
 export type { RouterAdapter }
 
 /**
- * Router adapter for React Router (v6+). Call this inside a component rendered
- * within a `<Router>` (typically where you render `<ListKitProvider>`); it reads
- * the current query string reactively and writes updates via `setSearchParams`.
+ * Router adapter for React Router (v6+). This is a hook: call it inside a
+ * component rendered within a `<Router>` (typically where you render
+ * `<ListKitProvider>`). It reads the current query string reactively and writes
+ * updates via `setSearchParams`.
  */
-export function reactRouterAdapter(): RouterAdapter {
+export function useReactRouterAdapter(): RouterAdapter {
 	const [searchParams, setSearchParams] = useSearchParams()
 
 	return {
