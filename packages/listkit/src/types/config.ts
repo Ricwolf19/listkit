@@ -56,7 +56,11 @@ export type ListConfig<T> = {
 	searchPlaceholder?: string
 	emptyMessage?: string
 	gridCols?: string
-	search?: SearchConfig<T>
+	/**
+	 * Enables the search box. Pass a SearchConfig (fields or fn) for in-memory
+	 * `data`, or `true` when an adapter performs the search server-side.
+	 */
+	search?: SearchConfig<T> | boolean
 	sort?: (data: T[]) => T[]
 	getItemKey?: (item: T, index: number) => string | number
 	card?: (item: T, ctx: CardContext<T>) => ReactNode

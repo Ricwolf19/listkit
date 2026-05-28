@@ -10,8 +10,3 @@ export type PaginationState = {
 	hasNext: boolean
 	hasPrev: boolean
 }
-
-export type ServerPaginationConfig = {
-	pagination: PaginationState
-	onPageChange: (page: number) => void
-}

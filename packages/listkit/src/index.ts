@@ -20,8 +20,21 @@ export { Toolbar, type ToolbarProps } from './components/Toolbar'
 export { ViewToggle } from './components/ViewToggle'
 
 // Hooks
+export { useListData } from './hooks/useListData'
 export { useListState } from './hooks/useListState'
 export { useViewType } from './hooks/useViewType'
+
+// Data layer (built-in adapters; more live in @pibytelabs/listkit/adapters)
+export { fetchAdapter } from './adapters/fetch'
+export { memoryAdapter } from './adapters/memory'
+export { serverActionAdapter } from './adapters/serverAction'
+export type {
+	DataAdapter,
+	ListQuery,
+	ListResult,
+	SortDir,
+	SortState,
+} from './types/data'
 
 // Theme
 export {
@@ -41,10 +54,5 @@ export type {
 	TableConfig,
 	ToolbarAction,
 } from './types/config'
-export type {
-	DisplayMode,
-	PaginationState,
-	ServerPaginationConfig,
-	ViewType,
-} from './types/list'
+export type { DisplayMode, PaginationState, ViewType } from './types/list'
 export type { RouterAdapter } from './types/router'
