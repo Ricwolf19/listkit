@@ -82,6 +82,7 @@ export function ListView<T>({
 		searchFn,
 		sortFn: config.sort,
 		serverPaginationEnabled: !!serverPagination,
+		viewStorageKey: config.id,
 	})
 
 	const getItemKey = config.getItemKey ?? ((_item: T, index: number) => index)

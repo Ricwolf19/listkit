@@ -68,7 +68,7 @@ export function SearchInput({
 				disabled={disabled}
 				placeholder={placeholder}
 				className={cn(
-					'block w-full rounded-lg border border-gray-300 bg-white py-2 pr-20 pl-9 text-sm text-gray-900 placeholder-gray-400 focus:ring-1 focus:outline-none [&::-webkit-search-cancel-button]:hidden',
+					'block h-10 w-full rounded-lg border border-gray-200 bg-white pr-20 pl-9 text-sm text-gray-900 placeholder-gray-400 transition-all duration-150 focus:ring-2 focus:outline-none [&::-webkit-search-cancel-button]:hidden',
 					theme.focusRing,
 					theme.focusBorder
 				)}
@@ -80,7 +80,7 @@ export function SearchInput({
 						type='button'
 						onClick={handleClear}
 						aria-label='Limpiar búsqueda'
-						className='text-gray-400 hover:text-gray-600'
+						className='cursor-pointer rounded-md p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
 					>
 						<X size={14} />
 					</button>

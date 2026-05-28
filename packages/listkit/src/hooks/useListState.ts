@@ -14,6 +14,8 @@ type UseListStateOptions<T> = {
 	searchDebounce?: number
 	/** Skip client-side slicing and auto page-reset (data already paginated). */
 	serverPaginationEnabled?: boolean
+	/** Scopes the persisted view-toggle choice (typically the list id). */
+	viewStorageKey?: string
 }
 
 /**
@@ -62,9 +64,10 @@ export function useListState<T>({
 	sortFn,
 	searchDebounce = 400,
 	serverPaginationEnabled = false,
+	viewStorageKey,
 }: UseListStateOptions<T>) {
 	const { get, set } = useListParams()
-	const { viewType, handleViewChange } = useViewType()
+	const { viewType, handleViewChange } = useViewType(viewStorageKey)
 
 	const currentSearch = get('search') ?? ''
 	const currentPage = Math.max(1, parseInt(get('page') ?? '1', 10) || 1)

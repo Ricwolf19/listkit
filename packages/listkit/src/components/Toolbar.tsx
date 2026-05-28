@@ -46,7 +46,7 @@ export function Toolbar({
 				action.className
 			)}
 		>
-			{action.icon && <span className='mr-1.5'>{action.icon}</span>}
+			{action.icon}
 			{action.label}
 		</Button>
 	)

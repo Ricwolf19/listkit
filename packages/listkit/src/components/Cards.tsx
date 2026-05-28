@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { DisplayMode } from '../types/list'
 import { cn } from '../utils/cn'
 import { displayVisibility } from '../utils/displayMode'
+import { Card } from './Card'
 import { EmptyState } from './EmptyState'
 import { SkeletonCards } from './SkeletonCards'
 
@@ -15,6 +16,7 @@ type CardsProps<T> = {
 	displayMode?: DisplayMode
 	gridCols?: string
 	className?: string
+	onCardClick?: (item: T, index: number) => void
 }
 
 export function Cards<T>({
@@ -26,6 +28,7 @@ export function Cards<T>({
 	displayMode = 'auto',
 	gridCols = 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 	className,
+	onCardClick,
 }: CardsProps<T>) {
 	if (displayMode === 'hide') return null
 
@@ -64,7 +67,12 @@ export function Cards<T>({
 		>
 			<div className={`grid gap-4 ${gridCols}`}>
 				{data.map((item, index) => (
-					<div key={keyExtractor(item, index)}>{renderCard(item, index)}</div>
+					<Card
+						key={keyExtractor(item, index)}
+						onClick={onCardClick ? () => onCardClick(item, index) : undefined}
+					>
+						{renderCard(item, index)}
+					</Card>
 				))}
 			</div>
 		</div>

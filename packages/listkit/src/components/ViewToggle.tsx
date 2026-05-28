@@ -21,20 +21,20 @@ export function ViewToggle({
 
 	const buttonClass = (active: boolean) =>
 		cn(
-			'flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-all',
+			'flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium transition-all duration-150 active:scale-[0.98]',
 			active
 				? cn(
 						theme.viewToggleActiveBg,
 						theme.viewToggleActiveText,
 						theme.viewToggleActiveShadow
 					)
-				: 'text-gray-600 hover:bg-white/50 hover:text-gray-900'
+				: 'text-gray-500 hover:text-gray-900'
 		)
 
 	return (
 		<div
 			className={cn(
-				'flex rounded-lg border border-gray-200 bg-gray-50 p-1',
+				'inline-flex h-10 items-center gap-1 rounded-lg bg-gray-100 p-1',
 				className
 			)}
 		>

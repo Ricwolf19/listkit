@@ -71,26 +71,38 @@ export function Table<T>({
 		>
 			<div className='overflow-x-auto'>
 				<div className='inline-block min-w-full align-middle'>
-					<div className='overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm'>
+					<div className='overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm'>
 						<table className='min-w-full divide-y divide-gray-200'>
 							{showHeader && (
-								<thead className='bg-gray-50'>
+								<thead className='bg-gray-50/80'>
 									<tr>
-										{visibleColumns.map(col => (
-											<th
-												key={col.key}
-												scope='col'
-												className={cn(
-													compact ? 'px-4 py-2' : 'px-6 py-3',
-													alignClass(col.align)
-												)}
-												style={col.width ? { width: col.width } : undefined}
-											>
-												<span className='block truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-800 uppercase'>
-													{col.header}
-												</span>
-											</th>
-										))}
+										{visibleColumns.map(col => {
+											const headerText =
+												typeof col.header === 'string' ? col.header : ''
+											const showTooltip = headerText.length > 14
+											return (
+												<th
+													key={col.key}
+													scope='col'
+													className={cn(
+														'relative',
+														compact ? 'px-4 py-2.5' : 'px-6 py-3.5',
+														alignClass(col.align),
+														showTooltip && 'group'
+													)}
+													style={col.width ? { width: col.width } : undefined}
+												>
+													<span className='block max-w-[12rem] truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase'>
+														{col.header}
+													</span>
+													{showTooltip && (
+														<span className='pointer-events-none invisible absolute top-full left-4 z-20 mt-1 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium tracking-normal whitespace-nowrap text-white normal-case opacity-0 shadow-lg transition-all duration-150 group-hover:visible group-hover:opacity-100'>
+															{col.header}
+														</span>
+													)}
+												</th>
+											)
+										})}
 									</tr>
 								</thead>
 							)}
@@ -103,7 +115,7 @@ export function Table<T>({
 											<tr
 												key={rowKey}
 												className={cn(
-													'hover:bg-gray-50',
+													'transition-colors hover:bg-gray-50/70',
 													rowClassName?.(item, i)
 												)}
 											>
