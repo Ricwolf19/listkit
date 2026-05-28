@@ -13,6 +13,8 @@ jobs:
   changeset:
     name: Verify changeset is present
     runs-on: ubuntu-latest
+    # Skip if PR has the 'skip-changeset' label (for infra/CI/chore PRs)
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
     steps:
       - uses: actions/checkout@v4
         with:
