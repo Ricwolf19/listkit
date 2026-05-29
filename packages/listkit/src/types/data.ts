@@ -1,3 +1,5 @@
+import type { ActiveFilterValue } from './filters'
+
 export type SortDir = 'asc' | 'desc'
 
 export type SortState = {
@@ -7,12 +9,14 @@ export type SortState = {
 
 /**
  * Everything an adapter needs to return one page of rows. `page` is 1-based.
+ * `filters` carries the applied advanced filters (v2.0); each entry knows its
+ * target `field`, `type`, and validated `value`.
  */
 export type ListQuery = {
 	page: number
 	pageSize: number
 	search?: string
-	filters?: Record<string, unknown>
+	filters?: ActiveFilterValue[]
 	sort?: SortState
 }
 

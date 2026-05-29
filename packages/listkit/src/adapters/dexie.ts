@@ -1,4 +1,5 @@
-import type { DataAdapter } from '../types/data'
+import { itemMatchesFilters } from '../filters/match'
+import type { DataAdapter, ListQuery } from '../types/data'
 
 /**
  * Structural subset of a Dexie Collection/Table — declared here so the package
@@ -22,33 +23,41 @@ export type DexieAdapterOptions<T> = {
 
 /**
  * IndexedDB data source for Dexie consumers (e.g. café-combate). Search is a
- * case-insensitive substring match over `searchFields`. For large stores or
- * indexed queries, write a custom DataAdapter instead.
+ * case-insensitive substring match over `searchFields`; advanced filters are
+ * evaluated with the shared matcher. For large stores or indexed queries, write
+ * a custom DataAdapter instead.
  */
 export function createDexieAdapter<T>(
 	table: DexieTableLike<T>,
 	options: DexieAdapterOptions<T> = {}
 ): DataAdapter<T> {
-	const build = (term?: string) => {
+	const build = (query: ListQuery) => {
 		let collection = table.toCollection()
+
+		const term = query.search?.trim().toLowerCase()
 		const fields = options.searchFields
-		if (term && term.trim() && fields && fields.length > 0) {
-			const q = term.toLowerCase()
+		if (term && fields && fields.length > 0) {
 			collection = collection.filter(item =>
 				fields.some(field =>
 					String(item[field] ?? '')
 						.toLowerCase()
-						.includes(q)
+						.includes(term)
 				)
 			)
 		}
+
+		const filters = query.filters
+		if (filters && filters.length > 0) {
+			collection = collection.filter(item => itemMatchesFilters(item, filters))
+		}
+
 		return collection
 	}
 
 	return {
 		async fetch(query) {
-			const total = await build(query.search).count()
-			const data = await build(query.search)
+			const total = await build(query).count()
+			const data = await build(query)
 				.offset((query.page - 1) * query.pageSize)
 				.limit(query.pageSize)
 				.toArray()

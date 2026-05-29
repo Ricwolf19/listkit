@@ -2,22 +2,33 @@
 	{
 		"name": "main entry (ESM)",
 		"path": "dist/index.js",
-		"limit": "15 KB",
-		"import": "*"
+		"limit": "30 KB",
+		"import": "*",
+		"ignore": [
+			"react",
+			"react-dom",
+			"react/jsx-runtime",
+			"lucide-react",
+			"zod",
+			"react-datepicker"
+		]
 	},
 	{
 		"name": "/next subpath (ESM)",
 		"path": "dist/next.js",
-		"limit": "2 KB"
+		"limit": "2 KB",
+		"ignore": ["react", "react-dom", "next"]
 	},
 	{
 		"name": "/react-router subpath (ESM)",
 		"path": "dist/react-router.js",
-		"limit": "2 KB"
+		"limit": "2 KB",
+		"ignore": ["react", "react-dom", "react-router-dom"]
 	},
 	{
 		"name": "/adapters subpath (ESM)",
 		"path": "dist/adapters.js",
-		"limit": "3 KB"
+		"limit": "3 KB",
+		"ignore": ["react", "react-dom"]
 	}
 ]

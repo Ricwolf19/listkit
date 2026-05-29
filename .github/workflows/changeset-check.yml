@@ -2,7 +2,10 @@ name: Changeset check
 
 on:
   pull_request:
-    branches: [main, development]
+    # Only on PRs into the integration branch (feature PRs must declare a bump).
+    # Release PRs go into `main` and legitimately have no changesets, so they're
+    # excluded here. Add the `skip-changeset` label to bypass on a one-off PR.
+    branches: [development]
     types: [opened, synchronize, reopened, labeled, unlabeled]
 
 permissions:

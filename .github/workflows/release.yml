@@ -39,7 +39,7 @@ jobs:
           if npm view @pibytelabs/listkit@"$VERSION" version > /dev/null 2>&1; then
             echo "Version $VERSION already published. Skipping publish."
           else
-            pnpm exec changeset publish
+            pnpm publish -r --filter @pibytelabs/listkit --no-git-checks
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

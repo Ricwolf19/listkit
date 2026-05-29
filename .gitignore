@@ -52,3 +52,6 @@ CLAUDE.md
 
 # pnpm
 .pnpm-debug.log
+
+# npm (we use pnpm)
+package-lock.json

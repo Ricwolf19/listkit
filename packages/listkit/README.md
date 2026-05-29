@@ -1,92 +1,248 @@
 # @pibytelabs/listkit
 
-> Standardized, responsive list views for React — table/cards, search, pagination, and theming out of the box.
+> Standardized, responsive list views for React — table/cards, search, advanced filters, pagination, and theming out of the box.
 
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)](https://registry.alagrandelepusecuca.mx/@pibytelabs/listkit)
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
 
 ## Features
 
-- **Declarative config** — one `defineListConfig<T>()` replaces scattered props, search fns, and column definitions.
-- **Responsive by default** — auto-switches between table (desktop) and cards (mobile); user preference is persisted in `localStorage`.
-- **Router adapters** — sync list state to the URL via pluggable adapters. Built-ins for **Next.js** and **React Router**.
-- **Composable UI** — use `<ListView>` out of the box, or drop down to `Toolbar`, `Table`, `Cards`, `Pagination`, etc.
-- **Tailwind v4 native** — zero custom CSS; ships with an 8-color theming palette.
-- **Type-safe** — fully typed generics from config to row renderers.
+- **Declarative config** — one `defineListConfig<T>()` describes the whole list view (search, filters, table columns, card, actions, theme).
+- **Responsive by default** — auto-switches between table (desktop) and cards (tablet/phone); follows the viewport.
+- **Data adapters** — render in-memory arrays or plug an async source (REST, Next.js server actions, Dexie). Search/pagination/filters flow through the adapter, so they can run server-side.
+- **Advanced filters** — `text`, `select`, `multi-select`, `date-range`, `number-range`, `boolean`; values are Zod-validated and synced to the URL.
+- **Router adapters** — sync list state to the URL via pluggable adapters: Next.js, React Router, or the framework-free browser adapter.
+- **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
+- **Composable + type-safe** — use `<ListView>`, or drop down to `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
 
 ## Install
 
 ```bash
 pnpm add @pibytelabs/listkit
-```
-
-Peer dependencies (required):
-
-```bash
+# peers
 pnpm add react react-dom lucide-react tailwindcss
 ```
 
-Optional peer (only if you use the corresponding adapter):
+Optional peers (install only what you use):
 
 ```bash
-pnpm add next          # for useNextRouterAdapter
-pnpm add react-router-dom  # for useReactRouterAdapter
+pnpm add zod                # advanced filters (value validation)
+pnpm add next               # useNextRouterAdapter
+pnpm add react-router-dom   # useReactRouterAdapter
 ```
 
-## Quick start
+Everything else (`react-datepicker`, `clsx`, `tailwind-merge`) is bundled as a regular dependency — no extra install needed.
+
+## Tailwind v4 setup
+
+listkit ships its compiled classes; register them once so Tailwind generates them:
+
+```css
+/* app/globals.css */
+@import 'tailwindcss';
+@import '@pibytelabs/listkit/tailwind.css';
+```
+
+`react-datepicker` styles are injected automatically at runtime (SSR-safe), so you don't need to import any extra CSS.
+
+## Usage
+
+### 1. Wire the provider (once, at the app root)
+
+The provider supplies the router adapter (URL sync) and an optional default theme.
 
 ```tsx
-import { ListView, defineListConfig } from '@pibytelabs/listkit'
-import { nextRouterAdapter } from '@pibytelabs/listkit/next'
+'use client'
+import { ListKitProvider, useNextRouterAdapter } from '@pibytelabs/listkit'
 
-const productConfig = defineListConfig<Product>({
-	id: 'products',
-	title: 'Products',
-	pageSize: 10,
-	colorTheme: 'indigo',
-	search: {
-		fields: ['name', 'sku'],
-	},
-	filters: [],
-})
-
-export default function ProductsPage() {
+export function Providers({ children }) {
 	return (
-		<ListKitProvider routerAdapter={nextRouterAdapter()}>
-			<ListView config={productConfig} data={products} />
+		<ListKitProvider router={useNextRouterAdapter()} theme='blue'>
+			{children}
 		</ListKitProvider>
 	)
 }
 ```
 
-## Subpath exports
+No framework? Use `useBrowserRouterAdapter()` (History API). React Router? `useReactRouterAdapter()`. Omit `router` entirely and state stays in component-local React state (no URL sync).
 
-| Import path                        | Contents                                                                     |
-| ---------------------------------- | ---------------------------------------------------------------------------- |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, presentational primitives |
-| `@pibytelabs/listkit/next`         | `nextRouterAdapter`                                                          |
-| `@pibytelabs/listkit/react-router` | `reactRouterAdapter`                                                         |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter` (v1.0+)                                      |
+### 2. Render a list
 
-## Tailwind v4 setup
+`<ListView>` takes a config plus either `data` (in-memory) or an `adapter` (async).
 
-Add the package to your Tailwind `content` scan so utility classes are generated:
-
-```css
-/* app/globals.css (Tailwind v4 CSS-first config) */
-@import 'tailwindcss';
-@source '../node_modules/@pibytelabs/listkit/dist';
+```tsx
+import { ListView } from '@pibytelabs/listkit'
+;<ListView config={productsConfig} data={products} />
 ```
 
-## Changelog
+### Organizing the config: file vs inline
 
-See [CHANGELOG.md](./CHANGELOG.md).
+Both are valid — `defineListConfig` is just a typed identity helper.
 
-## Roadmap
+**Inline** (great for small/one-off lists):
 
-- **v0.1.x** — Foundation: UI + standardization _(current)_
-- **v1.0** — Data layer: server-side pagination, sorting, and `DataAdapter`
-- **v2.0** — Advanced filters: `FilterSection[]` with dynamic operators
+```tsx
+function ProductsPage() {
+	const config = defineListConfig<Product>({
+		id: 'products',
+		title: 'Productos',
+		search: { fields: ['name', 'sku'] },
+		table: { columns: [{ key: 'name', header: 'Nombre' }] },
+	})
+	return <ListView config={config} data={products} />
+}
+```
+
+**Separate config file** (recommended once it grows — keeps the page tiny and the config testable/reusable):
+
+```
+features/products/
+├── config.tsx        # defineListConfig (columns, filters, actions, theme)
+├── ProductCard.tsx   # card renderer
+└── types.ts          # row type
+```
+
+```tsx
+// features/products/config.tsx
+export const productsConfig = defineListConfig<Product>({
+	/* … */
+})
+
+// page.tsx
+import { productsConfig } from '@/features/products/config'
+;<ListView config={productsConfig} data={products} />
+```
+
+### Advanced filters
+
+```tsx
+defineListConfig<Product>({
+	id: 'products',
+	search: true,
+	filtersTitle: 'Filtrar productos',
+	filters: [
+		{
+			id: 'attributes',
+			title: 'Atributos',
+			filters: [
+				{
+					id: 'category',
+					field: 'category',
+					label: 'Categoría',
+					type: 'select',
+					options: [{ value: 'coffee', label: 'Café' }],
+				},
+				{
+					id: 'tags',
+					field: 'tags',
+					label: 'Etiquetas',
+					type: 'multi-select',
+					options: [...],
+				},
+				{
+					id: 'price',
+					field: 'price',
+					label: 'Precio',
+					type: 'number-range',
+				},
+				{
+					id: 'createdAt',
+					field: 'createdAt',
+					label: 'Alta',
+					type: 'date-range',
+				},
+				{
+					id: 'active',
+					field: 'active',
+					label: 'Estado',
+					type: 'boolean',
+				},
+				{
+					id: 'name',
+					field: 'name',
+					label: 'Nombre',
+					type: 'text',
+				},
+			],
+		},
+	],
+})
+```
+
+Applied filters appear as removable chips above the list and sync to the URL. With an async adapter, read `query.filters` (an `ActiveFilterValue[]`) in your fetcher and translate to SQL/HTTP.
+
+### Custom cards with actions and theme
+
+The `card` renderer receives the row item plus a `ctx` object with actions and the active color theme:
+
+```tsx
+defineListConfig<Product>({
+	/* … */
+	actions: {
+		onEdit: item => openEditModal(item),
+		onDelete: item => confirmDelete(item),
+	},
+	card: (item, ctx) => (
+		<div className='p-4'>
+			<h3 className='font-semibold'>{item.name}</h3>
+			<div className='mt-3 flex gap-2'>
+				<button
+					onClick={() => ctx.actions.onEdit?.(item)}
+					className={cn(
+						'rounded-md px-3 py-1 text-sm',
+						ctx.colorTheme.primaryBg,
+						ctx.colorTheme.primaryText
+					)}
+				>
+					Editar
+				</button>
+			</div>
+		</div>
+	),
+})
+```
+
+### Async data (server-side)
+
+```tsx
+import { serverActionAdapter } from '@pibytelabs/listkit'
+
+const adapter = serverActionAdapter<Product>(async query => {
+	const { rows, total } = await listProductsAction(query) // page/pageSize/search/filters
+	return { data: rows, total }
+})
+
+<ListView config={productsConfig} adapter={adapter} />
+```
+
+### Theming
+
+```tsx
+// built-in palette per list
+defineListConfig({ colorTheme: 'teal', /* … */ })
+
+// global default
+<ListKitProvider theme="teal">…</ListKitProvider>
+
+// custom theme (brand colors) — pass a ThemeClasses object anywhere a theme is accepted
+const brand: ThemeClasses = {
+	primaryBg: 'bg-[#121c38]',
+	primaryText: 'text-white',
+	focusRing: 'focus:ring-indigo-500',
+	focusBorder: 'focus:border-indigo-500',
+	/* … */
+}
+defineListConfig({ colorTheme: brand, /* … */ })
+```
+
+## Subpath exports
+
+| Import path                        | Contents                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------- |
+| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, adapters, hooks, primitives, types |
+| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`                                                                |
+| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                               |
+| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`          |
+| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                       |
 
 ## License
 

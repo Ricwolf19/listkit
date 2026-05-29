@@ -13,6 +13,8 @@ export default defineConfig({
 	clean: true,
 	treeshake: true,
 	target: 'es2022',
+	// Keep styles injection so consumers don't need to import any CSS.
+	injectStyle: true,
 	external: [
 		'react',
 		'react-dom',
@@ -22,5 +24,7 @@ export default defineConfig({
 		'next/router',
 		'react-router-dom',
 		'react-router',
+		'react-datepicker',
+		'zod',
 	],
 })

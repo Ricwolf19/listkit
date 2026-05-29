@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { ColorTheme } from '../theme/colorTheme'
+import type { FilterSection } from './filters'
 
 export type ColumnDef<T> = {
 	key: string
@@ -62,6 +63,10 @@ export type ListConfig<T> = {
 	 */
 	search?: SearchConfig<T> | boolean
 	sort?: (data: T[]) => T[]
+	/** Advanced filters (v2.0). Renders a filter button + sidebar; values sync to the URL. */
+	filters?: FilterSection<T>[]
+	/** Title shown in the filter sidebar header. */
+	filtersTitle?: string
 	getItemKey?: (item: T, index: number) => string | number
 	card?: (item: T, ctx: CardContext<T>) => ReactNode
 	table?: TableConfig<T>

@@ -1,5 +1,49 @@
 # @pibytelabs/listkit
 
+## 2.0.0
+
+### Major Changes
+
+- 2a4bc21: v2.0 Advanced filters — declarative, Zod-validated, URL-synced.
+  - Add `filters: FilterSection<T>[]` to `defineListConfig`. Each `FilterDefinition` is a discriminated union over six input types: `text` (with exact/partial match), `select` (searchable), `multi-select`, `date-range`, `number-range`, and `boolean`. `field` is a type-aware `Path<T>`.
+  - New UI: a filter button in the toolbar (with active count), a slide-over `FilterSidebar` with sections, and removable `ActiveFilterChips`. Lean implementation — only `lucide-react`, no react-hook-form or datepicker; built on native date/number inputs plus a custom searchable select.
+  - Applied filters live in the URL (one JSON param per filter via the RouterAdapter) and are **Zod-validated on read**, so hand-edited/stale URLs can never feed malformed values into a query. `zod` is an optional peer dependency.
+  - Filters flow through `ListQuery.filters` (`ActiveFilterValue[]` with `field`/`type`/`value`): `memoryAdapter` applies them client-side; server adapters (`serverActionAdapter`/`fetchAdapter`) receive them to translate to SQL/HTTP.
+  - Exposed for composition: `FilterSidebar`, `FilterButton`, `ActiveFilterChips`, `DynamicFilter`, `useFilters`, `useListParams`, plus the filter types.
+
+  BREAKING: `useListState` now takes a shared `params` (from `useListParams`) instead of creating its own; `ListQuery.filters` is `ActiveFilterValue[]` rather than `Record<string, unknown>`.
+
+### Minor Changes
+
+- 2a4bc21: Date-range filters now use react-datepicker (calendar with month/year dropdowns
+  and optional time) instead of the native date input. react-datepicker is a
+  bundled dependency kept external from the JS bundle; its stylesheet is injected
+  at runtime via tsup `injectStyle` (SSR-safe), so consumers import no CSS.
+- 2a4bc21: Theming reach, sticky pagination, and layout-stability polish.
+  - **Custom themes**: `colorTheme` now accepts a full `ThemeClasses` object (brand colors) in addition to the 8 built-ins, and `<ListKitProvider theme={…}>` sets a global default. Per-list `colorTheme` still wins.
+  - **Themed surfaces**: active-filter chips, the table header accent, and neutral hovers (pagination arrows/page buttons) now follow the active theme.
+  - **Pagination is sticky, not fixed**: it no longer overlays app sidebars (full-width fixed bar removed), stays within the list column, and remains visible even with zero results.
+  - **No layout shift**: the active-filter chip row reserves its space so adding/removing filters doesn't push the table down.
+  - **Better empty states**: the table now renders the same icon+message empty state as the cards.
+  - Subtler 1px focus ring on inputs.
+  - README rewritten with usage, config-file-vs-inline organization, filters, async adapters, and theming.
+
+### Patch Changes
+
+- 96fbac3: Make advanced filters work consistently across every adapter, and fix the
+  filter sidebar animation.
+  - Extracted the filter matcher to a shared `itemMatchesFilters` helper. `memoryAdapter` and `createDexieAdapter` now both apply `query.filters`.
+  - `fetchAdapter`'s default query now serializes `filters` (JSON) so they reach the server.
+  - `FilterSidebar` enter/exit transition is now keyed only on `open`, so it animates reliably (the effect previously depended on an unstable `reset` identity, which broke the animation and risked a render loop).
+  - Removed `createMongoCollectionAdapter`: adapters run on the client, and MongoDB is server-side — use it inside a server action/route and expose it via `serverActionAdapter`/`fetchAdapter` instead.
+
+- 2a4bc21: Filter UX polish + a framework-free URL adapter.
+  - New `useBrowserRouterAdapter`: a History-API RouterAdapter so plain React/Vite apps get URL sync (search, page, filters) without Next.js or React Router. Without any adapter, list state stays component-local — which is why filter values weren't persisting to the URL before.
+  - `FilterSelect` gains full keyboard navigation (↑/↓/Enter/Esc/Tab, highlighted option with scroll-into-view), ported from the reference Select.
+  - `FilterSidebar` now animates in/out (slide + fade), is wider, and uses a sensible backdrop blur. The toolbar `FilterButton` shows a circular ✕ badge to clear all applied filters in one click.
+  - Filter inputs split into `components/filters/inputs/*` (one component per file) for cleaner organization.
+  - Subtler focus ring on inputs (1px instead of 2px).
+
 ## 1.0.0
 
 ### Minor Changes
