@@ -12,8 +12,6 @@ type UseListStateOptions<T> = {
 	adapter: DataAdapter<T>
 	pageSize?: number
 	searchDebounce?: number
-	/** Scopes the persisted view-toggle choice (typically the list id). */
-	viewStorageKey?: string
 }
 
 /**
@@ -49,10 +47,9 @@ export function useListState<T>({
 	adapter,
 	pageSize = DEFAULT_PAGE_SIZE,
 	searchDebounce = 400,
-	viewStorageKey,
 }: UseListStateOptions<T>) {
 	const { get, set } = useListParams()
-	const { viewType, handleViewChange } = useViewType(viewStorageKey)
+	const { viewType, handleViewChange } = useViewType()
 
 	const currentSearch = get('search') ?? ''
 	const currentPage = Math.max(1, parseInt(get('page') ?? '1', 10) || 1)
