@@ -15,6 +15,7 @@ type UseListStateOptions<T> = {
 	filters?: ActiveFilterValue[]
 	pageSize?: number
 	searchDebounce?: number
+	refreshToken?: number
 }
 
 export function useListState<T>({
@@ -23,6 +24,7 @@ export function useListState<T>({
 	filters,
 	pageSize = DEFAULT_PAGE_SIZE,
 	searchDebounce = 400,
+	refreshToken = 0,
 }: UseListStateOptions<T>) {
 	const { get, set } = params
 	const { viewType, handleViewChange } = useViewType()
@@ -64,7 +66,11 @@ export function useListState<T>({
 		[currentPage, pageSize, currentSearch, filtersKey]
 	)
 
-	const { data, total, isLoading, error } = useListData(adapter, query)
+	const { data, total, isLoading, error } = useListData(
+		adapter,
+		query,
+		refreshToken
+	)
 
 	const totalPages = Math.max(1, Math.ceil(total / pageSize))
 

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { Fragment, type ReactNode } from 'react'
 
 import type { DisplayMode } from '../types/list'
 import { cn } from '../utils/cn'
@@ -17,6 +17,8 @@ type CardsProps<T> = {
 	gridCols?: string
 	className?: string
 	onCardClick?: (item: T, index: number) => void
+	/** Skip the default `<Card>` wrapper and render `renderCard` output directly. */
+	bare?: boolean
 }
 
 export function Cards<T>({
@@ -29,6 +31,7 @@ export function Cards<T>({
 	gridCols = 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 	className,
 	onCardClick,
+	bare = false,
 }: CardsProps<T>) {
 	if (displayMode === 'hide') return null
 
@@ -62,14 +65,20 @@ export function Cards<T>({
 			aria-hidden={visibility.ariaHidden}
 		>
 			<div className={`grid gap-4 ${gridCols}`}>
-				{data.map((item, index) => (
-					<Card
-						key={keyExtractor(item, index)}
-						onClick={onCardClick ? () => onCardClick(item, index) : undefined}
-					>
-						{renderCard(item, index)}
-					</Card>
-				))}
+				{data.map((item, index) =>
+					bare ? (
+						<Fragment key={keyExtractor(item, index)}>
+							{renderCard(item, index)}
+						</Fragment>
+					) : (
+						<Card
+							key={keyExtractor(item, index)}
+							onClick={onCardClick ? () => onCardClick(item, index) : undefined}
+						>
+							{renderCard(item, index)}
+						</Card>
+					)
+				)}
 			</div>
 		</div>
 	)

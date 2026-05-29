@@ -18,6 +18,12 @@ type PaginationProps = {
 	onPageChange: (page: number) => void
 	isLoading?: boolean
 	colorTheme?: ColorTheme
+	/**
+	 * Extra classes for the fixed bar — lets the host app offset it around app
+	 * chrome (e.g. `lg:left-64` to clear a sidebar). Merged via tailwind-merge,
+	 * so a `left-*` here overrides the default `left-0`.
+	 */
+	className?: string
 }
 
 function getPageNumbers(
@@ -53,6 +59,7 @@ export function Pagination({
 	onPageChange,
 	isLoading = false,
 	colorTheme = 'red',
+	className,
 }: PaginationProps) {
 	const ref = useRef<HTMLDivElement>(null)
 	const theme = getColorTheme(colorTheme)
@@ -90,7 +97,10 @@ export function Pagination({
 	return (
 		<div
 			ref={ref}
-			className='fixed right-0 bottom-0 left-0 z-10 flex items-center justify-between gap-4 border-t border-gray-200 bg-white/95 px-4 py-2.5 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:px-6'
+			className={cn(
+				'fixed right-0 bottom-0 left-0 z-10 flex items-center justify-between gap-4 border-t border-gray-200 bg-white/95 px-4 py-2.5 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:px-6',
+				className
+			)}
 			style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.625rem)' }}
 			aria-label='Paginación'
 		>

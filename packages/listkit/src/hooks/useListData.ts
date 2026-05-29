@@ -15,7 +15,8 @@ type State<T> = ListResult<T> & {
  */
 export function useListData<T>(
 	adapter: DataAdapter<T>,
-	query: ListQuery
+	query: ListQuery,
+	refreshToken: number = 0
 ): State<T> {
 	const [state, setState] = useState<State<T>>({
 		data: [],
@@ -53,9 +54,10 @@ export function useListData<T>(
 			active = false
 			controller.abort()
 		}
-		// queryKey captures the meaningful contents of `query`.
+		// queryKey captures the meaningful contents of `query`; refreshToken forces
+		// a refetch on demand (e.g. after a mutation).
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [adapter, queryKey])
+	}, [adapter, queryKey, refreshToken])
 
 	return state
 }

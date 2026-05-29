@@ -69,6 +69,11 @@ export type ListConfig<T> = {
 	filtersTitle?: string
 	getItemKey?: (item: T, index: number) => string | number
 	card?: (item: T, ctx: CardContext<T>) => ReactNode
+	/**
+	 * Render `card` output directly, without listkit's default `<Card>` chrome
+	 * (border/padding/shadow). Use it to drop in a fully custom card component.
+	 */
+	bareCard?: boolean
 	table?: TableConfig<T>
 	actions?: ListActions<T>
 }

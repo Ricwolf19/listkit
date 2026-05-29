@@ -44,3 +44,14 @@ export function useListKitRouter(): RouterAdapter | undefined {
 export function useListKitTheme(): ColorTheme | undefined {
 	return useContext(ListKitContext).theme
 }
+
+// Per-list refetch. Provided by `<ListView>` (the refetch token lives there),
+// so any descendant — e.g. a row's delete button — can force the list to reload
+// after a mutation without a full page refresh. No-op outside a ListView.
+const ListRefreshContext = createContext<() => void>(() => {})
+
+export const ListRefreshProvider = ListRefreshContext.Provider
+
+export function useListRefresh(): () => void {
+	return useContext(ListRefreshContext)
+}
