@@ -70,10 +70,9 @@ export function ListView<T>({
 		() => flattenFilters(filterSections),
 		[filterSections]
 	)
-	const activeFilters = useMemo(
-		() => readActiveFilters(flatDefs, params.get),
-		[flatDefs, params]
-	)
+	// Computed every render so it always reflects the current URL/param values
+	// (cheap: a short loop over the filter definitions).
+	const activeFilters = readActiveFilters(flatDefs, params.get)
 
 	const [filtersOpen, setFiltersOpen] = useState(false)
 

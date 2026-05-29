@@ -26,6 +26,8 @@ const getServerSnapshot = () => ''
  * without Next.js or React Router. Writes use `history.replaceState`.
  */
 export function useBrowserRouterAdapter(): RouterAdapter {
+	// Re-renders the component when the query string changes (popstate or our own
+	// writes). `get` reads `window.location` live, so it always returns fresh values.
 	useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
 	return {

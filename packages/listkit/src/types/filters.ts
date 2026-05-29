@@ -31,11 +31,9 @@ export type FilterOption = {
 }
 
 export type TextFilterValue = { value: string; match: TextMatch }
-type SelectFilterValue = string
 export type MultiSelectFilterValue = string[]
 export type DateRangeFilterValue = { from?: string; to?: string }
 export type NumberRangeFilterValue = { min?: number; max?: number }
-type BooleanFilterValue = boolean
 
 type BaseFilter<T> = {
 	id: string

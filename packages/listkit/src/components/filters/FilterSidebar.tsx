@@ -35,9 +35,10 @@ export function FilterSidebar<T>({
 	const [mounted, setMounted] = useState(open)
 	const [shown, setShown] = useState(false)
 
+	// Enter/exit transition — keyed on `open` only so a re-render (e.g. a fresh
+	// `params`/`reset` identity) can't restart it mid-animation.
 	useEffect(() => {
 		if (open) {
-			reset()
 			setMounted(true)
 			const id = requestAnimationFrame(() => setShown(true))
 			return () => cancelAnimationFrame(id)
@@ -45,7 +46,13 @@ export function FilterSidebar<T>({
 		setShown(false)
 		const id = setTimeout(() => setMounted(false), ANIMATION_MS)
 		return () => clearTimeout(id)
-	}, [open, reset])
+	}, [open])
+
+	// Sync the draft from the param store when the panel opens.
+	useEffect(() => {
+		if (open) reset()
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [open])
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
