@@ -77,13 +77,13 @@ export function ListView<T>({
 	const [filtersOpen, setFiltersOpen] = useState(false)
 
 	const removeFilter = (id: string) => {
-		params.set(filterParamKey(id), null)
-		params.set('page', null)
+		params.setMany({ [filterParamKey(id)]: null, page: null })
 	}
 
 	const clearAllFilters = () => {
-		for (const def of flatDefs) params.set(filterParamKey(def.id), null)
-		params.set('page', null)
+		const updates: Record<string, string | null> = { page: null }
+		for (const def of flatDefs) updates[filterParamKey(def.id)] = null
+		params.setMany(updates)
 	}
 
 	const {

@@ -42,20 +42,21 @@ export function useFilters<T>(
 	const reset = useCallback(() => setDraft(readDraft()), [readDraft])
 
 	const apply = useCallback(() => {
+		const updates: Record<string, string | null> = {}
 		for (const def of defs) {
 			const value = draft[def.id]
 			const active = value != null && isFilterValueActive(def.type, value)
-			params.set(
-				filterParamKey(def.id),
-				active ? encodeFilterValue(value) : null
-			)
+			updates[filterParamKey(def.id)] = active ? encodeFilterValue(value) : null
 		}
-		params.set('page', null)
+		updates.page = null
+		params.setMany(updates)
 	}, [defs, draft, params])
 
 	const clear = useCallback(() => {
-		for (const def of defs) params.set(filterParamKey(def.id), null)
-		params.set('page', null)
+		const updates: Record<string, string | null> = {}
+		for (const def of defs) updates[filterParamKey(def.id)] = null
+		updates.page = null
+		params.setMany(updates)
 		setDraft({})
 	}, [defs, params])
 

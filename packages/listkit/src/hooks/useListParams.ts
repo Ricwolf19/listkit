@@ -5,6 +5,7 @@ import { useListKitRouter } from '../context/ListKitContext'
 export type ListParams = {
 	get: (key: string) => string | null
 	set: (key: string, value: string | null) => void
+	setMany: (updates: Record<string, string | null>) => void
 }
 
 /**
@@ -34,5 +35,19 @@ export function useListParams(): ListParams {
 		[router]
 	)
 
-	return { get, set }
+	const setMany = useCallback(
+		(updates: Record<string, string | null>) => {
+			if (router?.setMany) {
+				router.setMany(updates)
+			} else if (router) {
+				for (const [key, value] of Object.entries(updates))
+					router.set(key, value)
+			} else {
+				setInternal(prev => ({ ...prev, ...updates }))
+			}
+		},
+		[router]
+	)
+
+	return { get, set, setMany }
 }

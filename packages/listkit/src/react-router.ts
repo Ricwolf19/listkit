@@ -13,18 +13,25 @@ export type { RouterAdapter }
 export function useReactRouterAdapter(): RouterAdapter {
 	const [searchParams, setSearchParams] = useSearchParams()
 
-	return {
-		get(key) {
-			return searchParams.get(key)
-		},
-		set(key, value) {
-			const params = new URLSearchParams(searchParams)
+	const commit = (updates: Record<string, string | null>) => {
+		const params = new URLSearchParams(searchParams)
+		for (const [key, value] of Object.entries(updates)) {
 			if (value === null || value === '') {
 				params.delete(key)
 			} else {
 				params.set(key, value)
 			}
-			setSearchParams(params, { replace: true })
+		}
+		setSearchParams(params, { replace: true })
+	}
+
+	return {
+		get(key) {
+			return searchParams.get(key)
 		},
+		set(key, value) {
+			commit({ [key]: value })
+		},
+		setMany: commit,
 	}
 }

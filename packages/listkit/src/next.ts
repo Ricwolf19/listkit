@@ -14,19 +14,26 @@ export function useNextRouterAdapter(): RouterAdapter {
 	const router = useRouter()
 	const pathname = usePathname()
 
-	return {
-		get(key) {
-			return searchParams.get(key)
-		},
-		set(key, value) {
-			const params = new URLSearchParams(searchParams.toString())
+	const commit = (updates: Record<string, string | null>) => {
+		const params = new URLSearchParams(searchParams.toString())
+		for (const [key, value] of Object.entries(updates)) {
 			if (value === null || value === '') {
 				params.delete(key)
 			} else {
 				params.set(key, value)
 			}
-			const query = params.toString()
-			router.replace(query ? `${pathname}?${query}` : pathname)
+		}
+		const query = params.toString()
+		router.replace(query ? `${pathname}?${query}` : pathname)
+	}
+
+	return {
+		get(key) {
+			return searchParams.get(key)
 		},
+		set(key, value) {
+			commit({ [key]: value })
+		},
+		setMany: commit,
 	}
 }
