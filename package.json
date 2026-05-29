@@ -34,7 +34,6 @@
 		"depcruise:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot packages/listkit/src | dot -T svg > dependency-graph.svg",
 		"changeset": "changeset",
 		"release:prepare": "pnpm exec changeset version && git add . && git diff --staged --quiet || git commit -m \"chore: release\"",
-		"sync-dev": "git fetch origin && git checkout development && git merge origin/main --no-edit --no-ff -m 'chore: back-merge release' && git push origin development",
 		"version": "changeset version",
 		"release": "changeset publish",
 		"prepare": "husky && chmod +x .husky/pre-commit .husky/pre-push 2>/dev/null || true"
