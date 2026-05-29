@@ -39,7 +39,7 @@ jobs:
           if npm view @pibytelabs/listkit@"$VERSION" version > /dev/null 2>&1; then
             echo "Version $VERSION already published. Skipping publish."
           else
-            pnpm publish -r --filter @pibytelabs/listkit --no-git-checks
+            cd packages/listkit && npm publish
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -51,3 +51,15 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "@pibytelabs/listkit@$VERSION" -m "Release v$VERSION" || true
           git push origin "refs/tags/@pibytelabs/listkit@$VERSION" || true
+
+      - name: Create GitHub Release
+        run: |
+          VERSION=$(jq -r '.version' packages/listkit/package.json)
+          TAG="@pibytelabs/listkit@$VERSION"
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "Release $TAG already exists. Skipping."
+          else
+            gh release create "$TAG" --title "v$VERSION" --notes "See packages/listkit/CHANGELOG.md for details." --verify-tag
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -30,25 +30,32 @@ export function useBrowserRouterAdapter(): RouterAdapter {
 	// writes). `get` reads `window.location` live, so it always returns fresh values.
 	useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
 
+	const commit = (updates: Record<string, string | null>) => {
+		const params = new URLSearchParams(window.location.search)
+		for (const [key, value] of Object.entries(updates)) {
+			if (value === null || value === '') {
+				params.delete(key)
+			} else {
+				params.set(key, value)
+			}
+		}
+		const qs = params.toString()
+		window.history.replaceState(
+			null,
+			'',
+			qs ? `?${qs}` : window.location.pathname
+		)
+		emit()
+	}
+
 	return {
 		get(key) {
 			if (typeof window === 'undefined') return null
 			return new URLSearchParams(window.location.search).get(key)
 		},
 		set(key, value) {
-			const params = new URLSearchParams(window.location.search)
-			if (value === null || value === '') {
-				params.delete(key)
-			} else {
-				params.set(key, value)
-			}
-			const qs = params.toString()
-			window.history.replaceState(
-				null,
-				'',
-				qs ? `?${qs}` : window.location.pathname
-			)
-			emit()
+			commit({ [key]: value })
 		},
+		setMany: commit,
 	}
 }

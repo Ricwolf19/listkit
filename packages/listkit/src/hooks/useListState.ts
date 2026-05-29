@@ -97,11 +97,10 @@ export function useListState<T>({
 			if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current)
 			debounceTimerRef.current = setTimeout(() => {
 				isInternalChange.current = true
-				set('search', term.trim() || null)
-				set('page', null)
+				params.setMany({ search: term.trim() || null, page: null })
 			}, searchDebounce)
 		},
-		[set, searchDebounce]
+		[params, searchDebounce]
 	)
 
 	const cardsMode: DisplayMode =
