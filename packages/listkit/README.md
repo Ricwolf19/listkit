@@ -71,7 +71,6 @@ No framework? Use `useBrowserRouterAdapter()` (History API). React Router? `useR
 
 ```tsx
 import { ListView } from '@pibytelabs/listkit'
-
 ;<ListView config={productsConfig} data={products} />
 ```
 
@@ -110,7 +109,6 @@ export const productsConfig = defineListConfig<Product>({
 
 // page.tsx
 import { productsConfig } from '@/features/products/config'
-
 ;<ListView config={productsConfig} data={products} />
 ```
 

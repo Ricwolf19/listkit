@@ -16,10 +16,7 @@ function toTime(value: unknown): number | null {
  * Evaluates one applied filter against a row. Shared by the in-memory and Dexie
  * adapters (server adapters translate filters to their own query language).
  */
-export function matchesFilter(
-	item: unknown,
-	filter: ActiveFilterValue
-): boolean {
+function matchesFilter(item: unknown, filter: ActiveFilterValue): boolean {
 	const raw = getPath(item, filter.field)
 
 	switch (filter.type) {
