@@ -5,6 +5,7 @@ import type { ToolbarAction } from '../types/config'
 import type { ViewType } from '../types/list'
 import { cn } from '../utils/cn'
 import { Button } from './Button'
+import { FilterButton } from './filters/FilterButton'
 import { SearchInput } from './SearchInput'
 import { ViewToggle } from './ViewToggle'
 
@@ -20,6 +21,9 @@ export type ToolbarProps = {
 	showSearch?: boolean
 	showViewToggle?: boolean
 	customContent?: ReactNode
+	onOpenFilters?: () => void
+	onClearFilters?: () => void
+	filterCount?: number
 }
 
 export function Toolbar({
@@ -34,6 +38,9 @@ export function Toolbar({
 	showSearch = true,
 	showViewToggle = true,
 	customContent,
+	onOpenFilters,
+	onClearFilters,
+	filterCount = 0,
 }: ToolbarProps) {
 	const renderAction = (action: ToolbarAction, index: number) => (
 		<Button
@@ -54,16 +61,26 @@ export function Toolbar({
 	return (
 		<div className='py-2'>
 			<div className='flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between'>
-				{showSearch && (
+				{(showSearch || onOpenFilters) && (
 					<div className='flex max-w-2xl flex-1 items-center gap-2'>
-						<div className='flex-1'>
-							<SearchInput
-								placeholder={placeholder}
-								value={searchTerm}
-								onChange={onSearchChange}
+						{showSearch && (
+							<div className='flex-1'>
+								<SearchInput
+									placeholder={placeholder}
+									value={searchTerm}
+									onChange={onSearchChange}
+									colorTheme={colorTheme}
+								/>
+							</div>
+						)}
+						{onOpenFilters && (
+							<FilterButton
+								onClick={onOpenFilters}
+								activeCount={filterCount}
+								onClear={onClearFilters}
 								colorTheme={colorTheme}
 							/>
-						</div>
+						)}
 					</div>
 				)}
 

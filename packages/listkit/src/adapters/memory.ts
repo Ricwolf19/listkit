@@ -1,4 +1,6 @@
+import { itemMatchesFilters } from '../filters/match'
 import type { DataAdapter, ListQuery } from '../types/data'
+import type { ActiveFilterValue } from '../types/filters'
 import { getPath } from '../utils/getPath'
 
 export type MemorySearch<T> =
@@ -29,9 +31,14 @@ function applySearch<T>(
 	)
 }
 
+function applyFilters<T>(items: T[], filters: ActiveFilterValue[]): T[] {
+	if (filters.length === 0) return items
+	return items.filter(item => itemMatchesFilters(item, filters))
+}
+
 /**
- * In-memory data source. Handles search, sort, and pagination over a plain
- * array — the default when a `ListView` is given `data` instead of an adapter.
+ * In-memory data source. Handles search, advanced filters, sort, and pagination
+ * over a plain array — the default when a `ListView` is given `data`.
  */
 export function memoryAdapter<T>(
 	items: T[],
@@ -42,6 +49,9 @@ export function memoryAdapter<T>(
 			let rows = items
 			if (query.search && options.search) {
 				rows = applySearch(rows, query.search, options.search)
+			}
+			if (query.filters && query.filters.length > 0) {
+				rows = applyFilters(rows, query.filters)
 			}
 			if (options.sort) {
 				rows = options.sort([...rows])

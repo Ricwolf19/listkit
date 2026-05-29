@@ -1,4 +1,4 @@
-export const VERSION = '0.1.0'
+export const VERSION = '1.0.0'
 
 export { ListView, type ListViewProps } from './components/ListView'
 export { defineListConfig } from './config/defineListConfig'
@@ -19,8 +19,17 @@ export { Table } from './components/Table'
 export { Toolbar, type ToolbarProps } from './components/Toolbar'
 export { ViewToggle } from './components/ViewToggle'
 
+// Filters (v2.0)
+export { ActiveFilterChips } from './components/filters/ActiveFilterChips'
+export { DynamicFilter } from './components/filters/DynamicFilter'
+export { FilterButton } from './components/filters/FilterButton'
+export { FilterSidebar } from './components/filters/FilterSidebar'
+
 // Hooks
+export { useBrowserRouterAdapter } from './hooks/useBrowserRouterAdapter'
+export { useFilters } from './hooks/useFilters'
 export { useListData } from './hooks/useListData'
+export { type ListParams, useListParams } from './hooks/useListParams'
 export { useListState } from './hooks/useListState'
 export { useViewType } from './hooks/useViewType'
 
@@ -54,5 +63,14 @@ export type {
 	TableConfig,
 	ToolbarAction,
 } from './types/config'
+export type {
+	ActiveFilterValue,
+	FilterComponentType,
+	FilterDefinition,
+	FilterOption,
+	FilterSection,
+	Path,
+	TextMatch,
+} from './types/filters'
 export type { DisplayMode, PaginationState, ViewType } from './types/list'
 export type { RouterAdapter } from './types/router'

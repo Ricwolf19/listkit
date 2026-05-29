@@ -1,54 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import { useListKitRouter } from '../context/ListKitContext'
 import type { DataAdapter, ListQuery } from '../types/data'
+import type { ActiveFilterValue } from '../types/filters'
 import type { DisplayMode, PaginationState } from '../types/list'
 import { useListData } from './useListData'
+import type { ListParams } from './useListParams'
 import { useViewType } from './useViewType'
 
 const DEFAULT_PAGE_SIZE = 20
 
 type UseListStateOptions<T> = {
 	adapter: DataAdapter<T>
+	params: ListParams
+	filters?: ActiveFilterValue[]
 	pageSize?: number
 	searchDebounce?: number
 }
 
-/**
- * Reads/writes the `search` and `page` params from the active RouterAdapter when
- * one is provided via ListKitProvider; otherwise falls back to component-local
- * state. A single code path keeps both modes consistent.
- */
-function useListParams() {
-	const router = useListKitRouter()
-	const [internal, setInternal] = useState<Record<string, string | null>>({})
-
-	const get = useCallback(
-		(key: string): string | null =>
-			router ? router.get(key) : (internal[key] ?? null),
-		[router, internal]
-	)
-
-	const set = useCallback(
-		(key: string, value: string | null) => {
-			if (router) {
-				router.set(key, value)
-			} else {
-				setInternal(prev => ({ ...prev, [key]: value }))
-			}
-		},
-		[router]
-	)
-
-	return { get, set }
-}
-
 export function useListState<T>({
 	adapter,
+	params,
+	filters,
 	pageSize = DEFAULT_PAGE_SIZE,
 	searchDebounce = 400,
 }: UseListStateOptions<T>) {
-	const { get, set } = useListParams()
+	const { get, set } = params
 	const { viewType, handleViewChange } = useViewType()
 
 	const currentSearch = get('search') ?? ''
@@ -73,13 +49,19 @@ export function useListState<T>({
 		}
 	}, [])
 
+	// Serialized so a new array identity each render doesn't refetch needlessly.
+	const filtersKey = filters ? JSON.stringify(filters) : ''
+
 	const query = useMemo<ListQuery>(
 		() => ({
 			page: currentPage,
 			pageSize,
 			search: currentSearch.trim() || undefined,
+			filters: filters && filters.length > 0 ? filters : undefined,
 		}),
-		[currentPage, pageSize, currentSearch]
+		// filtersKey stands in for `filters` contents.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[currentPage, pageSize, currentSearch, filtersKey]
 	)
 
 	const { data, total, isLoading, error } = useListData(adapter, query)
