@@ -20,6 +20,10 @@ function defaultQuery(query: ListQuery): Record<string, string> {
 		params.sortField = query.sort.field
 		params.sortDir = query.sort.dir
 	}
+	// Advanced filters as a JSON param; the server parses & applies them.
+	if (query.filters && query.filters.length > 0) {
+		params.filters = JSON.stringify(query.filters)
+	}
 	return params
 }
 

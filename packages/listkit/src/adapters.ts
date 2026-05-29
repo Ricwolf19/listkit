@@ -11,12 +11,6 @@ export {
 	type MemorySearch,
 } from './adapters/memory'
 export {
-	createMongoCollectionAdapter,
-	type MongoAdapterOptions,
-	type MongoCollectionLike,
-	type MongoCursorLike,
-} from './adapters/mongo'
-export {
 	serverActionAdapter,
 	type ServerActionFetcher,
 } from './adapters/serverAction'
