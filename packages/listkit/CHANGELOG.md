@@ -1,5 +1,23 @@
 # @pibytelabs/listkit
 
+## 1.0.0
+
+### Minor Changes
+
+- f1bfd86: Data layer — pluggable `DataAdapter<T>` for async/server-driven lists.
+  - New `DataAdapter<T>` contract (`fetch(query) => { data, total }`) plus `ListQuery`, `ListResult`, and `SortState` types.
+  - `useListData` hook drives any adapter with loading/error state and aborts superseded requests.
+  - `<ListView>` now accepts an `adapter` prop. Passing plain `data` still works via an implicit `memoryAdapter`.
+  - Built-in adapters: `memoryAdapter`, `fetchAdapter` (REST), `serverActionAdapter` (Next.js server actions / RPC).
+  - Reference adapters for Dexie (IndexedDB) and MongoDB collections via structural typing.
+  - Server-side search, pagination, and sort now flow through the adapter.
+
+### Patch Changes
+
+- 74290df: Viewport mode now follows the viewport size automatically and is no longer persisted to `localStorage`. The manual toggle is respected during the session but resets on reload, eliminating stale view state across devices.
+
+- Tailwind CSS source file shipped: consumers can now register package classes with `@import '@pibytelabs/listkit/tailwind.css';` instead of hand-writing an `@source` path into `node_modules`.
+
 ## 0.1.1
 
 ### Patch Changes
