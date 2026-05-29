@@ -1,10 +1,12 @@
 import { Search, X } from 'lucide-react'
-import { type ChangeEvent, useEffect, useRef } from 'react'
+import { type ChangeEvent, useEffect, useRef, useState } from 'react'
 
 import type { ColorTheme } from '../theme/colorTheme'
 import { getColorTheme } from '../theme/colorTheme'
 import { cn } from '../utils/cn'
 import { getSearchShortcut } from '../utils/shortcut'
+
+type Shortcut = ReturnType<typeof getSearchShortcut>
 
 type SearchInputProps = {
 	value: string
@@ -27,9 +29,16 @@ export function SearchInput({
 }: SearchInputProps) {
 	const theme = getColorTheme(colorTheme)
 	const inputRef = useRef<HTMLInputElement>(null)
-	const shortcut = getSearchShortcut()
+	// Resolved on the client only: it reads `navigator`, so computing it during
+	// render would diverge from the server output and break hydration.
+	const [shortcut, setShortcut] = useState<Shortcut | null>(null)
 
 	useEffect(() => {
+		setShortcut(getSearchShortcut())
+	}, [])
+
+	useEffect(() => {
+		if (!shortcut) return
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e[shortcut.modifier] && e.key.toLowerCase() === shortcut.key) {
 				e.preventDefault()
@@ -38,7 +47,7 @@ export function SearchInput({
 		}
 		window.addEventListener('keydown', handleKeyDown)
 		return () => window.removeEventListener('keydown', handleKeyDown)
-	}, [shortcut.modifier, shortcut.key])
+	}, [shortcut])
 
 	useEffect(() => {
 		if (autoFocus) inputRef.current?.focus()
@@ -85,9 +94,11 @@ export function SearchInput({
 						<X size={14} />
 					</button>
 				)}
-				<kbd className='hidden rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 select-none sm:inline-block'>
-					{shortcut.display}
-				</kbd>
+				{shortcut && (
+					<kbd className='hidden rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 select-none sm:inline-block'>
+						{shortcut.display}
+					</kbd>
+				)}
 			</div>
 		</div>
 	)

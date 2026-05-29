@@ -4,6 +4,12 @@
 
 ### Patch Changes
 
+- bb26244: Fix SSR hydration mismatch in `SearchInput`. The keyboard-shortcut hint
+  (`⌘ K` / `Ctrl K`) was computed from `navigator` during render, so the server
+  ("Ctrl K") and a Mac client ("⌘ K") disagreed and React threw a hydration error.
+  The shortcut is now resolved in an effect (client-only) and the `<kbd>` hint
+  renders after mount, so SSR and the first client render always match.
+
 - 43ea119: Fix missing README in published package and improve documentation with installation guide, quick-start example, and Tailwind v4 setup instructions.
 
 ## 0.1.0

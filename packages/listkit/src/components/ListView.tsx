@@ -68,7 +68,6 @@ export function ListView<T>({
 	} = useListState<T>({
 		adapter: resolvedAdapter,
 		pageSize: config.pageSize,
-		viewStorageKey: config.id,
 	})
 
 	const isLoading = externalLoading || dataLoading
