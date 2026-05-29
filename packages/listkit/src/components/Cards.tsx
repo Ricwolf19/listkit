@@ -58,11 +58,7 @@ export function Cards<T>({
 
 	return (
 		<div
-			className={cn(
-				'mb-20 space-y-4 pt-1 pb-20',
-				visibility.className,
-				className
-			)}
+			className={cn('space-y-4 pt-1', visibility.className, className)}
 			aria-hidden={visibility.ariaHidden}
 		>
 			<div className={`grid gap-4 ${gridCols}`}>

@@ -77,7 +77,7 @@ export function SearchInput({
 				disabled={disabled}
 				placeholder={placeholder}
 				className={cn(
-					'block h-10 w-full rounded-lg border border-gray-200 bg-white pr-20 pl-9 text-sm text-gray-900 placeholder-gray-400 transition-all duration-150 focus:ring-2 focus:outline-none [&::-webkit-search-cancel-button]:hidden',
+					'block h-10 w-full rounded-lg border border-gray-200 bg-white pr-20 pl-9 text-sm text-gray-900 placeholder-gray-400 transition-all duration-150 focus:ring-1 focus:outline-none [&::-webkit-search-cancel-button]:hidden',
 					theme.focusRing,
 					theme.focusBorder
 				)}

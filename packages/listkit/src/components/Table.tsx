@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react'
 
+import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import type { ColumnDef } from '../types/config'
 import type { DisplayMode } from '../types/list'
 import { cn } from '../utils/cn'
 import { displayVisibility } from '../utils/displayMode'
+import { EmptyState } from './EmptyState'
 import { SkeletonTable } from './SkeletonTable'
 
 type TableProps<T> = {
@@ -17,6 +19,7 @@ type TableProps<T> = {
 	compact?: boolean
 	showHeader?: boolean
 	className?: string
+	colorTheme?: ColorTheme
 }
 
 function valueToString(value: unknown): ReactNode {
@@ -45,7 +48,9 @@ export function Table<T>({
 	compact = false,
 	showHeader = true,
 	className,
+	colorTheme = 'red',
 }: TableProps<T>) {
+	const theme = getColorTheme(colorTheme)
 	if (displayMode === 'hide') return null
 
 	const visibility = displayVisibility(displayMode, 'table')
@@ -74,7 +79,13 @@ export function Table<T>({
 					<div className='overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm'>
 						<table className='min-w-full divide-y divide-gray-200'>
 							{showHeader && (
-								<thead className='bg-gray-50/80'>
+								<thead
+									className={cn(
+										'bg-gray-50/80',
+										'border-b-2',
+										theme.chipBorder
+									)}
+								>
 									<tr>
 										{visibleColumns.map(col => {
 											const headerText =
@@ -141,11 +152,8 @@ export function Table<T>({
 									})
 								) : (
 									<tr>
-										<td
-											colSpan={visibleColumns.length || 1}
-											className='px-6 py-12 text-center text-gray-500'
-										>
-											{emptyMessage}
+										<td colSpan={visibleColumns.length || 1} className='p-0'>
+											<EmptyState message={emptyMessage} />
 										</td>
 									</tr>
 								)}
