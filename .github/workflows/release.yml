@@ -33,23 +33,21 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      # Publish with npm (not pnpm/changeset): npm attaches the `readme` field to
-      # the registry manifest, which is what Verdaccio's web UI renders. Skips
-      # versions already on the registry so the workflow stays green on no-op pushes.
-      - name: Publish to Verdaccio and tag
+      - name: Publish to Verdaccio
         run: |
-          cd packages/listkit
-          NAME=$(node -p "require('./package.json').name")
-          VERSION=$(node -p "require('./package.json').version")
-          TAG="$NAME@$VERSION"
-          if npm view "$NAME@$VERSION" version >/dev/null 2>&1; then
-            echo "$TAG already published — skipping publish & tag."
-            exit 0
+          VERSION=$(jq -r '.version' packages/listkit/package.json)
+          if npm view @pibytelabs/listkit@"$VERSION" version > /dev/null 2>&1; then
+            echo "Version $VERSION already published. Skipping publish."
+          else
+            pnpm exec changeset publish
           fi
-          npm publish
-          cd "$GITHUB_WORKSPACE"
-          git tag "$TAG"
-          git push origin "$TAG" || true
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create and push Git tag
+        run: |
+          VERSION=$(jq -r '.version' packages/listkit/package.json)
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "@pibytelabs/listkit@$VERSION" -m "Release v$VERSION" || true
+          git push origin "refs/tags/@pibytelabs/listkit@$VERSION" || true
