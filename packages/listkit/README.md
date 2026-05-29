@@ -8,7 +8,7 @@
 
 - **Declarative config** — one `defineListConfig<T>()` describes the whole list view (search, filters, table columns, card, actions, theme).
 - **Responsive by default** — auto-switches between table (desktop) and cards (tablet/phone); follows the viewport.
-- **Data adapters** — render in-memory arrays or plug an async source (REST, Next.js server actions, Dexie, Mongo). Search/pagination/filters flow through the adapter, so they can run server-side.
+- **Data adapters** — render in-memory arrays or plug an async source (REST, Next.js server actions, Dexie). Search/pagination/filters flow through the adapter, so they can run server-side.
 - **Advanced filters** — `text`, `select`, `multi-select`, `date-range`, `number-range`, `boolean`; values are Zod-validated and synced to the URL.
 - **Router adapters** — sync list state to the URL via pluggable adapters: Next.js, React Router, or the framework-free browser adapter.
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
@@ -30,6 +30,8 @@ pnpm add next               # useNextRouterAdapter
 pnpm add react-router-dom   # useReactRouterAdapter
 ```
 
+Everything else (`react-datepicker`, `clsx`, `tailwind-merge`) is bundled as a regular dependency — no extra install needed.
+
 ## Tailwind v4 setup
 
 listkit ships its compiled classes; register them once so Tailwind generates them:
@@ -39,6 +41,8 @@ listkit ships its compiled classes; register them once so Tailwind generates the
 @import 'tailwindcss';
 @import '@pibytelabs/listkit/tailwind.css';
 ```
+
+`react-datepicker` styles are injected automatically at runtime (SSR-safe), so you don't need to import any extra CSS.
 
 ## Usage
 
@@ -67,6 +71,7 @@ No framework? Use `useBrowserRouterAdapter()` (History API). React Router? `useR
 
 ```tsx
 import { ListView } from '@pibytelabs/listkit'
+
 ;<ListView config={productsConfig} data={products} />
 ```
 
@@ -92,7 +97,7 @@ function ProductsPage() {
 
 ```
 features/products/
-├── config.tsx        # defineListConfig (columns, filters, actions)
+├── config.tsx        # defineListConfig (columns, filters, actions, theme)
 ├── ProductCard.tsx   # card renderer
 └── types.ts          # row type
 ```
@@ -105,6 +110,7 @@ export const productsConfig = defineListConfig<Product>({
 
 // page.tsx
 import { productsConfig } from '@/features/products/config'
+
 ;<ListView config={productsConfig} data={products} />
 ```
 
@@ -113,19 +119,51 @@ import { productsConfig } from '@/features/products/config'
 ```tsx
 defineListConfig<Product>({
 	id: 'products',
-	search: true, // show the search box (adapter does the searching)
+	search: true,
+	filtersTitle: 'Filtrar productos',
 	filters: [
 		{
 			id: 'attributes',
 			title: 'Atributos',
 			filters: [
-				{ id: 'category', field: 'category', label: 'Categoría', type: 'select',
-				  options: [{ value: 'coffee', label: 'Café' }] },
-				{ id: 'tags', field: 'tags', label: 'Etiquetas', type: 'multi-select', options: [...] },
-				{ id: 'price', field: 'price', label: 'Precio', type: 'number-range' },
-				{ id: 'createdAt', field: 'createdAt', label: 'Alta', type: 'date-range' },
-				{ id: 'active', field: 'active', label: 'Estado', type: 'boolean' },
-				{ id: 'name', field: 'name', label: 'Nombre', type: 'text' },
+				{
+					id: 'category',
+					field: 'category',
+					label: 'Categoría',
+					type: 'select',
+					options: [{ value: 'coffee', label: 'Café' }],
+				},
+				{
+					id: 'tags',
+					field: 'tags',
+					label: 'Etiquetas',
+					type: 'multi-select',
+					options: [...],
+				},
+				{
+					id: 'price',
+					field: 'price',
+					label: 'Precio',
+					type: 'number-range',
+				},
+				{
+					id: 'createdAt',
+					field: 'createdAt',
+					label: 'Alta',
+					type: 'date-range',
+				},
+				{
+					id: 'active',
+					field: 'active',
+					label: 'Estado',
+					type: 'boolean',
+				},
+				{
+					id: 'name',
+					field: 'name',
+					label: 'Nombre',
+					type: 'text',
+				},
 			],
 		},
 	],
@@ -133,6 +171,37 @@ defineListConfig<Product>({
 ```
 
 Applied filters appear as removable chips above the list and sync to the URL. With an async adapter, read `query.filters` (an `ActiveFilterValue[]`) in your fetcher and translate to SQL/HTTP.
+
+### Custom cards with actions and theme
+
+The `card` renderer receives the row item plus a `ctx` object with actions and the active color theme:
+
+```tsx
+defineListConfig<Product>({
+	/* … */
+	actions: {
+		onEdit: item => openEditModal(item),
+		onDelete: item => confirmDelete(item),
+	},
+	card: (item, ctx) => (
+		<div className='p-4'>
+			<h3 className='font-semibold'>{item.name}</h3>
+			<div className='mt-3 flex gap-2'>
+				<button
+					onClick={() => ctx.actions.onEdit?.(item)}
+					className={cn(
+						'rounded-md px-3 py-1 text-sm',
+						ctx.colorTheme.primaryBg,
+						ctx.colorTheme.primaryText
+					)}
+				>
+					Editar
+				</button>
+			</div>
+		</div>
+	),
+})
+```
 
 ### Async data (server-side)
 
@@ -157,19 +226,25 @@ defineListConfig({ colorTheme: 'teal', /* … */ })
 <ListKitProvider theme="teal">…</ListKitProvider>
 
 // custom theme (brand colors) — pass a ThemeClasses object anywhere a theme is accepted
-const brand: ThemeClasses = { primaryBg: 'bg-[#121c38]', primaryText: 'text-white', /* … */ }
+const brand: ThemeClasses = {
+	primaryBg: 'bg-[#121c38]',
+	primaryText: 'text-white',
+	focusRing: 'focus:ring-indigo-500',
+	focusBorder: 'focus:border-indigo-500',
+	/* … */
+}
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
 
 ## Subpath exports
 
-| Import path                        | Contents                                                                                                     |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, adapters, hooks, primitives, types                        |
-| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`                                                                                       |
-| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                      |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`, `createMongoCollectionAdapter` |
-| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                              |
+| Import path                        | Contents                                                                              |
+| ---------------------------------- | ------------------------------------------------------------------------------------- |
+| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, adapters, hooks, primitives, types |
+| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`                                                                |
+| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                               |
+| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`          |
+| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                       |
 
 ## License
 
