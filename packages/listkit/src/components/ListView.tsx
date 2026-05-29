@@ -1,7 +1,7 @@
-import { type ReactNode, useMemo, useState } from 'react'
+import { type ReactNode, useCallback, useMemo, useState } from 'react'
 
 import { memoryAdapter } from '../adapters/memory'
-import { useListKitTheme } from '../context/ListKitContext'
+import { ListRefreshProvider, useListKitTheme } from '../context/ListKitContext'
 import {
 	filterParamKey,
 	flattenFilters,
@@ -34,6 +34,8 @@ export type ListViewProps<T> = {
 	beforePagination?: ReactNode
 	portals?: ReactNode
 	errorMessage?: string
+	/** Extra classes for the fixed pagination bar (e.g. to offset around a sidebar). */
+	paginationClassName?: string
 }
 
 export function ListView<T>({
@@ -48,6 +50,7 @@ export function ListView<T>({
 	beforePagination,
 	portals,
 	errorMessage = 'No se pudieron cargar los datos.',
+	paginationClassName,
 }: ListViewProps<T>) {
 	const providerTheme = useListKitTheme()
 	const colorTheme = config.colorTheme ?? providerTheme ?? DEFAULT_COLOR_THEME
@@ -76,6 +79,11 @@ export function ListView<T>({
 
 	const [filtersOpen, setFiltersOpen] = useState(false)
 
+	// Bumped to force a refetch (e.g. after a row mutation). Exposed via
+	// ListRefreshProvider so descendants can call useListRefresh().
+	const [refreshToken, setRefreshToken] = useState(0)
+	const refresh = useCallback(() => setRefreshToken(t => t + 1), [])
+
 	const removeFilter = (id: string) => {
 		params.setMany({ [filterParamKey(id)]: null, page: null })
 	}
@@ -103,6 +111,7 @@ export function ListView<T>({
 		params,
 		filters: activeFilters,
 		pageSize: config.pageSize,
+		refreshToken,
 	})
 
 	const isLoading = externalLoading || dataLoading
@@ -110,109 +119,115 @@ export function ListView<T>({
 	const cardCtx: CardContext<T> = { actions: config.actions ?? {}, colorTheme }
 
 	return (
-		<div className='pb-20'>
-			{(config.title || config.subtitle) && (
-				<header className='mb-2'>
-					{config.title && (
-						<h1 className='text-2xl font-bold text-gray-900'>{config.title}</h1>
-					)}
-					{config.subtitle && (
-						<p className='text-sm text-gray-500'>{config.subtitle}</p>
-					)}
-				</header>
-			)}
+		<ListRefreshProvider value={refresh}>
+			<div className='pb-20'>
+				{(config.title || config.subtitle) && (
+					<header className='mb-2'>
+						{config.title && (
+							<h1 className='text-2xl font-bold text-gray-900'>
+								{config.title}
+							</h1>
+						)}
+						{config.subtitle && (
+							<p className='text-sm text-gray-500'>{config.subtitle}</p>
+						)}
+					</header>
+				)}
 
-			{headerSection}
+				{headerSection}
 
-			<Toolbar
-				searchTerm={localSearchTerm}
-				onSearchChange={handleSearchChange}
-				viewType={viewType}
-				onViewChange={handleViewChange}
-				totalResults={pagination.totalItems}
-				placeholder={config.searchPlaceholder}
-				colorTheme={colorTheme}
-				actions={toolbarActions}
-				showSearch={showSearch}
-				showViewToggle={!!config.table && !!config.card}
-				customContent={toolbarContent}
-				onOpenFilters={hasFilters ? () => setFiltersOpen(true) : undefined}
-				onClearFilters={hasFilters ? clearAllFilters : undefined}
-				filterCount={activeFilters.length}
-			/>
+				<Toolbar
+					searchTerm={localSearchTerm}
+					onSearchChange={handleSearchChange}
+					viewType={viewType}
+					onViewChange={handleViewChange}
+					totalResults={pagination.totalItems}
+					placeholder={config.searchPlaceholder}
+					colorTheme={colorTheme}
+					actions={toolbarActions}
+					showSearch={showSearch}
+					showViewToggle={!!config.table && !!config.card}
+					customContent={toolbarContent}
+					onOpenFilters={hasFilters ? () => setFiltersOpen(true) : undefined}
+					onClearFilters={hasFilters ? clearAllFilters : undefined}
+					filterCount={activeFilters.length}
+				/>
 
-			{hasFilters && (
-				<div className='mt-1 mb-3 flex min-h-[1.75rem] items-center'>
-					<ActiveFilterChips
-						sections={filterSections}
-						activeFilters={activeFilters}
-						onRemove={removeFilter}
-						colorTheme={colorTheme}
-					/>
-				</div>
-			)}
-
-			{afterToolbar}
-
-			{error ? (
-				<div className='rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700'>
-					{errorMessage}
-				</div>
-			) : (
-				<>
-					{config.table && (
-						<Table<T>
-							data={rows}
-							columns={config.table.columns}
-							keyExtractor={getItemKey}
-							rowClassName={config.table.rowClassName}
-							compact={config.table.compact}
-							showHeader={config.table.showHeader}
-							emptyMessage={config.emptyMessage}
-							displayMode={config.card ? tableMode : 'show'}
-							loading={isLoading}
+				{hasFilters && (
+					<div className='mt-1 mb-3 flex min-h-[1.75rem] items-center'>
+						<ActiveFilterChips
+							sections={filterSections}
+							activeFilters={activeFilters}
+							onRemove={removeFilter}
 							colorTheme={colorTheme}
 						/>
-					)}
+					</div>
+				)}
 
-					{config.card && (
-						<Cards<T>
-							data={rows}
-							renderCard={item => config.card!(item, cardCtx)}
-							keyExtractor={getItemKey}
-							isLoading={isLoading}
-							emptyMessage={config.emptyMessage}
-							displayMode={config.table ? cardsMode : 'show'}
-							gridCols={config.gridCols}
-						/>
-					)}
-				</>
-			)}
+				{afterToolbar}
 
-			{beforePagination}
+				{error ? (
+					<div className='rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700'>
+						{errorMessage}
+					</div>
+				) : (
+					<>
+						{config.table && (
+							<Table<T>
+								data={rows}
+								columns={config.table.columns}
+								keyExtractor={getItemKey}
+								rowClassName={config.table.rowClassName}
+								compact={config.table.compact}
+								showHeader={config.table.showHeader}
+								emptyMessage={config.emptyMessage}
+								displayMode={config.card ? tableMode : 'show'}
+								loading={isLoading}
+								colorTheme={colorTheme}
+							/>
+						)}
 
-			<Pagination
-				currentPage={pagination.currentPage}
-				totalPages={pagination.totalPages}
-				totalItems={pagination.totalItems}
-				itemsPerPage={pagination.itemsPerPage}
-				onPageChange={handlePageChange}
-				isLoading={isLoading}
-				colorTheme={colorTheme}
-			/>
+						{config.card && (
+							<Cards<T>
+								data={rows}
+								renderCard={item => config.card!(item, cardCtx)}
+								keyExtractor={getItemKey}
+								isLoading={isLoading}
+								emptyMessage={config.emptyMessage}
+								displayMode={config.table ? cardsMode : 'show'}
+								gridCols={config.gridCols}
+								bare={config.bareCard}
+							/>
+						)}
+					</>
+				)}
 
-			{hasFilters && (
-				<FilterSidebar
-					open={filtersOpen}
-					onClose={() => setFiltersOpen(false)}
-					sections={filterSections}
-					params={params}
-					title={config.filtersTitle}
+				{beforePagination}
+
+				<Pagination
+					currentPage={pagination.currentPage}
+					totalPages={pagination.totalPages}
+					totalItems={pagination.totalItems}
+					itemsPerPage={pagination.itemsPerPage}
+					onPageChange={handlePageChange}
+					isLoading={isLoading}
 					colorTheme={colorTheme}
+					className={paginationClassName}
 				/>
-			)}
 
-			{portals}
-		</div>
+				{hasFilters && (
+					<FilterSidebar
+						open={filtersOpen}
+						onClose={() => setFiltersOpen(false)}
+						sections={filterSections}
+						params={params}
+						title={config.filtersTitle}
+						colorTheme={colorTheme}
+					/>
+				)}
+
+				{portals}
+			</div>
+		</ListRefreshProvider>
 	)
 }

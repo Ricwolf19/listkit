@@ -1,5 +1,11 @@
 # @pibytelabs/listkit
 
+## 2.0.2
+
+### Patch Changes
+
+- e04a128: Add `bareCard` config to render fully custom cards without the default `<Card>` chrome; expose `paginationClassName` on `ListView` to offset the fixed pagination bar around app layout (e.g. a sidebar); add `useListRefresh()` so descendants (like a row's delete button) can refetch the list after a mutation without a full page reload; and fix table header alignment for right/center-aligned columns.
+
 ## 2.0.1
 
 ### Patch Changes

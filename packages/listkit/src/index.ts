@@ -5,6 +5,7 @@ export { defineListConfig } from './config/defineListConfig'
 export {
 	ListKitProvider,
 	type ListKitProviderProps,
+	useListRefresh,
 } from './context/ListKitContext'
 
 // Sub-components for advanced composition

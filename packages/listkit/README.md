@@ -12,6 +12,8 @@
 - **Advanced filters** — `text`, `select`, `multi-select`, `date-range`, `number-range`, `boolean`; values are Zod-validated and synced to the URL.
 - **Router adapters** — sync list state to the URL via pluggable adapters: Next.js, React Router, or the framework-free browser adapter.
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
+- **Custom cards** — use the built-in card chrome, or `bareCard` to drop in a fully custom card component.
+- **Refresh on mutation** — `useListRefresh()` refetches the list after a delete/edit, no full page reload.
 - **Composable + type-safe** — use `<ListView>`, or drop down to `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
 
 ## Install
@@ -200,6 +202,52 @@ defineListConfig<Product>({
 	),
 })
 ```
+
+### Fully custom cards (`bareCard`)
+
+By default each `card` is wrapped in listkit's `<Card>` (border, padding, shadow). Set `bareCard: true` to render your `card` output directly — drop in your own card component without double chrome:
+
+```tsx
+defineListConfig<Post>({
+	bareCard: true,
+	gridCols: 'md:grid-cols-2 lg:grid-cols-3',
+	card: post => <MyPostCard {...post} />,
+})
+```
+
+### Refreshing after a mutation
+
+With an async adapter, listkit fetches on the client, so a server mutation won't show until the query changes. Call `useListRefresh()` from any descendant of `<ListView>` (a row's delete button, a modal) to force a refetch — no full page reload. It's a no-op outside a `ListView`, so shared buttons stay safe:
+
+```tsx
+import { useListRefresh } from '@pibytelabs/listkit'
+
+function DeleteButton({ onConfirm }) {
+	const refresh = useListRefresh()
+	return (
+		<button
+			onClick={async () => {
+				await onConfirm() // server action
+				refresh() // row disappears immediately
+			}}
+		>
+			Eliminar
+		</button>
+	)
+}
+```
+
+In-memory lists (the `data` prop) refresh automatically when `data` changes — this is only needed for async adapters.
+
+### Offsetting the pagination bar
+
+The pagination bar is `position: fixed`. Pass `paginationClassName` to clear app chrome such as a sidebar (merged via tailwind-merge, so a `left-*` overrides the default `left-0`):
+
+```tsx
+<ListView config={config} adapter={adapter} paginationClassName='lg:left-64' />
+```
+
+For a sidebar whose width changes (collapse), drive it with a CSS variable the sidebar sets and a class that reads it, e.g. `left-[var(--sidebar-w)]`.
 
 ### Async data (server-side)
 

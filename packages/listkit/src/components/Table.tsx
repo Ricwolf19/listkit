@@ -90,7 +90,7 @@ export function Table<T>({
 										{visibleColumns.map(col => {
 											const headerText =
 												typeof col.header === 'string' ? col.header : ''
-											const showTooltip = headerText.length > 14
+											const showTooltip = headerText.length > 16
 											return (
 												<th
 													key={col.key}
@@ -103,7 +103,7 @@ export function Table<T>({
 													)}
 													style={col.width ? { width: col.width } : undefined}
 												>
-													<span className='block max-w-[12rem] truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase'>
+													<span className='block truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase'>
 														{col.header}
 													</span>
 													{showTooltip && (
