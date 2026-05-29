@@ -1,6 +1,7 @@
 {
 	"name": "@pibytelabs/listkit",
 	"version": "1.0.0",
+	"readme": "README.md",
 	"description": "Standardized list views for React — table/cards, search, pagination, advanced filters.",
 	"keywords": [
 		"react",
@@ -103,7 +104,8 @@
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0",
 		"react-router-dom": "^6.0.0 || ^7.0.0",
-		"tailwindcss": "^4.0.0"
+		"tailwindcss": "^4.0.0",
+		"zod": "^3.23.0 || ^4.0.0"
 	},
 	"peerDependenciesMeta": {
 		"lucide-react": {
@@ -117,6 +119,9 @@
 		},
 		"tailwindcss": {
 			"optional": false
+		},
+		"zod": {
+			"optional": true
 		}
 	},
 	"dependencies": {
@@ -132,6 +137,7 @@
 		"react-dom": "^19.0.0",
 		"react-router-dom": "^7.0.0",
 		"tsup": "^8.3.5",
-		"typescript": "^5.7.2"
+		"typescript": "^5.7.2",
+		"zod": "^4.0.0"
 	}
 }
