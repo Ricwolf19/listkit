@@ -24,9 +24,7 @@ export default defineConfig({
 		'next/router',
 		'react-router-dom',
 		'react-router',
-		'react-day-picker',
-		'@floating-ui/react',
-		'date-fns',
+		'react-datepicker',
 		'zod',
 	],
 })
