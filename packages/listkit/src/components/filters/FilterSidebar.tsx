@@ -147,11 +147,36 @@ export function FilterSidebar<T>({
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') onClose()
+			if (e.key === 'Escape') {
+				onClose()
+				return
+			}
+			// Enter applies the filters from anywhere in the panel, not just from a
+			// native input that happens to trigger the form's implicit submit (custom
+			// controls like selects or the date picker don't). Buttons and textareas
+			// keep their own Enter behaviour.
+			if (e.key === 'Enter') {
+				const tag = (e.target as HTMLElement | null)?.tagName.toLowerCase()
+				if (tag === 'button' || tag === 'textarea') return
+				e.preventDefault()
+				apply()
+				onClose()
+			}
 		}
 		if (open) document.addEventListener('keydown', onKey)
 		return () => document.removeEventListener('keydown', onKey)
-	}, [open, onClose])
+	}, [open, onClose, apply])
+
+	// Lock background scroll while the panel is open so the wheel/touch scroll
+	// stays inside the sidebar instead of moving the page behind it.
+	useEffect(() => {
+		if (!open) return
+		const previous = document.body.style.overflow
+		document.body.style.overflow = 'hidden'
+		return () => {
+			document.body.style.overflow = previous
+		}
+	}, [open])
 
 	if (!mounted) return null
 
@@ -215,15 +240,18 @@ export function FilterSidebar<T>({
 					</button>
 				</header>
 
-				{/* Form wraps content + footer so Enter submits from any input */}
+				{/* Form wraps content + footer so Enter submits from any input.
+				    `min-h-0` lets the scroll area shrink below its content (without it
+				    the flex child refuses to shrink, the panel overflows the viewport,
+				    and the page scrolls behind the sidebar instead). */}
 				<form
-					className='flex flex-1 flex-col'
+					className='flex min-h-0 flex-1 flex-col'
 					onSubmit={e => {
 						e.preventDefault()
 						handleApply()
 					}}
 				>
-					<div className='flex-1 overflow-y-auto px-6 py-5'>
+					<div className='min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5'>
 						<div className='space-y-5'>
 							{sections.map(section => (
 								<SectionFilters

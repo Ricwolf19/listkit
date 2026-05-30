@@ -1,4 +1,11 @@
-import { CATEGORIES, type Product, TAGS } from './types'
+import {
+	CATEGORIES,
+	ORIGINS,
+	type Product,
+	ROAST_LEVELS,
+	SUPPLIERS,
+	TAGS,
+} from './types'
 
 const PRODUCT_NAMES = [
 	'Café Arábica Premium',
@@ -78,6 +85,12 @@ function generateProduct(index: number): Product {
 		price: Math.round(randFloat(29, 899) * 100) / 100,
 		inStock: stock > 0,
 		createdAt: daysAgo(rand(730)),
+		supplier: SUPPLIERS[rand(SUPPLIERS.length)]!,
+		origin: ORIGINS[rand(ORIGINS.length)]!,
+		roastLevel: ROAST_LEVELS[rand(ROAST_LEVELS.length)]!,
+		rating: Math.round(randFloat(1, 5) * 10) / 10,
+		weightGrams: [250, 500, 1000][rand(3)]!,
+		featured: seededRandom(seed * 5.5) > 0.7,
 	}
 }
 
