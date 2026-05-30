@@ -10,6 +10,10 @@ export type ColumnDef<T> = {
 	align?: 'left' | 'center' | 'right'
 	width?: string
 	hidden?: boolean
+	/** Makes the header clickable to sort by this column (cycles asc → desc → off). */
+	sortable?: boolean
+	/** Field the sort targets when `sortable`. Defaults to `key`. */
+	sortField?: string
 }
 
 export type TableConfig<T> = {

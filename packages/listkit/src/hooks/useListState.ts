@@ -1,13 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import type { DataAdapter, ListQuery, UseListDataHook } from '../types/data'
+import { DEFAULT_PAGE_SIZE } from '../constants'
+import { decodeSort, encodeSort, SORT_PARAM } from '../filters/serialize'
+import type {
+	DataAdapter,
+	ListDataSeed,
+	ListQuery,
+	ListResult,
+	SortState,
+	UseListDataHook,
+} from '../types/data'
 import type { ActiveFilterValue } from '../types/filters'
 import type { DisplayMode, PaginationState } from '../types/list'
 import { useListData as defaultUseListData } from './useListData'
 import type { ListParams } from './useListParams'
 import { useViewType } from './useViewType'
-
-const DEFAULT_PAGE_SIZE = 20
 
 type UseListStateOptions<T> = {
 	adapter: DataAdapter<T>
@@ -20,6 +27,10 @@ type UseListStateOptions<T> = {
 	useListData?: UseListDataHook<T>
 	/** Milliseconds to keep adapter responses in memory (default 30_000). */
 	staleTime?: number
+	/** Server-fetched first page, for SSR without a loading flash. */
+	initialData?: ListResult<T>
+	/** The query `initialData` answers (build it with `buildListQuery`). */
+	initialQuery?: ListQuery
 }
 
 export function useListState<T>({
@@ -31,6 +42,8 @@ export function useListState<T>({
 	refreshToken = 0,
 	useListData = defaultUseListData,
 	staleTime,
+	initialData,
+	initialQuery,
 }: UseListStateOptions<T>) {
 	const { get, set } = params
 	const { viewType, handleViewChange } = useViewType()
@@ -60,23 +73,52 @@ export function useListState<T>({
 	// Serialized so a new array identity each render doesn't refetch needlessly.
 	const filtersKey = filters ? JSON.stringify(filters) : ''
 
+	const sortRaw = get(SORT_PARAM)
+	const sort = useMemo(() => decodeSort(sortRaw ?? null), [sortRaw])
+
 	const query = useMemo<ListQuery>(
 		() => ({
 			page: currentPage,
 			pageSize,
 			search: currentSearch.trim() || undefined,
 			filters: filters && filters.length > 0 ? filters : undefined,
+			sort,
 		}),
 		// filtersKey stands in for `filters` contents.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[currentPage, pageSize, currentSearch, filtersKey]
+		[currentPage, pageSize, currentSearch, filtersKey, sortRaw]
+	)
+
+	const handleSortChange = useCallback(
+		(field: string) => {
+			// Cycle: not sorted → asc → desc → cleared. Reset to page 1 on change.
+			const current = decodeSort(get(SORT_PARAM) ?? null)
+			let next: SortState | undefined
+			if (current?.field !== field) next = { field, dir: 'asc' }
+			else if (current.dir === 'asc') next = { field, dir: 'desc' }
+			else next = undefined
+			params.setMany({
+				[SORT_PARAM]: next ? encodeSort(next) : null,
+				page: null,
+			})
+		},
+		[get, params]
+	)
+
+	const seed = useMemo<ListDataSeed<T> | undefined>(
+		() =>
+			initialData && initialQuery
+				? { query: initialQuery, data: initialData }
+				: undefined,
+		[initialData, initialQuery]
 	)
 
 	const { data, total, isLoading, error } = useListData(
 		adapter,
 		query,
 		refreshToken,
-		staleTime
+		staleTime,
+		seed
 	)
 
 	const totalPages = Math.max(1, Math.ceil(total / pageSize))
@@ -133,5 +175,7 @@ export function useListState<T>({
 		handleViewChange,
 		cardsMode,
 		tableMode,
+		sort,
+		handleSortChange,
 	}
 }

@@ -162,14 +162,15 @@ export const productsConfig = defineListConfig<Product>({
 
 	table: {
 		columns: [
-			{ key: 'name', header: 'Nombre' },
+			{ key: 'name', header: 'Nombre', sortable: true },
 			{ key: 'sku', header: 'SKU' },
-			{ key: 'category', header: 'Categoría' },
-			{ key: 'stock', header: 'Stock', align: 'right' },
+			{ key: 'category', header: 'Categoría', sortable: true },
+			{ key: 'stock', header: 'Stock', align: 'right', sortable: true },
 			{
 				key: 'price',
 				header: 'Precio',
 				align: 'right',
+				sortable: true,
 				render: item => currency(item.price),
 			},
 		],

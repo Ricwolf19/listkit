@@ -53,7 +53,22 @@ export function memoryAdapter<T>(
 			if (query.filters && query.filters.length > 0) {
 				rows = applyFilters(rows, query.filters)
 			}
-			if (options.sort) {
+			if (query.sort) {
+				// Active column sort wins over the config's default sorter.
+				const { field, dir } = query.sort
+				const factor = dir === 'desc' ? -1 : 1
+				rows = [...rows].sort((a, b) => {
+					const av = getPath(a, field)
+					const bv = getPath(b, field)
+					if (av == null && bv == null) return 0
+					if (av == null) return 1
+					if (bv == null) return -1
+					if (typeof av === 'number' && typeof bv === 'number') {
+						return (av - bv) * factor
+					}
+					return String(av).localeCompare(String(bv)) * factor
+				})
+			} else if (options.sort) {
 				rows = options.sort([...rows])
 			}
 			const total = rows.length

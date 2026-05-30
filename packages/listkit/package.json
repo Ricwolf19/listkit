@@ -84,6 +84,16 @@
 				"default": "./dist/adapters.cjs"
 			}
 		},
+		"./server": {
+			"import": {
+				"types": "./dist/server.d.ts",
+				"default": "./dist/server.js"
+			},
+			"require": {
+				"types": "./dist/server.d.cts",
+				"default": "./dist/server.cjs"
+			}
+		},
 		"./tailwind.css": "./tailwind.css",
 		"./package.json": "./package.json"
 	},

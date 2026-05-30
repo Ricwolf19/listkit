@@ -20,7 +20,7 @@ const asyncAdapter = serverActionAdapter<(typeof PRODUCTS)[0]>(async query => {
 	await new Promise(r => setTimeout(r, 300))
 
 	const all = [...PRODUCTS]
-	const { search, filters, page, pageSize } = query
+	const { search, filters, page, pageSize, sort } = query
 
 	let rows = all
 
@@ -86,6 +86,19 @@ const asyncAdapter = serverActionAdapter<(typeof PRODUCTS)[0]>(async query => {
 				})
 			}
 		}
+	}
+
+	// Column sort (server-side simulation)
+	if (sort) {
+		const factor = sort.dir === 'desc' ? -1 : 1
+		rows = [...rows].sort((a, b) => {
+			const av = a[sort.field as keyof typeof a]
+			const bv = b[sort.field as keyof typeof b]
+			if (typeof av === 'number' && typeof bv === 'number') {
+				return (av - bv) * factor
+			}
+			return String(av).localeCompare(String(bv)) * factor
+		})
 	}
 
 	const total = rows.length
