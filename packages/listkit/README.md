@@ -321,6 +321,20 @@ export default async function OrdersPage({
 }
 ```
 
+> Since the config is now read in a Server Component, build it with
+> `defineListConfig` from **`@pibytelabs/listkit/server`** (not the main entry).
+> The main entry pulls in client context (`createContext`) and would crash the
+> RSC render. Both the server page and the client list view can import the same
+> config module when it's defined this way.
+
+```tsx
+// config.ts — shared by the server page and the client list view
+import { defineListConfig } from '@pibytelabs/listkit/server'
+export const ordersConfig = defineListConfig<Order>({
+	/* … */
+})
+```
+
 ```tsx
 // OrdersList.tsx — a Client Component
 'use client'
@@ -580,14 +594,14 @@ defineListConfig({ colorTheme: brand, /* … */ })
 
 ## Subpath exports
 
-| Import path                        | Contents                                                                              |
-| ---------------------------------- | ------------------------------------------------------------------------------------- |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, adapters, hooks, primitives, types |
-| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`                                                                |
-| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                               |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`          |
-| `@pibytelabs/listkit/server`       | `buildListQuery` — React Server Component-safe (no React/DOM), for SSR `initialData`  |
-| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                       |
+| Import path                        | Contents                                                                                |
+| ---------------------------------- | --------------------------------------------------------------------------------------- |
+| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, adapters, hooks, primitives, types   |
+| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`                                                                  |
+| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                 |
+| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`            |
+| `@pibytelabs/listkit/server`       | `buildListQuery`, `defineListConfig` — RSC-safe (no React/DOM), for SSR configs/queries |
+| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                         |
 
 ## License
 
