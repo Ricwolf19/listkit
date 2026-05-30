@@ -10,6 +10,8 @@ export type FilterButtonProps = {
 	label?: string
 	colorTheme?: ColorTheme
 	className?: string
+	/** Keyboard shortcut shown in the button tooltip, e.g. "Shift + F". */
+	shortcutHint?: string
 }
 
 export function FilterButton({
@@ -19,6 +21,7 @@ export function FilterButton({
 	label = 'Filtros',
 	colorTheme = 'red',
 	className,
+	shortcutHint,
 }: FilterButtonProps) {
 	const theme = getColorTheme(colorTheme)
 	const active = activeCount > 0
@@ -28,6 +31,7 @@ export function FilterButton({
 			<button
 				type='button'
 				onClick={onClick}
+				title={shortcutHint ? `${label} (${shortcutHint})` : label}
 				className={cn(
 					'inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none active:scale-[0.98]',
 					active

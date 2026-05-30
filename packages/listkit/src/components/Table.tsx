@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 
-import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
+import { type ColorTheme } from '../theme/colorTheme'
 import type { ColumnDef } from '../types/config'
 import type { DisplayMode } from '../types/list'
 import { cn } from '../utils/cn'
@@ -48,9 +48,9 @@ export function Table<T>({
 	compact = false,
 	showHeader = true,
 	className,
-	colorTheme = 'red',
+	// colorTheme = 'red',
 }: TableProps<T>) {
-	const theme = getColorTheme(colorTheme)
+	// const theme = getColorTheme(colorTheme)
 	if (displayMode === 'hide') return null
 
 	const visibility = displayVisibility(displayMode, 'table')
@@ -80,11 +80,7 @@ export function Table<T>({
 						<table className='min-w-full divide-y divide-gray-200'>
 							{showHeader && (
 								<thead
-									className={cn(
-										'bg-gray-50/80',
-										'border-b-2',
-										theme.chipBorder
-									)}
+									className={cn('bg-gray-100', 'border-b border-gray-200')}
 								>
 									<tr>
 										{visibleColumns.map(col => {

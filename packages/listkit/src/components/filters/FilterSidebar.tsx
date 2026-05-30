@@ -1,15 +1,15 @@
-import { X } from 'lucide-react'
+import { SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
 import { useFilters } from '../../hooks/useFilters'
 import type { ListParams } from '../../hooks/useListParams'
 import { type ColorTheme, getColorTheme } from '../../theme/colorTheme'
-import type { FilterSection } from '../../types/filters'
+import type { FilterDefinition, FilterSection } from '../../types/filters'
 import { cn } from '../../utils/cn'
 import { Button } from '../Button'
 import { DynamicFilter } from './DynamicFilter'
 
-const ANIMATION_MS = 200
+const ANIMATION_MS = 300
 
 export type FilterSidebarProps<T> = {
 	open: boolean
@@ -18,6 +18,98 @@ export type FilterSidebarProps<T> = {
 	params: ListParams
 	title?: string
 	colorTheme?: ColorTheme
+}
+
+function SectionFilters<T>({
+	section,
+	theme,
+	colorTheme,
+	draft,
+	setValue,
+}: {
+	section: FilterSection<T>
+	theme: ReturnType<typeof getColorTheme>
+	colorTheme: ColorTheme
+	draft: Record<string, unknown>
+	setValue: (id: string, value: unknown) => void
+}) {
+	const hasGrid = section.filters.some(f => f.columns === 2)
+
+	return (
+		<section
+			key={section.id}
+			className='rounded-xl border border-gray-100 bg-gray-50/40 p-4'
+		>
+			{(section.title || section.description) && (
+				<div className='mb-4 flex items-center gap-2.5'>
+					<div className={cn('h-5 w-1 rounded-full', theme.primaryBg)} />
+					<div>
+						{section.title && (
+							<h3 className='text-sm font-semibold text-gray-900'>
+								{section.title}
+							</h3>
+						)}
+						{section.description && (
+							<p className='text-xs text-gray-500'>{section.description}</p>
+						)}
+					</div>
+				</div>
+			)}
+			<div
+				className={cn(
+					'space-y-5',
+					hasGrid && 'grid grid-cols-2 space-y-0 gap-x-4 gap-y-6'
+				)}
+			>
+				{section.filters.map(def => (
+					<FilterField
+						key={def.id}
+						def={def}
+						value={draft[def.id]}
+						onChange={value => setValue(def.id, value)}
+						colorTheme={colorTheme}
+						hasGrid={hasGrid}
+					/>
+				))}
+			</div>
+		</section>
+	)
+}
+
+function FilterField({
+	def,
+	value,
+	onChange,
+	colorTheme,
+	hasGrid,
+}: {
+	def: FilterDefinition
+	value: unknown
+	onChange: (value: unknown) => void
+	colorTheme: ColorTheme
+	hasGrid: boolean
+}) {
+	return (
+		<div
+			className={cn(
+				'space-y-1.5',
+				hasGrid && def.columns === 1 && 'col-span-2'
+			)}
+		>
+			<label className='block text-sm font-medium text-gray-700'>
+				{def.label}
+			</label>
+			{def.description && (
+				<p className='text-xs text-gray-500'>{def.description}</p>
+			)}
+			<DynamicFilter
+				def={def}
+				value={value}
+				onChange={onChange}
+				colorTheme={colorTheme}
+			/>
+		</div>
+	)
 }
 
 export function FilterSidebar<T>({
@@ -35,8 +127,7 @@ export function FilterSidebar<T>({
 	const [mounted, setMounted] = useState(open)
 	const [shown, setShown] = useState(false)
 
-	// Enter/exit transition — keyed on `open` only so a re-render (e.g. a fresh
-	// `params`/`reset` identity) can't restart it mid-animation.
+	// Enter/exit transition — keyed on `open` only so a re-render can't restart it.
 	useEffect(() => {
 		if (open) {
 			setMounted(true)
@@ -71,86 +162,107 @@ export function FilterSidebar<T>({
 
 	return (
 		<div className='fixed inset-0 z-50 flex justify-end'>
+			{/* Backdrop */}
 			<div
 				className={cn(
-					'absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-200',
+					'absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity',
 					shown ? 'opacity-100' : 'opacity-0'
 				)}
+				style={{ transitionDuration: `${ANIMATION_MS}ms` }}
 				onClick={onClose}
 				aria-hidden
 			/>
+
+			{/* Panel */}
 			<div
 				className={cn(
-					'relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl transition-transform duration-200 ease-out',
+					'relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl transition-transform',
 					shown ? 'translate-x-0' : 'translate-x-full'
 				)}
+				style={{
+					transitionDuration: `${ANIMATION_MS}ms`,
+					transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)',
+				}}
 				role='dialog'
 				aria-modal
 			>
-				<header className='flex items-center justify-between border-b border-gray-200 px-6 py-4'>
-					<h2 className='text-lg font-semibold text-gray-900'>{title}</h2>
+				{/* Header */}
+				<header className='flex items-center justify-between border-b border-gray-200 px-6 py-5'>
+					<div className='flex items-center gap-3'>
+						<div
+							className={cn(
+								'flex h-10 w-10 items-center justify-center rounded-lg',
+								theme.primaryBg,
+								theme.primaryText
+							)}
+						>
+							<SlidersHorizontal className='h-5 w-5' />
+						</div>
+						<div>
+							<h2 className='text-xl font-bold text-gray-900'>{title}</h2>
+							<p className='text-xs text-gray-500'>
+								Ajusta los filtros y presiona Enter para aplicar
+							</p>
+						</div>
+					</div>
 					<button
 						type='button'
 						onClick={onClose}
 						aria-label='Cerrar'
-						className='cursor-pointer rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
+						className='cursor-pointer rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
 					>
 						<X className='h-5 w-5' />
 					</button>
 				</header>
 
-				<div className='flex-1 space-y-6 overflow-y-auto px-6 py-5'>
-					{sections.map(section => (
-						<section key={section.id} className='space-y-4'>
-							{(section.title || section.description) && (
-								<div>
-									{section.title && (
-										<h3 className='text-sm font-semibold text-gray-900'>
-											{section.title}
-										</h3>
-									)}
-									{section.description && (
-										<p className='text-xs text-gray-500'>
-											{section.description}
-										</p>
-									)}
-								</div>
-							)}
-							{section.filters.map(def => (
-								<div key={def.id} className='space-y-1.5'>
-									<label className='block text-sm font-medium text-gray-700'>
-										{def.label}
-									</label>
-									{def.description && (
-										<p className='text-xs text-gray-500'>{def.description}</p>
-									)}
-									<DynamicFilter
-										def={def}
-										value={draft[def.id]}
-										onChange={value => setValue(def.id, value)}
-										colorTheme={colorTheme}
-									/>
-								</div>
+				{/* Form wraps content + footer so Enter submits from any input */}
+				<form
+					className='flex flex-1 flex-col'
+					onSubmit={e => {
+						e.preventDefault()
+						handleApply()
+					}}
+				>
+					<div className='flex-1 overflow-y-auto px-6 py-5'>
+						<div className='space-y-5'>
+							{sections.map(section => (
+								<SectionFilters
+									key={section.id}
+									section={section}
+									theme={theme}
+									colorTheme={colorTheme}
+									draft={draft}
+									setValue={setValue}
+								/>
 							))}
-						</section>
-					))}
-				</div>
+						</div>
+					</div>
 
-				<footer className='flex items-center justify-between gap-3 border-t border-gray-200 px-6 py-4'>
-					<Button variant='ghost' onClick={clear}>
-						Limpiar
-					</Button>
-					<Button
-						onClick={handleApply}
-						className={cn(
-							theme.primaryBg,
-							theme.primaryText,
-							theme.primaryHover
-						)}
-					>
-						Aplicar filtros
-					</Button>
-				</footer>
+					{/* Footer inside form so the submit button is native */}
+					<footer className='flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]'>
+						<Button
+							type='button'
+							variant='ghost'
+							size='md'
+							onClick={clear}
+							className='text-gray-500 hover:text-gray-700'
+						>
+							Limpiar todo
+						</Button>
+						<Button
+							type='submit'
+							size='md'
+							className={cn(
+								'px-6 shadow-lg shadow-black/10',
+								theme.primaryBg,
+								theme.primaryText,
+								theme.primaryHover
+							)}
+						>
+							Aplicar filtros
+						</Button>
+					</footer>
+				</form>
 			</div>
 		</div>
 	)

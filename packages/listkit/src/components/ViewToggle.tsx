@@ -9,6 +9,8 @@ type ViewToggleProps = {
 	onViewChange: (view: ViewType) => void
 	className?: string
 	colorTheme?: ColorTheme
+	/** Keyboard shortcut shown in tooltips, e.g. "Shift + V". */
+	shortcutHint?: string
 }
 
 export function ViewToggle({
@@ -16,12 +18,13 @@ export function ViewToggle({
 	onViewChange,
 	className,
 	colorTheme = 'red',
+	shortcutHint,
 }: ViewToggleProps) {
 	const theme = getColorTheme(colorTheme)
 
 	const buttonClass = (active: boolean) =>
 		cn(
-			'flex h-8 cursor-pointer items-center gap-2 rounded-md px-3 text-sm font-medium transition-all duration-150 active:scale-[0.98]',
+			'flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-all duration-150 active:scale-[0.98]',
 			active
 				? cn(
 						theme.viewToggleActiveBg,
@@ -34,7 +37,7 @@ export function ViewToggle({
 	return (
 		<div
 			className={cn(
-				'inline-flex h-10 items-center gap-1 rounded-lg bg-gray-100 p-1',
+				'inline-flex h-11 items-center gap-1 rounded-xl bg-gray-100 p-1',
 				className
 			)}
 		>
@@ -42,7 +45,9 @@ export function ViewToggle({
 				type='button'
 				onClick={() => onViewChange('table')}
 				className={buttonClass(view === 'table')}
-				title='Vista de tabla'
+				title={
+					shortcutHint ? `Vista de tabla (${shortcutHint})` : 'Vista de tabla'
+				}
 			>
 				<TableIcon className='h-4 w-4' />
 				<span className='hidden sm:inline'>Tabla</span>
@@ -51,7 +56,11 @@ export function ViewToggle({
 				type='button'
 				onClick={() => onViewChange('cards')}
 				className={buttonClass(view === 'cards')}
-				title='Vista de tarjetas'
+				title={
+					shortcutHint
+						? `Vista de tarjetas (${shortcutHint})`
+						: 'Vista de tarjetas'
+				}
 			>
 				<LayoutGrid className='h-4 w-4' />
 				<span className='hidden sm:inline'>Tarjetas</span>

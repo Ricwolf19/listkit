@@ -33,3 +33,11 @@ export type ListResult<T> = {
 export type DataAdapter<T> = {
 	fetch(query: ListQuery, signal?: AbortSignal): Promise<ListResult<T>>
 }
+
+/** Shape of the built-in useListData hook so consumers can inject their own (e.g. TanStack Query). */
+export type UseListDataHook<T> = (
+	adapter: DataAdapter<T>,
+	query: ListQuery,
+	refreshToken?: number,
+	staleTime?: number
+) => ListResult<T> & { isLoading: boolean; error: Error | null }

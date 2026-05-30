@@ -18,11 +18,6 @@ type PaginationProps = {
 	onPageChange: (page: number) => void
 	isLoading?: boolean
 	colorTheme?: ColorTheme
-	/**
-	 * Extra classes for the fixed bar — lets the host app offset it around app
-	 * chrome (e.g. `lg:left-64` to clear a sidebar). Merged via tailwind-merge,
-	 * so a `left-*` here overrides the default `left-0`.
-	 */
 	className?: string
 }
 
@@ -92,16 +87,16 @@ export function Pagination({
 		}
 	}
 
-	const arrowBtn = 'h-8 w-8 p-1.5 text-gray-600'
+	const arrowBtn = 'h-9 w-9 p-2 text-gray-600'
 
 	return (
 		<div
 			ref={ref}
 			className={cn(
-				'fixed right-0 bottom-0 left-0 z-10 flex items-center justify-between gap-4 border-t border-gray-200 bg-white/95 px-4 py-2.5 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:px-6',
+				'fixed right-0 bottom-0 left-0 z-10 flex items-center justify-between gap-4 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:px-6',
 				className
 			)}
-			style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.625rem)' }}
+			style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}
 			aria-label='Paginación'
 		>
 			<div className='min-w-0 flex-1 truncate text-xs text-gray-600 sm:text-sm'>
@@ -116,13 +111,24 @@ export function Pagination({
 						<span className='hidden sm:inline'>Cargando…</span>
 					</span>
 				) : totalItems === 0 ? (
-					<span>0 resultados</span>
+					<span className='font-medium text-gray-900'>0 resultados</span>
 				) : (
-					<span>
-						Mostrando <span className='font-medium'>{startItem}</span>–
-						<span className='font-medium'>{endItem}</span> de{' '}
-						<span className='font-medium'>{totalItems}</span>
-					</span>
+					<div className='flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3'>
+						<span>
+							<span className='hidden text-gray-500 sm:inline'>Mostrando </span>
+							<span className='font-semibold text-gray-900'>
+								{startItem}–{endItem}
+							</span>{' '}
+							<span className='text-gray-500'>de {totalItems}</span>
+						</span>
+						<span className='hidden text-gray-300 sm:inline'>|</span>
+						<span className='text-xs text-gray-500 sm:text-sm'>
+							Página{' '}
+							<span className='font-semibold text-gray-900'>{currentPage}</span>{' '}
+							de{' '}
+							<span className='font-semibold text-gray-900'>{totalPages}</span>
+						</span>
+					</div>
 				)}
 			</div>
 
@@ -135,7 +141,7 @@ export function Pagination({
 					className={cn('hidden sm:flex', arrowBtn, theme.softHoverBg)}
 					title='Primera página'
 				>
-					<ChevronsLeft className='h-3.5 w-3.5' />
+					<ChevronsLeft className='h-4 w-4' />
 				</Button>
 				<Button
 					variant='ghost'
@@ -145,7 +151,7 @@ export function Pagination({
 					className={cn(arrowBtn, theme.softHoverBg)}
 					title='Página anterior'
 				>
-					<ChevronLeft className='h-3.5 w-3.5' />
+					<ChevronLeft className='h-4 w-4' />
 				</Button>
 
 				<div className='mx-2 hidden items-center gap-1 md:flex'>
@@ -165,9 +171,14 @@ export function Pagination({
 								onClick={() => goTo(page)}
 								disabled={isLoading}
 								className={cn(
-									'h-8 min-w-8 px-2 py-1 text-xs',
+									'h-9 min-w-9 px-2 py-1 text-xs font-medium',
 									page === currentPage
-										? cn(theme.primaryBg, theme.primaryText, theme.primaryHover)
+										? cn(
+												theme.primaryBg,
+												theme.primaryText,
+												theme.primaryHover,
+												'shadow-sm'
+											)
 										: cn('text-gray-600', theme.softHoverBg)
 								)}
 							>
@@ -178,7 +189,7 @@ export function Pagination({
 				</div>
 
 				<div className='mx-2 flex items-center md:hidden'>
-					<span className='text-xs whitespace-nowrap text-gray-500'>
+					<span className='text-xs font-medium whitespace-nowrap text-gray-700'>
 						{currentPage} / {totalPages}
 					</span>
 				</div>
@@ -191,7 +202,7 @@ export function Pagination({
 					className={cn(arrowBtn, theme.softHoverBg)}
 					title='Página siguiente'
 				>
-					<ChevronRight className='h-3.5 w-3.5' />
+					<ChevronRight className='h-4 w-4' />
 				</Button>
 				<Button
 					variant='ghost'
@@ -201,7 +212,7 @@ export function Pagination({
 					className={cn('hidden sm:flex', arrowBtn, theme.softHoverBg)}
 					title='Última página'
 				>
-					<ChevronsRight className='h-3.5 w-3.5' />
+					<ChevronsRight className='h-4 w-4' />
 				</Button>
 			</div>
 		</div>

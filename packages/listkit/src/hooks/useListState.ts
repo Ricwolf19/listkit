@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
-import type { DataAdapter, ListQuery } from '../types/data'
+import type { DataAdapter, ListQuery, UseListDataHook } from '../types/data'
 import type { ActiveFilterValue } from '../types/filters'
 import type { DisplayMode, PaginationState } from '../types/list'
-import { useListData } from './useListData'
+import { useListData as defaultUseListData } from './useListData'
 import type { ListParams } from './useListParams'
 import { useViewType } from './useViewType'
 
@@ -16,6 +16,10 @@ type UseListStateOptions<T> = {
 	pageSize?: number
 	searchDebounce?: number
 	refreshToken?: number
+	/** Optional data hook override (e.g. TanStack Query). */
+	useListData?: UseListDataHook<T>
+	/** Milliseconds to keep adapter responses in memory (default 30_000). */
+	staleTime?: number
 }
 
 export function useListState<T>({
@@ -25,6 +29,8 @@ export function useListState<T>({
 	pageSize = DEFAULT_PAGE_SIZE,
 	searchDebounce = 400,
 	refreshToken = 0,
+	useListData = defaultUseListData,
+	staleTime,
 }: UseListStateOptions<T>) {
 	const { get, set } = params
 	const { viewType, handleViewChange } = useViewType()
@@ -69,7 +75,8 @@ export function useListState<T>({
 	const { data, total, isLoading, error } = useListData(
 		adapter,
 		query,
-		refreshToken
+		refreshToken,
+		staleTime
 	)
 
 	const totalPages = Math.max(1, Math.ceil(total / pageSize))
