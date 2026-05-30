@@ -1,6 +1,6 @@
 {
 	"name": "@pibytelabs/listkit",
-	"version": "2.0.4",
+	"version": "2.1.0",
 	"description": "Standardized list views for React — table/cards, search, pagination, advanced filters.",
 	"keywords": [
 		"react",
@@ -82,6 +82,16 @@
 			"require": {
 				"types": "./dist/adapters.d.cts",
 				"default": "./dist/adapters.cjs"
+			}
+		},
+		"./server": {
+			"import": {
+				"types": "./dist/server.d.ts",
+				"default": "./dist/server.js"
+			},
+			"require": {
+				"types": "./dist/server.d.cts",
+				"default": "./dist/server.cjs"
 			}
 		},
 		"./tailwind.css": "./tailwind.css",

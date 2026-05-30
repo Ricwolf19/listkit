@@ -20,7 +20,7 @@ module.exports = {
 					'\\.d\\.ts$',
 					'(^|/)tsconfig\\.json$',
 					'(^|/)(babel|webpack|vite|tsup|tailwind|postcss|eslint|prettier|knip|commitlint|\\.size-limit|\\.dependency-cruiser)\\.config\\.(js|cjs|mjs|ts|json)$',
-					'packages/listkit/src/(index|next|react-router|adapters)\\.ts$',
+					'packages/listkit/src/(index|next|react-router|adapters|server)\\.ts$',
 					'playground/src/main\\.tsx$',
 				],
 			},

@@ -12,7 +12,12 @@ import { useListShortcuts } from '../hooks/useListShortcuts'
 import { useListState } from '../hooks/useListState'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
 import type { CardContext, ListConfig, ToolbarAction } from '../types/config'
-import type { DataAdapter, UseListDataHook } from '../types/data'
+import type {
+	DataAdapter,
+	ListQuery,
+	ListResult,
+	UseListDataHook,
+} from '../types/data'
 import { Cards } from './Cards'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
 import { FilterSidebar } from './filters/FilterSidebar'
@@ -41,6 +46,14 @@ export type ListViewProps<T> = {
 	useListData?: UseListDataHook<T>
 	/** Milliseconds to keep adapter responses in memory (default 30_000). */
 	staleTime?: number
+	/**
+	 * Server-fetched first page (SSR). Renders these rows in the initial HTML and
+	 * skips the client's first fetch. Pair with `initialQuery` so the snapshot is
+	 * only used while the URL still matches it.
+	 */
+	initialData?: ListResult<T>
+	/** The query `initialData` answers. Build it with `buildListQuery`. */
+	initialQuery?: ListQuery
 }
 
 export function ListView<T>({
@@ -58,6 +71,8 @@ export function ListView<T>({
 	paginationClassName,
 	useListData,
 	staleTime,
+	initialData,
+	initialQuery,
 }: ListViewProps<T>) {
 	const providerTheme = useListKitTheme()
 	const colorTheme = config.colorTheme ?? providerTheme ?? DEFAULT_COLOR_THEME
@@ -114,6 +129,8 @@ export function ListView<T>({
 		handleViewChange,
 		cardsMode,
 		tableMode,
+		sort,
+		handleSortChange,
 	} = useListState<T>({
 		adapter: resolvedAdapter,
 		params,
@@ -122,6 +139,8 @@ export function ListView<T>({
 		refreshToken,
 		useListData,
 		staleTime,
+		initialData,
+		initialQuery,
 	})
 
 	const isLoading = externalLoading || dataLoading
@@ -220,6 +239,8 @@ export function ListView<T>({
 								displayMode={config.card ? tableMode : 'show'}
 								loading={isLoading}
 								colorTheme={colorTheme}
+								sort={sort}
+								onSort={handleSortChange}
 							/>
 						)}
 

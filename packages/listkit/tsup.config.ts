@@ -6,6 +6,7 @@ export default defineConfig({
 		next: 'src/next.ts',
 		'react-router': 'src/react-router.ts',
 		adapters: 'src/adapters.ts',
+		server: 'src/server.ts',
 	},
 	format: ['esm', 'cjs'],
 	dts: true,

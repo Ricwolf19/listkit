@@ -1,6 +1,11 @@
 import { useEffect, useState } from 'react'
 
-import type { DataAdapter, ListQuery, ListResult } from '../types/data'
+import type {
+	DataAdapter,
+	ListDataSeed,
+	ListQuery,
+	ListResult,
+} from '../types/data'
 
 type State<T> = ListResult<T> & {
 	isLoading: boolean
@@ -64,13 +69,22 @@ export function useListData<T>(
 	adapter: DataAdapter<T>,
 	query: ListQuery,
 	refreshToken: number = 0,
-	staleTime: number = 30_000
+	staleTime: number = 30_000,
+	seed?: ListDataSeed<T>
 ): State<T> {
 	const queryKey = JSON.stringify(query)
 	const cacheKey = `${refreshToken}::${queryKey}`
+	// The SSR snapshot only applies when it answers the query we're rendering.
+	const seedMatches = !!seed && JSON.stringify(seed.query) === queryKey
 
 	// Initialise from cache when possible to avoid a loading flash on mount.
 	const [state, setState] = useState<State<T>>(() => {
+		// SSR snapshot: `seed` is a prop passed identically to the server and the
+		// client, so rendering it on the first paint hydrates cleanly. This is how
+		// the list shows server-fetched rows in the initial HTML.
+		if (seedMatches) {
+			return { ...seed!.data, isLoading: false, error: null }
+		}
 		// Never read the shared cache (nor call Date.now) during a server render.
 		// The cache is a module-level Map that, on the server, persists across
 		// requests — reading it here would bleed one request's rows into another
@@ -92,6 +106,14 @@ export function useListData<T>(
 
 	useEffect(() => {
 		let active = true
+
+		// Prime the cache from the SSR snapshot on the initial token so the client
+		// treats it as a fresh hit and skips the redundant first fetch. A refresh
+		// (refreshToken > 0) changes the key, so it always refetches as expected.
+		if (seedMatches && refreshToken === 0 && !readCache<T>(cacheKey)?.data) {
+			writeCache(cacheKey, { data: seed!.data, ts: Date.now() })
+		}
+
 		const hit = readCache<T>(cacheKey)
 		const now = Date.now()
 
@@ -154,6 +176,54 @@ export function useListData<T>(
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [adapter, cacheKey, staleTime])
+
+	// Prefetch the next page on idle so forward pagination is instant. The result
+	// lands in the shared cache under the next page's key; when the user advances,
+	// useListData finds a fresh hit and renders without a loading flash.
+	useEffect(() => {
+		if (typeof window === 'undefined') return
+		if (state.isLoading || state.error) return
+		if (query.page * query.pageSize >= state.total) return // already last page
+
+		const nextQuery = { ...query, page: query.page + 1 }
+		const nextKey = `${refreshToken}::${JSON.stringify(nextQuery)}`
+		if (readCache<T>(nextKey)?.data) return
+
+		let cancelled = false
+		const run = () => {
+			if (cancelled) return
+			adapter
+				.fetch(nextQuery)
+				.then(result => {
+					if (!cancelled) writeCache(nextKey, { data: result, ts: Date.now() })
+				})
+				.catch(() => {
+					/* prefetch is best-effort; ignore errors */
+				})
+		}
+
+		const canIdle = typeof window.requestIdleCallback === 'function'
+		const handle = canIdle
+			? window.requestIdleCallback(run, { timeout: 2000 })
+			: window.setTimeout(run, 300)
+
+		return () => {
+			cancelled = true
+			if (canIdle && typeof window.cancelIdleCallback === 'function') {
+				window.cancelIdleCallback(handle as number)
+			} else {
+				window.clearTimeout(handle as number)
+			}
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [
+		adapter,
+		cacheKey,
+		refreshToken,
+		state.total,
+		state.isLoading,
+		state.error,
+	])
 
 	return state
 }

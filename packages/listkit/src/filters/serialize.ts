@@ -1,3 +1,4 @@
+import type { SortState } from '../types/data'
 import type {
 	ActiveFilterValue,
 	DateRangeFilterValue,
@@ -12,6 +13,22 @@ import { parseFilterValue } from './schemas'
 const PREFIX = 'f_'
 
 export const filterParamKey = (id: string) => `${PREFIX}${id}`
+
+/** URL param that carries the active column sort, encoded as `field:dir`. */
+export const SORT_PARAM = 'sort'
+
+export const encodeSort = (sort: SortState): string =>
+	`${sort.field}:${sort.dir}`
+
+export function decodeSort(raw: string | null): SortState | undefined {
+	if (!raw) return undefined
+	const sep = raw.lastIndexOf(':')
+	if (sep <= 0) return undefined
+	const field = raw.slice(0, sep)
+	const dir = raw.slice(sep + 1)
+	if (dir !== 'asc' && dir !== 'desc') return undefined
+	return { field, dir }
+}
 
 export function flattenFilters<T>(
 	sections: FilterSection<T>[]

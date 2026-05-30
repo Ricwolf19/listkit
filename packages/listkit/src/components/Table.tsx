@@ -1,7 +1,9 @@
+import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 
 import { type ColorTheme } from '../theme/colorTheme'
 import type { ColumnDef } from '../types/config'
+import type { SortState } from '../types/data'
 import type { DisplayMode } from '../types/list'
 import { cn } from '../utils/cn'
 import { displayVisibility } from '../utils/displayMode'
@@ -20,6 +22,10 @@ type TableProps<T> = {
 	showHeader?: boolean
 	className?: string
 	colorTheme?: ColorTheme
+	/** Active column sort, used to render the header indicator. */
+	sort?: SortState
+	/** Called with a column's sort field when a sortable header is clicked. */
+	onSort?: (field: string) => void
 }
 
 function valueToString(value: unknown): ReactNode {
@@ -48,6 +54,8 @@ export function Table<T>({
 	compact = false,
 	showHeader = true,
 	className,
+	sort,
+	onSort,
 	// colorTheme = 'red',
 }: TableProps<T>) {
 	// const theme = getColorTheme(colorTheme)
@@ -87,10 +95,26 @@ export function Table<T>({
 											const headerText =
 												typeof col.header === 'string' ? col.header : ''
 											const showTooltip = headerText.length > 16
+											const sortField = col.sortField ?? col.key
+											const isSortable = !!col.sortable && !!onSort
+											const activeDir =
+												sort?.field === sortField ? sort.dir : undefined
+											const label = (
+												<span className='block truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase'>
+													{col.header}
+												</span>
+											)
 											return (
 												<th
 													key={col.key}
 													scope='col'
+													aria-sort={
+														activeDir === 'asc'
+															? 'ascending'
+															: activeDir === 'desc'
+																? 'descending'
+																: undefined
+													}
 													className={cn(
 														'relative',
 														compact ? 'px-4 py-2.5' : 'px-6 py-3.5',
@@ -99,9 +123,30 @@ export function Table<T>({
 													)}
 													style={col.width ? { width: col.width } : undefined}
 												>
-													<span className='block truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-500 uppercase'>
-														{col.header}
-													</span>
+													{isSortable ? (
+														<button
+															type='button'
+															onClick={() => onSort!(sortField)}
+															className={cn(
+																'inline-flex w-full cursor-pointer items-center gap-1.5 select-none hover:text-gray-700',
+																col.align === 'right' && 'justify-end',
+																col.align === 'center' && 'justify-center'
+															)}
+														>
+															{label}
+															<span className='shrink-0 text-gray-400'>
+																{activeDir === 'asc' ? (
+																	<ArrowUp className='h-3.5 w-3.5 text-gray-700' />
+																) : activeDir === 'desc' ? (
+																	<ArrowDown className='h-3.5 w-3.5 text-gray-700' />
+																) : (
+																	<ChevronsUpDown className='h-3.5 w-3.5 opacity-50' />
+																)}
+															</span>
+														</button>
+													) : (
+														label
+													)}
 													{showTooltip && (
 														<span className='pointer-events-none invisible absolute top-full left-4 z-20 mt-1 rounded-md bg-gray-900 px-2.5 py-1.5 text-xs font-medium tracking-normal whitespace-nowrap text-white normal-case opacity-0 shadow-lg transition-all duration-150 group-hover:visible group-hover:opacity-100'>
 															{col.header}

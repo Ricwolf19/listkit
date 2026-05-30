@@ -40,6 +40,7 @@ export { memoryAdapter } from './adapters/memory'
 export { serverActionAdapter } from './adapters/serverAction'
 export type {
 	DataAdapter,
+	ListDataSeed,
 	ListQuery,
 	ListResult,
 	SortDir,

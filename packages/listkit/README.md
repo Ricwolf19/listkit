@@ -11,7 +11,9 @@
 - **Data adapters** — render in-memory arrays or plug an async source (REST, Next.js server actions, Dexie). Search/pagination/filters flow through the adapter, so they can run server-side.
 - **Built-in cache** — responses are kept in memory with configurable `staleTime`. Returning to a recent page/filter serves data instantly; stale-while-revalidate refreshes silently in the background.
 - **Pluggable data hook** — inject your own `useListData` (e.g. TanStack Query) for background refetch, retries, and cross-component cache without coupling the package to any library.
+- **SSR-ready** — pass a server-fetched first page as `initialData` and the list renders real rows in the initial HTML (SEO, no loading flash, hydrates without a refetch). `buildListQuery` rebuilds the exact query on the server so it matches the client.
 - **Advanced filters** — `text`, `select`, `multi-select`, `date-range`, `number-range`, `boolean`; values are Zod-validated and synced to the URL. Filters can be arranged in 1 or 2 columns to save space.
+- **Column sorting** — mark columns `sortable`; headers cycle asc → desc → off, sync to the URL, and flow into the adapter (`query.sort`). The next page is prefetched on idle so forward pagination is instant.
 - **Router adapters** — sync list state to the URL via pluggable adapters: Next.js, React Router, or the framework-free browser adapter.
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
 - **Custom cards** — use the built-in card chrome, or `bareCard` to drop in a fully custom card component.
@@ -175,6 +177,29 @@ defineListConfig<Product>({
 
 Applied filters appear as removable chips above the list and sync to the URL. With an async adapter, read `query.filters` (an `ActiveFilterValue[]`) in your fetcher and translate to SQL/HTTP.
 
+### Column sorting
+
+Mark any table column `sortable`. Clicking its header cycles **ascending →
+descending → off**, syncs the active sort to a `sort` URL param, and flows into
+the adapter as `query.sort` (`{ field, dir }`):
+
+```tsx
+table: {
+	columns: [
+		{ key: 'name', header: 'Name', sortable: true },
+		{ key: 'createdAt', header: 'Created', sortable: true, sortField: 'created_at' },
+		{ key: 'total', header: 'Total', align: 'right', sortable: true },
+	],
+}
+```
+
+- **In-memory data** — the built-in adapter sorts automatically by the active field.
+- **Async adapters** — read `query.sort` in your fetcher and translate to `ORDER BY`.
+- `sortField` overrides the field name sent to the adapter (defaults to the column `key`).
+
+After a page loads, the next page is prefetched on idle into the cache, so
+clicking "next" renders instantly with no loading flash.
+
 ### Custom cards with actions and theme
 
 The `card` renderer receives the row item plus a `ctx` object with actions and the active color theme:
@@ -264,6 +289,70 @@ const adapter = serverActionAdapter<Product>(async query => {
 
 <ListView config={productsConfig} adapter={adapter} />
 ```
+
+### Server-side rendering (`initialData`)
+
+By default the list fetches on the **client**: the server renders an empty/loading
+shell and rows appear after hydration. For SEO, a faster first paint, and no
+loading flash, fetch the **first page on the server** and hand it to `<ListView>`
+as `initialData` — it renders those rows in the initial HTML and **skips the
+client's first fetch**. Paging and filtering afterwards still run on the client.
+
+The catch: the server must compute the **same query** the client will derive from
+the URL, or the two renders disagree and React warns about a hydration mismatch.
+`buildListQuery` (from `@pibytelabs/listkit/server`) does exactly that — use its
+result both to fetch and as `initialQuery`:
+
+```tsx
+// app/orders/page.tsx — a React Server Component
+import { buildListQuery } from '@pibytelabs/listkit/server'
+import { ordersConfig } from './config'
+import { listOrders } from './actions'
+import { OrdersList } from './OrdersList'
+
+export default async function OrdersPage({
+	searchParams,
+}: {
+	searchParams: Promise<Record<string, string | string[] | undefined>>
+}) {
+	const query = buildListQuery(ordersConfig, await searchParams)
+	const initial = await listOrders(query) // { data, total }
+	return <OrdersList initialData={initial} initialQuery={query} />
+}
+```
+
+```tsx
+// OrdersList.tsx — a Client Component
+'use client'
+import { ListView, serverActionAdapter } from '@pibytelabs/listkit'
+import type { ListQuery, ListResult } from '@pibytelabs/listkit'
+import { ordersConfig } from './config'
+import { listOrders } from './actions'
+
+export function OrdersList({
+	initialData,
+	initialQuery,
+}: {
+	initialData: ListResult<Order>
+	initialQuery: ListQuery
+}) {
+	const adapter = serverActionAdapter<Order>(q => listOrders(q))
+	return (
+		<ListView
+			config={ordersConfig}
+			adapter={adapter}
+			initialData={initialData} // rendered in the server HTML
+			initialQuery={initialQuery} // used only while the URL still matches
+		/>
+	)
+}
+```
+
+The same server action (`listOrders`) powers both the server's first page and the
+client's later fetches — no duplicated fetching logic. `initialData` is used only
+while the live query equals `initialQuery`; the moment the user changes a
+page/filter (or calls `useListRefresh()`), the list fetches normally. It's
+fully opt-in: lists without `initialData` keep client-fetching unchanged.
 
 ### Built-in cache (zero dependencies)
 
@@ -497,6 +586,7 @@ defineListConfig({ colorTheme: brand, /* … */ })
 | `@pibytelabs/listkit/next`         | `useNextRouterAdapter`                                                                |
 | `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                               |
 | `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`          |
+| `@pibytelabs/listkit/server`       | `buildListQuery` — React Server Component-safe (no React/DOM), for SSR `initialData`  |
 | `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                       |
 
 ## License
