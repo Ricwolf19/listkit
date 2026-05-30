@@ -1,6 +1,6 @@
 import {
 	ListView,
-	memoryAdapter,
+	// memoryAdapter,
 	serverActionAdapter,
 	useListRefresh,
 } from '@pibytelabs/listkit'
@@ -10,10 +10,10 @@ import { useState } from 'react'
 import { productsConfig } from './products/config'
 import { PRODUCTS } from './products/data'
 
-const memory = memoryAdapter(PRODUCTS, {
-	search: { fields: ['name', 'sku', 'category'] },
-	sort: data => [...data].sort((a, b) => a.name.localeCompare(b.name)),
-})
+// const memory = memoryAdapter(PRODUCTS, {
+// 	search: { fields: ['name', 'sku', 'category'] },
+// 	sort: data => [...data].sort((a, b) => a.name.localeCompare(b.name)),
+// })
 
 const asyncAdapter = serverActionAdapter<(typeof PRODUCTS)[0]>(async query => {
 	// Simulate network latency so skeletons and cache are visible

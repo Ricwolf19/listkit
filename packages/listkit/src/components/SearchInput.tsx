@@ -20,7 +20,7 @@ type SearchInputProps = {
 }
 
 export function SearchInput({
-	id,
+	// id,
 	value,
 	onChange,
 	placeholder = 'Buscar...',

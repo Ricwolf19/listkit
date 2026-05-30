@@ -44,7 +44,7 @@ export function Toolbar({
 	onOpenFilters,
 	onClearFilters,
 	filterCount = 0,
-	searchInputId,
+	// searchInputId,
 	filterShortcutHint,
 	viewShortcutHint,
 }: ToolbarProps) {
