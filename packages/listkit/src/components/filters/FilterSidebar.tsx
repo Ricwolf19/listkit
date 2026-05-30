@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useFilters } from '../../hooks/useFilters'
 import type { ListParams } from '../../hooks/useListParams'
 import { type ColorTheme, getColorTheme } from '../../theme/colorTheme'
-import type { FilterSection } from '../../types/filters'
+import type { FilterDefinition, FilterSection } from '../../types/filters'
 import { cn } from '../../utils/cn'
 import { Button } from '../Button'
 import { DynamicFilter } from './DynamicFilter'
@@ -18,6 +18,93 @@ export type FilterSidebarProps<T> = {
 	params: ListParams
 	title?: string
 	colorTheme?: ColorTheme
+}
+
+function SectionFilters<T>({
+	section,
+	theme,
+	colorTheme,
+	draft,
+	setValue,
+}: {
+	section: FilterSection<T>
+	theme: ReturnType<typeof getColorTheme>
+	colorTheme: ColorTheme
+	draft: Record<string, unknown>
+	setValue: (id: string, value: unknown) => void
+}) {
+	const hasGrid = section.filters.some(f => f.columns === 2)
+
+	return (
+		<section
+			key={section.id}
+			className='rounded-xl border border-gray-100 bg-gray-50/40 p-4'
+		>
+			{(section.title || section.description) && (
+				<div className='mb-4 flex items-center gap-2'>
+					<div className={cn('h-5 w-1 rounded-full', theme.primaryBg)} />
+					<div>
+						{section.title && (
+							<h3 className='text-sm font-semibold text-gray-900'>
+								{section.title}
+							</h3>
+						)}
+						{section.description && (
+							<p className='text-xs text-gray-500'>{section.description}</p>
+						)}
+					</div>
+				</div>
+			)}
+			<div className={cn(hasGrid && 'grid grid-cols-2 gap-4')}>
+				{section.filters.map(def => (
+					<FilterField
+						key={def.id}
+						def={def}
+						value={draft[def.id]}
+						onChange={value => setValue(def.id, value)}
+						colorTheme={colorTheme}
+						hasGrid={hasGrid}
+					/>
+				))}
+			</div>
+		</section>
+	)
+}
+
+function FilterField({
+	def,
+	value,
+	onChange,
+	colorTheme,
+	hasGrid,
+}: {
+	def: FilterDefinition
+	value: unknown
+	onChange: (value: unknown) => void
+	colorTheme: ColorTheme
+	hasGrid: boolean
+}) {
+	return (
+		<div
+			className={cn(
+				'space-y-1.5',
+				hasGrid && def.columns === 1 && 'col-span-2'
+			)}
+		>
+			<label className='block text-sm font-medium text-gray-700'>
+				{def.label}
+			</label>
+			{def.description && (
+				<p className='text-xs text-gray-500'>{def.description}</p>
+			)}
+			<DynamicFilter
+				def={def}
+				value={value}
+				onChange={onChange}
+				colorTheme={colorTheme}
+			/>
+		</div>
+	)
 }
 
 export function FilterSidebar<T>({
@@ -99,48 +186,33 @@ export function FilterSidebar<T>({
 					</button>
 				</header>
 
-				<div className='flex-1 space-y-6 overflow-y-auto px-6 py-5'>
-					{sections.map(section => (
-						<section key={section.id} className='space-y-4'>
-							{(section.title || section.description) && (
-								<div>
-									{section.title && (
-										<h3 className='text-sm font-semibold text-gray-900'>
-											{section.title}
-										</h3>
-									)}
-									{section.description && (
-										<p className='text-xs text-gray-500'>
-											{section.description}
-										</p>
-									)}
-								</div>
-							)}
-							{section.filters.map(def => (
-								<div key={def.id} className='space-y-1.5'>
-									<label className='block text-sm font-medium text-gray-700'>
-										{def.label}
-									</label>
-									{def.description && (
-										<p className='text-xs text-gray-500'>{def.description}</p>
-									)}
-									<DynamicFilter
-										def={def}
-										value={draft[def.id]}
-										onChange={value => setValue(def.id, value)}
-										colorTheme={colorTheme}
-									/>
-								</div>
-							))}
-						</section>
-					))}
-				</div>
+				<form
+					className='flex-1 overflow-y-auto'
+					onSubmit={e => {
+						e.preventDefault()
+						handleApply()
+					}}
+				>
+					<div className='space-y-5 px-6 py-5'>
+						{sections.map(section => (
+							<SectionFilters
+								key={section.id}
+								section={section}
+								theme={theme}
+								colorTheme={colorTheme}
+								draft={draft}
+								setValue={setValue}
+							/>
+						))}
+					</div>
+				</form>
 
 				<footer className='flex items-center justify-between gap-3 border-t border-gray-200 px-6 py-4'>
-					<Button variant='ghost' onClick={clear}>
+					<Button type='button' variant='ghost' onClick={clear}>
 						Limpiar
 					</Button>
 					<Button
+						type='submit'
 						onClick={handleApply}
 						className={cn(
 							theme.primaryBg,

@@ -40,6 +40,8 @@ type BaseFilter<T> = {
 	field: Path<T>
 	label: string
 	description?: string
+	/** Number of columns this filter occupies in the sidebar grid (1 = full width, 2 = half width). */
+	columns?: 1 | 2
 }
 
 export type FilterDefinition<T = unknown> =
