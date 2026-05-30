@@ -195,7 +195,19 @@ export function ListView<T>({
 						{errorMessage}
 					</div>
 				) : (
-					<>
+					<div
+						key={`${viewType}-${pagination.currentPage}-${rows.length}`}
+						className='animate-lk-fade-in'
+					>
+						<style>{`
+							@keyframes lk-fade-in {
+								from { opacity: 0; transform: translateY(6px); }
+								to { opacity: 1; transform: translateY(0); }
+							}
+							.animate-lk-fade-in {
+								animation: lk-fade-in 0.25s ease-out;
+							}
+						`}</style>
 						{config.table && (
 							<Table<T>
 								data={rows}
@@ -223,7 +235,7 @@ export function ListView<T>({
 								bare={config.bareCard}
 							/>
 						)}
-					</>
+					</div>
 				)}
 
 				{beforePagination}

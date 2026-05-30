@@ -4,17 +4,11 @@ import { ProductCard } from './ProductCard'
 import { brandTheme } from './theme'
 import { CATEGORIES, currency, type Product, TAGS } from './types'
 
-/**
- * One config describes the whole list view. Keeping it in its own file (next to
- * the row type, data source, and card component) keeps the page that renders
- * `<ListView>` tiny — see HelloListKit.tsx.
- */
 export const productsConfig = defineListConfig<Product>({
 	id: 'products',
 	title: 'Productos',
-	subtitle: 'Demostración de listkit — todos los tipos de filtro',
-	pageSize: 8,
-	// Custom brand theme (a ThemeClasses object), not one of the 8 built-ins.
+	subtitle: 'Catálogo completo con filtros avanzados, cache y paginación',
+	pageSize: 12,
 	colorTheme: brandTheme,
 	searchPlaceholder: 'Buscar por nombre, SKU o categoría…',
 	emptyMessage: 'No se encontraron productos',
@@ -60,18 +54,21 @@ export const productsConfig = defineListConfig<Product>({
 					field: 'price',
 					label: 'Precio (MXN)',
 					type: 'number-range',
+					columns: 2,
 				},
 				{
 					id: 'stock',
 					field: 'stock',
 					label: 'Existencias',
 					type: 'number-range',
+					columns: 2,
 				},
 				{
 					id: 'createdAt',
 					field: 'createdAt',
 					label: 'Fecha de alta',
 					type: 'date-range',
+					columns: 2,
 				},
 				{
 					id: 'inStock',
@@ -80,6 +77,7 @@ export const productsConfig = defineListConfig<Product>({
 					type: 'boolean',
 					trueLabel: 'En stock',
 					falseLabel: 'Agotado',
+					columns: 2,
 				},
 			],
 		},

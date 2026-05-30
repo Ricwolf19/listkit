@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 
 import { getSearchShortcut } from '../utils/shortcut'
 
@@ -8,15 +8,18 @@ type Handlers = {
 	onToggleView?: () => void
 }
 
-export function useListShortcuts({
-	onFocusSearch,
-	onOpenFilters,
-	onToggleView,
-}: Handlers) {
+export function useListShortcuts(handlers: Handlers) {
+	// Keep the latest handlers in a ref so the listener can be attached once
+	// instead of re-subscribing on every render (callers pass inline arrows).
+	const handlersRef = useRef(handlers)
+	handlersRef.current = handlers
+
 	useEffect(() => {
 		const searchShortcut = getSearchShortcut()
 
 		const handle = (e: KeyboardEvent) => {
+			const { onFocusSearch, onOpenFilters, onToggleView } = handlersRef.current
+
 			// Skip if the user is typing inside an input/textarea/select
 			const target = e.target as HTMLElement
 			const tag = target.tagName.toLowerCase()
@@ -42,10 +45,11 @@ export function useListShortcuts({
 			if (
 				onOpenFilters &&
 				!isEditable &&
+				e.shiftKey &&
 				!e.metaKey &&
 				!e.ctrlKey &&
 				!e.altKey &&
-				(e.key === 'f' || e.key === 'F')
+				e.key.toLowerCase() === 'f'
 			) {
 				e.preventDefault()
 				onOpenFilters()
@@ -56,10 +60,11 @@ export function useListShortcuts({
 			if (
 				onToggleView &&
 				!isEditable &&
+				e.shiftKey &&
 				!e.metaKey &&
 				!e.ctrlKey &&
 				!e.altKey &&
-				(e.key === 'v' || e.key === 'V')
+				e.key.toLowerCase() === 'v'
 			) {
 				e.preventDefault()
 				onToggleView()
@@ -69,5 +74,5 @@ export function useListShortcuts({
 
 		window.addEventListener('keydown', handle)
 		return () => window.removeEventListener('keydown', handle)
-	}, [onFocusSearch, onOpenFilters, onToggleView])
+	}, [])
 }

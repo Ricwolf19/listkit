@@ -273,6 +273,7 @@ By default `useListData` keeps the last response in memory for **30 seconds** (`
 - If the cache is stale, the old data is shown immediately while a background refresh runs (stale-while-revalidate).
 - Identical in-flight requests are **deduplicated** so rapid filter changes don't fire duplicate calls.
 - Calling `useListRefresh()` bumps the internal `refreshToken` and bypasses the cache.
+- The cache is **bounded** (least-recently-used eviction, ~100 entries shared across all lists), so a long-running app can't grow it without limit. If you need a larger, GC-tunable, cross-component cache, inject TanStack Query (below) and let it own the lifecycle.
 
 You can tune or disable it per list:
 
