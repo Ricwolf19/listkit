@@ -80,11 +80,7 @@ export function Table<T>({
 						<table className='min-w-full divide-y divide-gray-200'>
 							{showHeader && (
 								<thead
-									className={cn(
-										'bg-gray-50/80',
-										'border-b-2',
-										theme.chipBorder
-									)}
+									className={cn('bg-gray-100', 'border-b border-gray-200')}
 								>
 									<tr>
 										{visibleColumns.map(col => {

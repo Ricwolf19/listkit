@@ -9,6 +9,7 @@ import { getSearchShortcut } from '../utils/shortcut'
 type Shortcut = ReturnType<typeof getSearchShortcut>
 
 type SearchInputProps = {
+	id?: string
 	value: string
 	onChange: (value: string) => void
 	placeholder?: string
@@ -19,6 +20,7 @@ type SearchInputProps = {
 }
 
 export function SearchInput({
+	id,
 	value,
 	onChange,
 	placeholder = 'Buscar...',

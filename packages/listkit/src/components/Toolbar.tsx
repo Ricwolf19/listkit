@@ -24,6 +24,9 @@ export type ToolbarProps = {
 	onOpenFilters?: () => void
 	onClearFilters?: () => void
 	filterCount?: number
+	searchInputId?: string
+	filterShortcutHint?: string
+	viewShortcutHint?: string
 }
 
 export function Toolbar({
@@ -41,6 +44,9 @@ export function Toolbar({
 	onOpenFilters,
 	onClearFilters,
 	filterCount = 0,
+	searchInputId,
+	filterShortcutHint,
+	viewShortcutHint,
 }: ToolbarProps) {
 	const renderAction = (action: ToolbarAction, index: number) => (
 		<Button
@@ -79,6 +85,7 @@ export function Toolbar({
 								activeCount={filterCount}
 								onClear={onClearFilters}
 								colorTheme={colorTheme}
+								shortcutHint={filterShortcutHint}
 							/>
 						)}
 					</div>
@@ -103,6 +110,7 @@ export function Toolbar({
 							onViewChange={onViewChange}
 							className='hidden sm:flex'
 							colorTheme={colorTheme}
+							shortcutHint={viewShortcutHint}
 						/>
 					)}
 				</div>
@@ -115,6 +123,7 @@ export function Toolbar({
 							view={viewType}
 							onViewChange={onViewChange}
 							colorTheme={colorTheme}
+							shortcutHint={viewShortcutHint}
 						/>
 					)}
 					{actions

@@ -13,3 +13,7 @@ export function getSearchShortcut(): SearchShortcut {
 		? { key: 'k', modifier: 'metaKey', display: '⌘ K' }
 		: { key: 'k', modifier: 'ctrlKey', display: 'Ctrl K' }
 }
+
+export function formatShortcutTitle(label: string, keys: string): string {
+	return `${label} (${keys})`
+}
