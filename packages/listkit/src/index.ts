@@ -44,6 +44,7 @@ export type {
 	ListResult,
 	SortDir,
 	SortState,
+	UseListDataHook,
 } from './types/data'
 
 // Theme

@@ -8,10 +8,11 @@ import {
 	readActiveFilters,
 } from '../filters/serialize'
 import { useListParams } from '../hooks/useListParams'
+import { useListShortcuts } from '../hooks/useListShortcuts'
 import { useListState } from '../hooks/useListState'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
 import type { CardContext, ListConfig, ToolbarAction } from '../types/config'
-import type { DataAdapter } from '../types/data'
+import type { DataAdapter, UseListDataHook } from '../types/data'
 import { Cards } from './Cards'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
 import { FilterSidebar } from './filters/FilterSidebar'
@@ -36,6 +37,10 @@ export type ListViewProps<T> = {
 	errorMessage?: string
 	/** Extra classes for the fixed pagination bar (e.g. to offset around a sidebar). */
 	paginationClassName?: string
+	/** Optional data hook override (e.g. TanStack Query caching). */
+	useListData?: UseListDataHook<T>
+	/** Milliseconds to keep adapter responses in memory (default 30_000). */
+	staleTime?: number
 }
 
 export function ListView<T>({
@@ -51,6 +56,8 @@ export function ListView<T>({
 	portals,
 	errorMessage = 'No se pudieron cargar los datos.',
 	paginationClassName,
+	useListData,
+	staleTime,
 }: ListViewProps<T>) {
 	const providerTheme = useListKitTheme()
 	const colorTheme = config.colorTheme ?? providerTheme ?? DEFAULT_COLOR_THEME
@@ -69,6 +76,7 @@ export function ListView<T>({
 	const params = useListParams()
 	const filterSections = useMemo(() => config.filters ?? [], [config.filters])
 	const hasFilters = filterSections.length > 0
+	const searchInputId = `listkit-search-${config.id}`
 	const flatDefs = useMemo(
 		() => flattenFilters(filterSections),
 		[filterSections]
@@ -112,11 +120,24 @@ export function ListView<T>({
 		filters: activeFilters,
 		pageSize: config.pageSize,
 		refreshToken,
+		useListData,
+		staleTime,
 	})
 
 	const isLoading = externalLoading || dataLoading
 	const getItemKey = config.getItemKey ?? ((_item: T, index: number) => index)
 	const cardCtx: CardContext<T> = { actions: config.actions ?? {}, colorTheme }
+
+	useListShortcuts({
+		onFocusSearch: () => {
+			document.getElementById(searchInputId)?.focus()
+		},
+		onOpenFilters: hasFilters ? () => setFiltersOpen(true) : undefined,
+		onToggleView:
+			config.table && config.card
+				? () => handleViewChange(viewType === 'table' ? 'cards' : 'table')
+				: undefined,
+	})
 
 	return (
 		<ListRefreshProvider value={refresh}>
@@ -151,10 +172,13 @@ export function ListView<T>({
 					onOpenFilters={hasFilters ? () => setFiltersOpen(true) : undefined}
 					onClearFilters={hasFilters ? clearAllFilters : undefined}
 					filterCount={activeFilters.length}
+					searchInputId={showSearch ? searchInputId : undefined}
+					filterShortcutHint='Shift + F'
+					viewShortcutHint='Shift + V'
 				/>
 
-				{hasFilters && (
-					<div className='mt-1 mb-3 flex min-h-[1.75rem] items-center'>
+				{activeFilters.length > 0 && (
+					<div className='mt-2 mb-3 flex items-center'>
 						<ActiveFilterChips
 							sections={filterSections}
 							activeFilters={activeFilters}
