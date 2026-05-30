@@ -2,7 +2,15 @@ import { defineListConfig } from '@pibytelabs/listkit'
 
 import { ProductCard } from './ProductCard'
 import { brandTheme } from './theme'
-import { CATEGORIES, currency, type Product, TAGS } from './types'
+import {
+	CATEGORIES,
+	currency,
+	ORIGINS,
+	type Product,
+	ROAST_LEVELS,
+	SUPPLIERS,
+	TAGS,
+} from './types'
 
 export const productsConfig = defineListConfig<Product>({
 	id: 'products',
@@ -43,6 +51,42 @@ export const productsConfig = defineListConfig<Product>({
 					type: 'text',
 					placeholder: 'Buscar por nombre…',
 				},
+				{
+					id: 'sku',
+					field: 'sku',
+					label: 'SKU',
+					type: 'text',
+					placeholder: 'SKU-10000…',
+				},
+			],
+		},
+		{
+			id: 'origin',
+			title: 'Origen y proveedor',
+			filters: [
+				{
+					id: 'supplier',
+					field: 'supplier',
+					label: 'Proveedor',
+					type: 'select',
+					searchable: true,
+					options: SUPPLIERS.map(s => ({ value: s, label: s })),
+				},
+				{
+					id: 'country',
+					field: 'origin',
+					label: 'País de origen',
+					type: 'select',
+					searchable: true,
+					options: ORIGINS.map(o => ({ value: o, label: o })),
+				},
+				{
+					id: 'roast',
+					field: 'roastLevel',
+					label: 'Nivel de tueste',
+					type: 'select',
+					options: ROAST_LEVELS.map(r => ({ value: r, label: r })),
+				},
 			],
 		},
 		{
@@ -64,6 +108,20 @@ export const productsConfig = defineListConfig<Product>({
 					columns: 2,
 				},
 				{
+					id: 'rating',
+					field: 'rating',
+					label: 'Calificación (0–5)',
+					type: 'number-range',
+					columns: 2,
+				},
+				{
+					id: 'weight',
+					field: 'weightGrams',
+					label: 'Peso (g)',
+					type: 'number-range',
+					columns: 2,
+				},
+				{
 					id: 'createdAt',
 					field: 'createdAt',
 					label: 'Fecha de alta',
@@ -78,6 +136,20 @@ export const productsConfig = defineListConfig<Product>({
 					trueLabel: 'En stock',
 					falseLabel: 'Agotado',
 					columns: 2,
+				},
+			],
+		},
+		{
+			id: 'flags',
+			title: 'Otros',
+			filters: [
+				{
+					id: 'featured',
+					field: 'featured',
+					label: 'Destacado',
+					type: 'boolean',
+					trueLabel: 'Solo destacados',
+					falseLabel: 'No destacados',
 				},
 			],
 		},

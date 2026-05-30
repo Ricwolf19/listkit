@@ -71,6 +71,17 @@ export function useListData<T>(
 
 	// Initialise from cache when possible to avoid a loading flash on mount.
 	const [state, setState] = useState<State<T>>(() => {
+		// Never read the shared cache (nor call Date.now) during a server render.
+		// The cache is a module-level Map that, on the server, persists across
+		// requests — reading it here would bleed one request's rows into another
+		// request's HTML and desync hydration (e.g. a button rendered enabled on
+		// the server but disabled on the client). On a real page load the client's
+		// module starts empty too, so both sides render the same loading state and
+		// hydrate cleanly; client-side navigations (no SSR) still read the cache
+		// below for an instant, flash-free result.
+		if (typeof window === 'undefined') {
+			return { data: [], total: 0, isLoading: true, error: null }
+		}
 		const hit = readCache<T>(cacheKey)
 		if (hit?.data) {
 			const isFresh = Date.now() - hit.ts < staleTime

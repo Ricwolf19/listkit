@@ -35,37 +35,53 @@ const asyncAdapter = serverActionAdapter<(typeof PRODUCTS)[0]>(async query => {
 		)
 	}
 
-	// Client-side filter simulation
+	// Client-side filter simulation — generic by f.field so every advanced
+	// filter targets the right Product property (not a hardcoded one).
 	if (filters) {
 		for (const f of filters) {
+			const get = (r: (typeof PRODUCTS)[0]) =>
+				r[f.field as keyof (typeof PRODUCTS)[0]]
+
 			if (f.type === 'select' && f.value) {
-				rows = rows.filter(r => r.category === f.value)
+				rows = rows.filter(r => get(r) === f.value)
 			}
 			if (f.type === 'multi-select' && Array.isArray(f.value)) {
-				rows = rows.filter(r =>
-					(f.value as string[]).some(v => r.tags.includes(v))
-				)
+				rows = rows.filter(r => {
+					const v = get(r)
+					return Array.isArray(v)
+						? (f.value as string[]).some(x => (v as string[]).includes(x))
+						: (f.value as string[]).includes(String(v))
+				})
 			}
 			if (f.type === 'text' && f.value && typeof f.value === 'object') {
-				const term = (f.value as { value: string }).value.toLowerCase()
-				rows = rows.filter(r => r.name.toLowerCase().includes(term))
+				const { value, match } = f.value as {
+					value: string
+					match?: 'exact' | 'partial'
+				}
+				const term = value.toLowerCase()
+				rows = rows.filter(r => {
+					const field = String(get(r)).toLowerCase()
+					return match === 'exact' ? field === term : field.includes(term)
+				})
 			}
 			if (f.type === 'boolean' && typeof f.value === 'boolean') {
-				rows = rows.filter(r => r.inStock === f.value)
+				rows = rows.filter(r => get(r) === f.value)
 			}
 			if (f.type === 'number-range' && typeof f.value === 'object') {
 				const { min, max } = f.value as { min?: number; max?: number }
 				rows = rows.filter(r => {
-					if (min != null && r.price < min) return false
-					if (max != null && r.price > max) return false
+					const n = get(r) as number
+					if (min != null && n < min) return false
+					if (max != null && n > max) return false
 					return true
 				})
 			}
 			if (f.type === 'date-range' && typeof f.value === 'object') {
 				const { from, to } = f.value as { from?: string; to?: string }
 				rows = rows.filter(r => {
-					if (from && r.createdAt < from) return false
-					if (to && r.createdAt > to) return false
+					const d = String(get(r))
+					if (from && d < from) return false
+					if (to && d > to) return false
 					return true
 				})
 			}
