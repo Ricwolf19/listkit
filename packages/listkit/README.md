@@ -9,11 +9,14 @@
 - **Declarative config** — one `defineListConfig<T>()` describes the whole list view (search, filters, table columns, card, actions, theme).
 - **Responsive by default** — auto-switches between table (desktop) and cards (tablet/phone); follows the viewport.
 - **Data adapters** — render in-memory arrays or plug an async source (REST, Next.js server actions, Dexie). Search/pagination/filters flow through the adapter, so they can run server-side.
-- **Advanced filters** — `text`, `select`, `multi-select`, `date-range`, `number-range`, `boolean`; values are Zod-validated and synced to the URL.
+- **Built-in cache** — responses are kept in memory with configurable `staleTime`. Returning to a recent page/filter serves data instantly; stale-while-revalidate refreshes silently in the background.
+- **Pluggable data hook** — inject your own `useListData` (e.g. TanStack Query) for background refetch, retries, and cross-component cache without coupling the package to any library.
+- **Advanced filters** — `text`, `select`, `multi-select`, `date-range`, `number-range`, `boolean`; values are Zod-validated and synced to the URL. Filters can be arranged in 1 or 2 columns to save space.
 - **Router adapters** — sync list state to the URL via pluggable adapters: Next.js, React Router, or the framework-free browser adapter.
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
 - **Custom cards** — use the built-in card chrome, or `bareCard` to drop in a fully custom card component.
 - **Refresh on mutation** — `useListRefresh()` refetches the list after a delete/edit, no full page reload.
+- **Keyboard shortcuts** — `⌘ K` focus search, `Shift + F` open filters, `Shift + V` toggle view.
 - **Composable + type-safe** — use `<ListView>`, or drop down to `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
 
 ## Install
@@ -260,6 +263,209 @@ const adapter = serverActionAdapter<Product>(async query => {
 })
 
 <ListView config={productsConfig} adapter={adapter} />
+```
+
+### Built-in cache (zero dependencies)
+
+By default `useListData` keeps the last response in memory for **30 seconds** (`staleTime`). This means:
+
+- Going back to a page you already visited shows data **instantly** — no loading flash.
+- If the cache is stale, the old data is shown immediately while a background refresh runs (stale-while-revalidate).
+- Identical in-flight requests are **deduplicated** so rapid filter changes don't fire duplicate calls.
+- Calling `useListRefresh()` bumps the internal `refreshToken` and bypasses the cache.
+
+You can tune or disable it per list:
+
+```tsx
+// Cache responses for 5 minutes
+<ListView config={config} adapter={adapter} staleTime={5 * 60 * 1000} />
+
+// Disable cache (always fetch)
+<ListView config={config} adapter={adapter} staleTime={0} />
+```
+
+### Using with TanStack Query
+
+If your app already uses TanStack Query and you want its cross-component cache, background refetch, and retries, inject your own hook instead of the built-in one:
+
+```tsx
+import { useQuery } from '@tanstack/react-query'
+import type { UseListDataHook } from '@pibytelabs/listkit'
+
+const useCachedListData: UseListDataHook<Customer> = (
+	adapter,
+	query,
+	refreshToken
+) => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ['customers', 'list', query, refreshToken],
+		queryFn: () => adapter.fetch(query),
+		staleTime: 5 * 60 * 1000,
+	})
+
+	return {
+		data: data?.data ?? [],
+		total: data?.total ?? 0,
+		isLoading,
+		error,
+	}
+}
+
+// Pass it to the list
+;<ListView
+	config={customersConfig}
+	adapter={customersAdapter}
+	useListData={useCachedListData}
+/>
+```
+
+**No conflict with the built-in cache** — when you pass `useListData`, listkit delegates every fetch to your hook. The built-in `Map` cache is never touched, so TanStack Query owns the entire lifecycle (stale-while-revalidate, garbage collection, prefetching, etc.).
+
+### Complete example — without React Query (built-in cache)
+
+A generic admin list using a Next.js server action, the native cache, and mutations:
+
+```tsx
+// features/users/config.tsx
+export const usersConfig = defineListConfig<User>({
+	id: 'users',
+	title: 'Usuarios',
+	search: true,
+	pageSize: 20,
+	filters: [
+		{
+			id: 'filters',
+			filters: [
+				{
+					id: 'status',
+					field: 'status',
+					label: 'Estado',
+					type: 'select',
+					options: [
+						{ value: 'active', label: 'Activo' },
+						{ value: 'inactive', label: 'Inactivo' },
+					],
+					columns: 2, // half-width, sits next to the next filter
+				},
+				{
+					id: 'role',
+					field: 'role',
+					label: 'Rol',
+					type: 'select',
+					options: [
+						{ value: 'admin', label: 'Admin' },
+						{ value: 'editor', label: 'Editor' },
+					],
+					columns: 2,
+				},
+				{
+					id: 'createdAt',
+					field: 'createdAt',
+					label: 'Alta',
+					type: 'date-range',
+				},
+			],
+		},
+	],
+	table: {
+		columns: [
+			{ key: 'name', header: 'Nombre' },
+			{ key: 'email', header: 'Correo' },
+			{ key: 'status', header: 'Estado' },
+			{
+				key: 'actions',
+				header: '',
+				render: item => <UserActions user={item} />,
+			},
+		],
+	},
+})
+
+// features/users/UserList.tsx
+export function UserList() {
+	const adapter = serverActionAdapter<User>(async query => {
+		const { rows, total } = await listUsersAction(query)
+		return { data: rows, total }
+	})
+
+	return (
+		<ListView
+			config={usersConfig}
+			adapter={adapter}
+			staleTime={60_000} // built-in cache: keep responses for 1 minute
+			toolbarActions={[
+				{
+					label: 'Nuevo usuario',
+					onClick: () => openCreateModal(),
+				},
+			]}
+		/>
+	)
+}
+
+// features/users/UserActions.tsx
+import { useListRefresh } from '@pibytelabs/listkit'
+
+function UserActions({ user }: { user: User }) {
+	const refresh = useListRefresh()
+
+	const handleDelete = async () => {
+		await deleteUserAction(user.id)
+		refresh() // invalidates the built-in cache and refetches
+	}
+
+	return <button onClick={handleDelete}>Eliminar</button>
+}
+```
+
+### Complete example — with React Query
+
+Same list, but letting TanStack Query own the cache and background refetch:
+
+```tsx
+// features/users/UserList.tsx
+import { useQuery } from '@tanstack/react-query'
+import type { UseListDataHook } from '@pibytelabs/listkit'
+
+const useUsersListData: UseListDataHook<User> = (
+	adapter,
+	query,
+	refreshToken
+) => {
+	const { data, isLoading, error } = useQuery({
+		queryKey: ['users', 'list', query, refreshToken],
+		queryFn: () => adapter.fetch(query),
+		staleTime: 5 * 60 * 1000,
+	})
+
+	return {
+		data: data?.data ?? [],
+		total: data?.total ?? 0,
+		isLoading,
+		error,
+	}
+}
+
+export function UserList() {
+	const adapter = serverActionAdapter<User>(async query => {
+		const { rows, total } = await listUsersAction(query)
+		return { data: rows, total }
+	})
+
+	return (
+		<ListView
+			config={usersConfig}
+			adapter={adapter}
+			useListData={useUsersListData} // React Query takes over
+			toolbarActions={[
+				{
+					label: 'Nuevo usuario',
+					onClick: () => openCreateModal(),
+				},
+			]}
+		/>
+	)
+}
 ```
 
 ### Theming
