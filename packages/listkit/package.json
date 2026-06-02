@@ -1,6 +1,6 @@
 {
 	"name": "@pibytelabs/listkit",
-	"version": "2.2.0",
+	"version": "2.2.1",
 	"description": "Standardized list views for React — table/cards, search, pagination, advanced filters.",
 	"keywords": [
 		"react",
