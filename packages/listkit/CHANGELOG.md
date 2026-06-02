@@ -1,5 +1,65 @@
 # @pibytelabs/listkit
 
+## 2.3.0
+
+### Minor Changes
+
+- a5f08f2: Localizable UI strings via a `labels` prop. Every built-in string listkit
+  renders (results count, empty/error/loading states, filter sidebar
+  apply/clear/hint + title, boolean Yes/No, multi-select summary, pagination
+  summary, and the icon controls' `aria-label`/`title`) now comes from a
+  `ListLabels` object. Pass overrides app-wide on the provider
+  (`<ListKitProvider labels={…}>`) or per list (`config.labels`); unset keys fall
+  back to `DEFAULT_LABELS` (English).
+
+  ```tsx
+  <ListKitProvider labels={{
+    empty: 'Sin resultados', applyFilters: 'Aplicar', clearFilters: 'Limpiar',
+    yes: 'Sí', no: 'No', tableView: 'Vista tabla', cardsView: 'Vista tarjetas',
+    results: n => `${n} resultado${n === 1 ? '' : 's'}`,
+  }}>
+  ```
+
+  Ready-made label sets for the common cases — `DEFAULT_LABELS` (English) and
+  `ES_LABELS` (Spanish) — so a Spanish app is one line:
+  `<ListKitProvider labels={ES_LABELS}>` (English needs no prop).
+
+  `NextListView` accepts `labels` (and `theme`) and forwards them to its internal
+  provider, so a Next app can localize per list without a separate provider.
+
+  New exports: `ListLabels`, `DEFAULT_LABELS`, `ES_LABELS`, `resolveLabels`,
+  `useLabels`, `useListKitLabels`.
+
+  **Breaking-ish:** the built-in **defaults are now English** (they were Spanish).
+  Apps that relied on the Spanish defaults should pass `labels` (provider) — or the
+  existing per-item config props (`emptyMessage`, `filtersTitle`, a filter's
+  `trueLabel`/`falseLabel`) which still win over labels.
+
+- a5f08f2: Language-agnostic toolbar: the view toggle, filter button and results count are
+  now **icon-only** instead of carrying hardcoded Spanish text, so listkit reads
+  the same in any-language app. The view/filter names move to `aria-label` /
+  `title` (English defaults: "Table view", "Cards view", "Filters") and the
+  results count renders as a list icon + number with an `aria-label` ("N results")
+  — no more "N resultados" / "Tabla" / "Tarjetas" / "Filtros" baked into the UI.
+  The view toggle also gains `aria-pressed` for correct toggle semantics.
+
+  > Note: sentence-style strings (empty state, load error, "Apply/Clear filters",
+  > boolean Yes/No) still default to their current values and remain overridable
+  > via the config; a full `labels` i18n option is planned next.
+
+### Patch Changes
+
+- e9fea7e: Document the public API with consistent TSDoc. Every exported type, function,
+  component and hook in the configuration/entry/data surface now carries a
+  one-line summary plus `@param` / `@returns` / `@typeParam` / `@remarks` /
+  `@example` and per-field docs, so they render in editor hover/IntelliSense and
+  read cleanly for tools and agents. Covered: `ListConfig`, `ColumnDef`,
+  `FilterDefinition` (and all filter types), `ListQuery`/`ListResult`/`DataAdapter`,
+  `defineListConfig`, `NextListView`, `ListKitProvider`, `useListRefresh`,
+  `invalidateListCache`, `loadInitialList`, `buildListQuery`, `ListSkeleton`, the
+  `/query` + `/sql` helpers, and the adapters (`serverActionAdapter`,
+  `fetchAdapter`, `memoryAdapter`, `createDexieAdapter`).
+
 ## 2.2.1
 
 ### Patch Changes
