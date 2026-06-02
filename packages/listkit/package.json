@@ -37,6 +37,7 @@
 		"dist",
 		"tailwind.css",
 		"README.md",
+		"README.es.md",
 		"LICENSE",
 		"NOTICE"
 	],
