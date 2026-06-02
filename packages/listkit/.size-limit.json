@@ -14,10 +14,26 @@
 		]
 	},
 	{
-		"name": "/next subpath (ESM)",
+		"name": "/next — useNextRouterAdapter (ESM)",
 		"path": "dist/next.js",
-		"limit": "2 KB",
+		"import": "{ useNextRouterAdapter }",
+		"limit": "3 KB",
 		"ignore": ["react", "react-dom", "next"]
+	},
+	{
+		"name": "/next — NextListView (ESM, bundles ListView)",
+		"path": "dist/next.js",
+		"import": "{ NextListView }",
+		"limit": "26 KB",
+		"ignore": [
+			"react",
+			"react-dom",
+			"react/jsx-runtime",
+			"next",
+			"lucide-react",
+			"zod",
+			"react-datepicker"
+		]
 	},
 	{
 		"name": "/react-router subpath (ESM)",
