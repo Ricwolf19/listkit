@@ -31,6 +31,8 @@ type UseListStateOptions<T> = {
 	initialData?: ListResult<T>
 	/** The query `initialData` answers (build it with `buildListQuery`). */
 	initialQuery?: ListQuery
+	/** List identity, namespaces the response cache so lists don't collide. */
+	listId?: string
 }
 
 export function useListState<T>({
@@ -44,6 +46,7 @@ export function useListState<T>({
 	staleTime,
 	initialData,
 	initialQuery,
+	listId,
 }: UseListStateOptions<T>) {
 	const { get, set } = params
 	const { viewType, handleViewChange } = useViewType()
@@ -118,7 +121,8 @@ export function useListState<T>({
 		query,
 		refreshToken,
 		staleTime,
-		seed
+		seed,
+		listId
 	)
 
 	const totalPages = Math.max(1, Math.ceil(total / pageSize))

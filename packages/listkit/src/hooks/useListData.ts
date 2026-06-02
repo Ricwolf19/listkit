@@ -70,10 +70,15 @@ export function useListData<T>(
 	query: ListQuery,
 	refreshToken: number = 0,
 	staleTime: number = 30_000,
-	seed?: ListDataSeed<T>
+	seed?: ListDataSeed<T>,
+	listId: string = ''
 ): State<T> {
 	const queryKey = JSON.stringify(query)
-	const cacheKey = `${refreshToken}::${queryKey}`
+	// `listId` namespaces the shared cache per list. Without it, two lists that
+	// derive the same query (e.g. several admin tables at page 1 / 25 per page)
+	// would collide on one entry and serve each other's rows — correct count,
+	// wrong (often blank) cells. `defineListConfig`'s `id` provides it.
+	const cacheKey = `${listId}::${refreshToken}::${queryKey}`
 	// The SSR snapshot only applies when it answers the query we're rendering.
 	const seedMatches = !!seed && JSON.stringify(seed.query) === queryKey
 
@@ -186,7 +191,7 @@ export function useListData<T>(
 		if (query.page * query.pageSize >= state.total) return // already last page
 
 		const nextQuery = { ...query, page: query.page + 1 }
-		const nextKey = `${refreshToken}::${JSON.stringify(nextQuery)}`
+		const nextKey = `${listId}::${refreshToken}::${JSON.stringify(nextQuery)}`
 		if (readCache<T>(nextKey)?.data) return
 
 		let cancelled = false

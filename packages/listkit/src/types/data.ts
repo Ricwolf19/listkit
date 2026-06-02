@@ -51,5 +51,7 @@ export type UseListDataHook<T> = (
 	refreshToken?: number,
 	staleTime?: number,
 	/** Optional SSR snapshot; custom hooks may ignore it and seed via their own library. */
-	seed?: ListDataSeed<T>
+	seed?: ListDataSeed<T>,
+	/** List identity used to namespace the cache so distinct lists never collide. */
+	listId?: string
 ) => ListResult<T> & { isLoading: boolean; error: Error | null }
