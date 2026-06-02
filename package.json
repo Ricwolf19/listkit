@@ -19,6 +19,7 @@
 		"dev:package": "pnpm --filter @pibytelabs/listkit dev",
 		"build": "pnpm --filter @pibytelabs/listkit build",
 		"build:all": "pnpm -r build",
+		"docs": "pnpm --filter @pibytelabs/listkit run docs",
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
@@ -49,6 +50,7 @@
 		"dependency-cruiser": "^17.4.2",
 		"eslint": "^9.39.4",
 		"eslint-config-prettier": "^9.1.2",
+		"eslint-plugin-jsdoc": "^63.0.1",
 		"eslint-plugin-react": "^7.37.5",
 		"eslint-plugin-react-hooks": "^5.2.0",
 		"eslint-plugin-simple-import-sort": "^13.0.0",
@@ -61,6 +63,7 @@
 		"publint": "^0.3.21",
 		"secretlint": "^13.0.2",
 		"size-limit": "^12.1.0",
+		"typedoc": "^0.28.19",
 		"typescript": "^5.9.3",
 		"typescript-eslint": "^8.60.0"
 	}

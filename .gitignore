@@ -55,3 +55,6 @@ CLAUDE.md
 
 # npm (we use pnpm)
 package-lock.json
+
+# Generated API docs (typedoc)
+packages/listkit/docs/

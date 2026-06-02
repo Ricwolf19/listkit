@@ -1,5 +1,6 @@
 import js from '@eslint/js'
 import prettier from 'eslint-config-prettier'
+import jsdoc from 'eslint-plugin-jsdoc'
 import react from 'eslint-plugin-react'
 import reactHooks from 'eslint-plugin-react-hooks'
 import simpleImportSort from 'eslint-plugin-simple-import-sort'
@@ -14,6 +15,7 @@ export default tseslint.config(
 			'**/coverage/**',
 			'**/build/**',
 			'**/.vite/**',
+			'**/docs/**',
 		],
 	},
 	js.configs.recommended,
@@ -60,6 +62,66 @@ export default tseslint.config(
 				'warn',
 				{ argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
 			],
+		},
+	},
+	// JSDoc on the package's public source. The `recommended-typescript` preset
+	// validates existing JSDoc (alignment, tag names, param-name match) without
+	// requiring redundant `{type}` annotations; `require-jsdoc` then enforces
+	// presence on every exported function, type and hook.
+	{
+		files: ['packages/listkit/src/**/*.{ts,tsx}'],
+		// Internal building blocks not re-exported from a package entry; they get
+		// brief inline comments, not enforced JSDoc.
+		ignores: [
+			'packages/listkit/src/components/filters/inputs/**',
+			'packages/listkit/src/filters/**',
+			'packages/listkit/src/hooks/useListShortcuts.ts',
+			'packages/listkit/src/utils/getPath.ts',
+			'packages/listkit/src/utils/cn.ts',
+			'packages/listkit/src/utils/shortcut.ts',
+			'packages/listkit/src/constants.ts',
+		],
+		plugins: { jsdoc },
+		extends: [jsdoc.configs['flat/recommended-typescript']],
+		// We write TSDoc (what TypeDoc + the TS language server read), so keep
+		// `@typeParam` and treat `@defaultValue` as a valid block tag.
+		settings: {
+			jsdoc: {
+				mode: 'typescript',
+				tagNamePreference: { template: 'typeParam' },
+			},
+		},
+		rules: {
+			'jsdoc/require-jsdoc': [
+				'error',
+				{
+					publicOnly: true,
+					require: { FunctionDeclaration: true },
+					contexts: [
+						'ExportNamedDeclaration > TSTypeAliasDeclaration',
+						'ExportNamedDeclaration > TSInterfaceDeclaration',
+						'ExportNamedDeclaration > VariableDeclaration > VariableDeclarator > ArrowFunctionExpression',
+					],
+				},
+			],
+			// TypeScript already documents shapes; descriptions/returns are optional.
+			'jsdoc/require-param': 'off',
+			'jsdoc/require-returns': 'off',
+			'jsdoc/require-param-description': 'off',
+			'jsdoc/require-returns-description': 'off',
+			'jsdoc/tag-lines': 'off',
+			'jsdoc/check-tag-names': [
+				'warn',
+				{
+					definedTags: [
+						'typeParam',
+						'remarks',
+						'defaultValue',
+						'packageDocumentation',
+					],
+				},
+			],
+			'jsdoc/escape-inline-tags': 'off',
 		},
 	},
 	prettier

@@ -4,3 +4,7 @@ build
 coverage
 pnpm-lock.yaml
 .changeset
+
+# Generated API docs (typedoc)
+docs/
+**/docs/

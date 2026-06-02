@@ -126,7 +126,9 @@
 		"size": "size-limit",
 		"size:why": "size-limit --why",
 		"check:publish": "publint",
-		"check:types": "echo 'attw check skipped — re-enable in v0.1.0 once package has real runtime content'"
+		"check:types": "echo 'attw check skipped — re-enable in v0.1.0 once package has real runtime content'",
+		"docs": "typedoc",
+		"docs:watch": "typedoc --watch"
 	},
 	"peerDependencies": {
 		"lucide-react": ">=0.400.0",
