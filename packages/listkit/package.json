@@ -1,6 +1,6 @@
 {
 	"name": "@pibytelabs/listkit",
-	"version": "2.1.2",
+	"version": "2.2.0",
 	"description": "Standardized list views for React — table/cards, search, pagination, advanced filters.",
 	"keywords": [
 		"react",
@@ -94,6 +94,26 @@
 				"default": "./dist/server.cjs"
 			}
 		},
+		"./query": {
+			"import": {
+				"types": "./dist/query.d.ts",
+				"default": "./dist/query.js"
+			},
+			"require": {
+				"types": "./dist/query.d.cts",
+				"default": "./dist/query.cjs"
+			}
+		},
+		"./sql": {
+			"import": {
+				"types": "./dist/sql.d.ts",
+				"default": "./dist/sql.js"
+			},
+			"require": {
+				"types": "./dist/sql.d.cts",
+				"default": "./dist/sql.cjs"
+			}
+		},
 		"./tailwind.css": "./tailwind.css",
 		"./package.json": "./package.json"
 	},
@@ -108,7 +128,7 @@
 		"check:types": "echo 'attw check skipped — re-enable in v0.1.0 once package has real runtime content'"
 	},
 	"peerDependencies": {
-		"lucide-react": "^0.400.0 || ^0.500.0 || ^0.575.0",
+		"lucide-react": ">=0.400.0",
 		"next": "^14.0.0 || ^15.0.0 || ^16.0.0",
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0",
@@ -141,7 +161,7 @@
 	"devDependencies": {
 		"@types/react": "^19.0.2",
 		"@types/react-dom": "^19.0.2",
-		"lucide-react": "^0.575.0",
+		"lucide-react": "^1.14.0",
 		"next": "^16.0.0",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",

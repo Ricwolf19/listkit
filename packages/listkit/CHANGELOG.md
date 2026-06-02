@@ -1,5 +1,68 @@
 # @pibytelabs/listkit
 
+## 2.2.0
+
+### Minor Changes
+
+- Less boilerplate on the consumer side — three helpers that every SSR/Next app
+  was hand-rolling are now built in:
+  - **`NextListView`** (from `@pibytelabs/listkit/next`): `<ListView>` pre-wired
+    with the Next.js App Router adapter (search/page/filters/sort sync to the URL).
+    Replaces the per-app "provider + `useNextRouterAdapter` + `<ListView>`" wrapper.
+    Optional `theme` prop; omit it to inherit a root `<ListKitProvider theme={…}>`.
+  - **`loadInitialList(config, searchParams, fetcher)`** (from
+    `@pibytelabs/listkit/server`): rebuilds the URL-derived query, fetches the
+    first page on the server, and degrades to a client fetch on error. Returns
+    `{ initialData, initialQuery }` for `<ListView>`/`NextListView`.
+  - **`ListSkeleton`** (from `@pibytelabs/listkit`): ready-made page-level
+    `<Suspense>` fallback (toolbar bar + skeleton table) for the SSR pattern.
+
+  Also: `ListKitProvider` now inherits unspecified `router`/`theme` from a parent
+  provider, so wrappers like `NextListView` can inject only the router while a
+  root provider supplies the theme.
+
+- Standardized query helpers so apps stop re-implementing the
+  `ListQuery` → backend translation in every project:
+  - **`@pibytelabs/listkit/query`** (backend-agnostic, RSC-safe): `filtersById`,
+    `getString`, `getBoolean`, `getStringArray`, `getDateRange`, `getNumberRange`,
+    `getText`, `paginate`, plus the `DateRangeValue` / `NumberRangeValue` /
+    `TextValue` types. These read a `ListQuery`'s filters by config `id` and clamp
+    pagination — useful from any data fetcher (server action, route handler, repo).
+  - **`@pibytelabs/listkit/sql`** (Postgres-flavoured): `buildOrderBy` (safe,
+    whitelist-only `ORDER BY`) and `textCondition` (`lower(col) LIKE/= $n`).
+
+  Per-backend SQL/Mongo/Dexie helpers stay opt-in subpaths and intentionally
+  small — compose them, rather than expecting a universal query builder.
+
+- Filter UX + cache-invalidation fixes:
+  - **Filter sidebar Enter key:** pressing Enter now applies the filters from any
+    control in the panel, including the boolean toggle buttons. Previously Enter
+    on a focused option button activated it (toggling the just-picked value off)
+    instead of applying. Only `textarea` keeps native Enter (newlines).
+  - **Boolean filter overflow:** long `trueLabel`/`falseLabel` (e.g.
+    "Con WhatsApp" / "Sin WhatsApp") now ellipsise inside the fixed-height pill
+    (`min-w-0` + `px-3` + `truncate`, with a `title` tooltip) instead of wrapping
+    and spilling out of the button.
+  - **Refresh truly invalidates the cache (bug fix):** `useListRefresh()` now
+    clears the list's cached pages instead of namespacing them behind the refresh
+    token. This fixes a deleted/edited row reappearing after the list unmounts and
+    remounts (navigating away and back). The SSR `initialData` snapshot is also
+    treated as authoritative on mount, so returning to a list after a mutation
+    elsewhere (with `revalidatePath`) shows fresh data without a stale flash.
+  - **New export `invalidateListCache(listId?)`:** imperatively drop a list's cache
+    (by `config.id`) or the whole cache. Useful from outside the list tree — e.g.
+    a create/edit page that mutates then navigates back.
+
+### Patch Changes
+
+- Widen the `lucide-react` peer dependency range to `>=0.400.0` so consumers on
+  the newer `1.x` line (and any future major) install cleanly without
+  `--legacy-peer-deps`. listkit only imports a handful of long-stable named icons
+  (`X`, `Search`, `Check`, `ChevronDown`, `Calendar`, `LayoutGrid`, `Table`,
+  `ArrowUp`/`ArrowDown`, `ChevronsUpDown`, `SlidersHorizontal`, `Inbox`), whose
+  API is unchanged across these versions; the build and typecheck pass against
+  `lucide-react@1.x`.
+
 ## 2.1.2
 
 ### Patch Changes
