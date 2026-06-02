@@ -1,5 +1,26 @@
 # @pibytelabs/listkit
 
+## 2.2.1
+
+### Patch Changes
+
+- 69501ad: Fix `ListSkeleton` crashing React Server Components. It was only exported from
+  the main entry, whose barrel evaluates `ListKitProvider`'s `createContext` —
+  so importing `ListSkeleton` into a Server Component (e.g. a `<Suspense>`
+  fallback in a `page.tsx`) threw "createContext only works in Client Components".
+  It's now also re-exported from `@pibytelabs/listkit/server` (RSC-safe, no
+  client context). Import the Suspense fallback from there in Server Components:
+
+  ```tsx
+  import { ListSkeleton, loadInitialList } from '@pibytelabs/listkit/server'
+  ```
+
+- 4a34b9d: Refactor and professionalize the package README.
+  - Restructured `README.md` with a centered hero banner, badges (license, Node, React, Tailwind, TypeScript), table of contents, and a prominent Quick Start section.
+  - Added `README.es.md` — full Spanish translation with identical structure, examples, and navigation.
+  - Added a language switcher linking both READMEs at the top of each file.
+  - Included `README.es.md` in the `files` array of `package.json` so it ships with the published tarball.
+
 ## 2.2.0
 
 ### Minor Changes

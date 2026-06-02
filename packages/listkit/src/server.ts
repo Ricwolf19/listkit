@@ -1,8 +1,10 @@
-// Server-safe entry: pure helpers usable from React Server Components. Nothing
-// here imports React or touches the DOM, so it runs during SSR to seed
-// `<ListView initialData={…} initialQuery={…}>`. `defineListConfig` is
-// re-exported (also in the main entry) so building a config in an RSC doesn't
-// pull the client context and crash the render.
+// Server-safe entry for React Server Components. Nothing here touches client-only
+// APIs (createContext / hooks / DOM), so importing it from an RSC won't crash —
+// unlike the main barrel, which pulls `ListKitProvider`'s `createContext`.
+// `defineListConfig` and `ListSkeleton` are re-exported here (also in the main
+// entry) so a Server Component can build a config and render the Suspense
+// fallback without importing the client barrel.
+export { ListSkeleton } from './components/ListSkeleton'
 export { defineListConfig } from './config/defineListConfig'
 export { buildListQuery, type SearchParamsLike } from './utils/buildListQuery'
 export { type InitialList, loadInitialList } from './utils/loadInitialList'

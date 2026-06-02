@@ -1,8 +1,50 @@
+<div align="center">
+
 # @pibytelabs/listkit
 
-> Standardized, responsive list views for React — table/cards, search, advanced filters, pagination, and theming out of the box.
+**Standardized, responsive list views for React.**  
+Table / cards, search, advanced filters, pagination, sorting, SSR, and theming — out of the box.
 
-[![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-339933.svg)](https://nodejs.org/)
+[![React](https://img.shields.io/badge/react-%5E18%20%7C%7C%20%5E19-61dafb.svg)](https://react.dev/)
+[![Tailwind](https://img.shields.io/badge/tailwindcss-v4-38bdf8.svg)](https://tailwindcss.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6.svg)](https://www.typescriptlang.org/)
+
+🌐 **English** | [🇲🇽 Español](./README.es.md)
+
+</div>
+
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Quick Start](#quick-start)
+- [Installation](#installation)
+- [Tailwind v4 Setup](#tailwind-v4-setup)
+- [Usage](#usage)
+  - [1. Wire the provider](#1-wire-the-provider-once-at-the-app-root)
+  - [2. Render a list](#2-render-a-list)
+  - [Organizing the config](#organizing-the-config-file-vs-inline)
+  - [Advanced filters](#advanced-filters)
+  - [Column sorting](#column-sorting)
+  - [Custom cards with actions and theme](#custom-cards-with-actions-and-theme)
+  - [Fully custom cards (`bareCard`)](#fully-custom-cards-barecard)
+  - [Refreshing after a mutation](#refreshing-after-a-mutation)
+  - [Offsetting the pagination bar](#offsetting-the-pagination-bar)
+  - [Async data (server-side)](#async-data-server-side)
+  - [Server-side rendering (`initialData`)](#server-side-rendering-initialdata)
+  - [Less boilerplate (Next.js)](#less-boilerplate-nextjs)
+  - [Built-in cache (zero dependencies)](#built-in-cache-zero-dependencies)
+  - [Using with TanStack Query](#using-with-tanstack-query)
+  - [Complete example — built-in cache](#complete-example--without-react-query-built-in-cache)
+  - [Complete example — with React Query](#complete-example--with-react-query)
+  - [Theming](#theming)
+- [Subpath Exports](#subpath-exports)
+- [License](#license)
+
+---
 
 ## Features
 
@@ -21,7 +63,46 @@
 - **Keyboard shortcuts** — `⌘ K` focus search, `Shift + F` open filters, `Shift + V` toggle view.
 - **Composable + type-safe** — use `<ListView>`, or drop down to `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
 
-## Install
+---
+
+## Quick Start
+
+```bash
+pnpm add @pibytelabs/listkit react react-dom lucide-react tailwindcss
+```
+
+```css
+/* app/globals.css */
+@import 'tailwindcss';
+@import '@pibytelabs/listkit/tailwind.css';
+```
+
+```tsx
+// app/providers.tsx
+'use client'
+import { ListKitProvider, useNextRouterAdapter } from '@pibytelabs/listkit'
+
+export function Providers({ children }) {
+	return (
+		<ListKitProvider router={useNextRouterAdapter()} theme='blue'>
+			{children}
+		</ListKitProvider>
+	)
+}
+```
+
+```tsx
+// app/page.tsx
+import { ListView } from '@pibytelabs/listkit'
+
+export default function Page() {
+	return <ListView config={productsConfig} data={products} />
+}
+```
+
+---
+
+## Installation
 
 ```bash
 pnpm add @pibytelabs/listkit
@@ -39,7 +120,9 @@ pnpm add react-router-dom   # useReactRouterAdapter
 
 Everything else (`react-datepicker`, `clsx`, `tailwind-merge`) is bundled as a regular dependency — no extra install needed.
 
-## Tailwind v4 setup
+---
+
+## Tailwind v4 Setup
 
 listkit ships its compiled classes; register them once so Tailwind generates them:
 
@@ -50,6 +133,8 @@ listkit ships its compiled classes; register them once so Tailwind generates the
 ```
 
 `react-datepicker` styles are injected automatically at runtime (SSR-safe), so you don't need to import any extra CSS.
+
+---
 
 ## Usage
 
@@ -91,9 +176,9 @@ Both are valid — `defineListConfig` is just a typed identity helper.
 function ProductsPage() {
 	const config = defineListConfig<Product>({
 		id: 'products',
-		title: 'Productos',
+		title: 'Products',
 		search: { fields: ['name', 'sku'] },
-		table: { columns: [{ key: 'name', header: 'Nombre' }] },
+		table: { columns: [{ key: 'name', header: 'Name' }] },
 	})
 	return <ListView config={config} data={products} />
 }
@@ -123,55 +208,55 @@ import { productsConfig } from '@/features/products/config'
 
 ```tsx
 defineListConfig<Product>({
-	id: 'products',
-	search: true,
-	filtersTitle: 'Filtrar productos',
-	filters: [
-		{
-			id: 'attributes',
-			title: 'Atributos',
-			filters: [
-				{
-					id: 'category',
-					field: 'category',
-					label: 'Categoría',
-					type: 'select',
-					options: [{ value: 'coffee', label: 'Café' }],
-				},
-				{
-					id: 'tags',
-					field: 'tags',
-					label: 'Etiquetas',
-					type: 'multi-select',
-					options: [...],
-				},
-				{
-					id: 'price',
-					field: 'price',
-					label: 'Precio',
-					type: 'number-range',
-				},
-				{
-					id: 'createdAt',
-					field: 'createdAt',
-					label: 'Alta',
-					type: 'date-range',
-				},
-				{
-					id: 'active',
-					field: 'active',
-					label: 'Estado',
-					type: 'boolean',
-				},
-				{
-					id: 'name',
-					field: 'name',
-					label: 'Nombre',
-					type: 'text',
-				},
-			],
-		},
-	],
+  id: 'products',
+  search: true,
+  filtersTitle: 'Filter products',
+  filters: [
+    {
+      id: 'attributes',
+      title: 'Attributes',
+      filters: [
+        {
+          id: 'category',
+          field: 'category',
+          label: 'Category',
+          type: 'select',
+          options: [{ value: 'coffee', label: 'Coffee' }],
+        },
+        {
+          id: 'tags',
+          field: 'tags',
+          label: 'Tags',
+          type: 'multi-select',
+          options: [...],
+        },
+        {
+          id: 'price',
+          field: 'price',
+          label: 'Price',
+          type: 'number-range',
+        },
+        {
+          id: 'createdAt',
+          field: 'createdAt',
+          label: 'Created',
+          type: 'date-range',
+        },
+        {
+          id: 'active',
+          field: 'active',
+          label: 'Status',
+          type: 'boolean',
+        },
+        {
+          id: 'name',
+          field: 'name',
+          label: 'Name',
+          type: 'text',
+        },
+      ],
+    },
+  ],
 })
 ```
 
@@ -179,17 +264,15 @@ Applied filters appear as removable chips above the list and sync to the URL. Wi
 
 ### Column sorting
 
-Mark any table column `sortable`. Clicking its header cycles **ascending →
-descending → off**, syncs the active sort to a `sort` URL param, and flows into
-the adapter as `query.sort` (`{ field, dir }`):
+Mark any table column `sortable`. Clicking its header cycles **ascending → descending → off**, syncs the active sort to a `sort` URL param, and flows into the adapter as `query.sort` (`{ field, dir }`):
 
 ```tsx
 table: {
-	columns: [
-		{ key: 'name', header: 'Name', sortable: true },
-		{ key: 'createdAt', header: 'Created', sortable: true, sortField: 'created_at' },
-		{ key: 'total', header: 'Total', align: 'right', sortable: true },
-	],
+  columns: [
+    { key: 'name', header: 'Name', sortable: true },
+    { key: 'createdAt', header: 'Created', sortable: true, sortField: 'created_at' },
+    { key: 'total', header: 'Total', align: 'right', sortable: true },
+  ],
 }
 ```
 
@@ -197,8 +280,7 @@ table: {
 - **Async adapters** — read `query.sort` in your fetcher and translate to `ORDER BY`.
 - `sortField` overrides the field name sent to the adapter (defaults to the column `key`).
 
-After a page loads, the next page is prefetched on idle into the cache, so
-clicking "next" renders instantly with no loading flash.
+After a page loads, the next page is prefetched on idle into the cache, so clicking "next" renders instantly with no loading flash.
 
 ### Custom cards with actions and theme
 
@@ -223,7 +305,7 @@ defineListConfig<Product>({
 						ctx.colorTheme.primaryText
 					)}
 				>
-					Editar
+					Edit
 				</button>
 			</div>
 		</div>
@@ -259,7 +341,7 @@ function DeleteButton({ onConfirm }) {
 				refresh() // row disappears immediately
 			}}
 		>
-			Eliminar
+			Delete
 		</button>
 	)
 }
@@ -290,8 +372,8 @@ For a sidebar whose width changes (collapse), drive it with a CSS variable the s
 import { serverActionAdapter } from '@pibytelabs/listkit'
 
 const adapter = serverActionAdapter<Product>(async query => {
-	const { rows, total } = await listProductsAction(query) // page/pageSize/search/filters
-	return { data: rows, total }
+  const { rows, total } = await listProductsAction(query) // page/pageSize/search/filters
+  return { data: rows, total }
 })
 
 <ListView config={productsConfig} adapter={adapter} />
@@ -299,16 +381,9 @@ const adapter = serverActionAdapter<Product>(async query => {
 
 ### Server-side rendering (`initialData`)
 
-By default the list fetches on the **client**: the server renders an empty/loading
-shell and rows appear after hydration. For SEO, a faster first paint, and no
-loading flash, fetch the **first page on the server** and hand it to `<ListView>`
-as `initialData` — it renders those rows in the initial HTML and **skips the
-client's first fetch**. Paging and filtering afterwards still run on the client.
+By default the list fetches on the **client**: the server renders an empty/loading shell and rows appear after hydration. For SEO, a faster first paint, and no loading flash, fetch the **first page on the server** and hand it to `<ListView>` as `initialData` — it renders those rows in the initial HTML and **skips the client's first fetch**. Paging and filtering afterwards still run on the client.
 
-The catch: the server must compute the **same query** the client will derive from
-the URL, or the two renders disagree and React warns about a hydration mismatch.
-`buildListQuery` (from `@pibytelabs/listkit/server`) does exactly that — use its
-result both to fetch and as `initialQuery`:
+The catch: the server must compute the **same query** the client will derive from the URL, or the two renders disagree and React warns about a hydration mismatch. `buildListQuery` (from `@pibytelabs/listkit/server`) does exactly that — use its result both to fetch and as `initialQuery`:
 
 ```tsx
 // app/orders/page.tsx — a React Server Component
@@ -369,11 +444,7 @@ export function OrdersList({
 }
 ```
 
-The same server action (`listOrders`) powers both the server's first page and the
-client's later fetches — no duplicated fetching logic. `initialData` is used only
-while the live query equals `initialQuery`; the moment the user changes a
-page/filter (or calls `useListRefresh()`), the list fetches normally. It's
-fully opt-in: lists without `initialData` keep client-fetching unchanged.
+The same server action (`listOrders`) powers both the server's first page and the client's later fetches — no duplicated fetching logic. `initialData` is used only while the live query equals `initialQuery`; the moment the user changes a page/filter (or calls `useListRefresh()`), the list fetches normally. It's fully opt-in: lists without `initialData` keep client-fetching unchanged.
 
 ### Less boilerplate (Next.js)
 
@@ -381,13 +452,13 @@ Three helpers cover the wiring every SSR/Next app would otherwise hand-roll:
 
 - **`NextListView`** (`@pibytelabs/listkit/next`) — `<ListView>` pre-wired with the App Router adapter, so search/page/filters/sort sync to the URL. No manual `ListKitProvider` + `useNextRouterAdapter`. Pass `theme` here, or set it once on a root `<ListKitProvider theme={…}>` and `NextListView` inherits it (a provider inherits any prop you don't pass).
 - **`loadInitialList(config, searchParams, fetcher)`** (`@pibytelabs/listkit/server`) — wraps `buildListQuery` + the first-page fetch and degrades to a client fetch on error. Returns `{ initialData, initialQuery }`.
-- **`ListSkeleton`** (`@pibytelabs/listkit`) — a ready-made `<Suspense>` fallback (toolbar bar + skeleton table) for the streaming SSR pattern.
+- **`ListSkeleton`** — a ready-made `<Suspense>` fallback (toolbar bar + skeleton table) for the streaming SSR pattern. Import it from `@pibytelabs/listkit/server` in a Server Component (the page), or from `@pibytelabs/listkit` in client code.
 
 ```tsx
 // app/orders/page.tsx — Server Component
 import { Suspense } from 'react'
-import { loadInitialList } from '@pibytelabs/listkit/server'
-import { ListSkeleton } from '@pibytelabs/listkit'
+// Import both from /server in RSC — the main barrel pulls client context.
+import { ListSkeleton, loadInitialList } from '@pibytelabs/listkit/server'
 import { ordersConfig } from './config'
 import { listOrders } from './actions'
 import { OrdersList } from './OrdersList'
@@ -497,7 +568,7 @@ A generic admin list using a Next.js server action, the native cache, and mutati
 // features/users/config.tsx
 export const usersConfig = defineListConfig<User>({
 	id: 'users',
-	title: 'Usuarios',
+	title: 'Users',
 	search: true,
 	pageSize: 20,
 	filters: [
@@ -507,18 +578,18 @@ export const usersConfig = defineListConfig<User>({
 				{
 					id: 'status',
 					field: 'status',
-					label: 'Estado',
+					label: 'Status',
 					type: 'select',
 					options: [
-						{ value: 'active', label: 'Activo' },
-						{ value: 'inactive', label: 'Inactivo' },
+						{ value: 'active', label: 'Active' },
+						{ value: 'inactive', label: 'Inactive' },
 					],
 					columns: 2, // half-width, sits next to the next filter
 				},
 				{
 					id: 'role',
 					field: 'role',
-					label: 'Rol',
+					label: 'Role',
 					type: 'select',
 					options: [
 						{ value: 'admin', label: 'Admin' },
@@ -529,7 +600,7 @@ export const usersConfig = defineListConfig<User>({
 				{
 					id: 'createdAt',
 					field: 'createdAt',
-					label: 'Alta',
+					label: 'Created',
 					type: 'date-range',
 				},
 			],
@@ -537,9 +608,9 @@ export const usersConfig = defineListConfig<User>({
 	],
 	table: {
 		columns: [
-			{ key: 'name', header: 'Nombre' },
-			{ key: 'email', header: 'Correo' },
-			{ key: 'status', header: 'Estado' },
+			{ key: 'name', header: 'Name' },
+			{ key: 'email', header: 'Email' },
+			{ key: 'status', header: 'Status' },
 			{
 				key: 'actions',
 				header: '',
@@ -563,7 +634,7 @@ export function UserList() {
 			staleTime={60_000} // built-in cache: keep responses for 1 minute
 			toolbarActions={[
 				{
-					label: 'Nuevo usuario',
+					label: 'New user',
 					onClick: () => openCreateModal(),
 				},
 			]}
@@ -582,7 +653,7 @@ function UserActions({ user }: { user: User }) {
 		refresh() // invalidates the built-in cache and refetches
 	}
 
-	return <button onClick={handleDelete}>Eliminar</button>
+	return <button onClick={handleDelete}>Delete</button>
 }
 ```
 
@@ -627,7 +698,7 @@ export function UserList() {
 			useListData={useUsersListData} // React Query takes over
 			toolbarActions={[
 				{
-					label: 'Nuevo usuario',
+					label: 'New user',
 					onClick: () => openCreateModal(),
 				},
 			]}
@@ -647,16 +718,18 @@ defineListConfig({ colorTheme: 'teal', /* … */ })
 
 // custom theme (brand colors) — pass a ThemeClasses object anywhere a theme is accepted
 const brand: ThemeClasses = {
-	primaryBg: 'bg-[#121c38]',
-	primaryText: 'text-white',
-	focusRing: 'focus:ring-indigo-500',
-	focusBorder: 'focus:border-indigo-500',
-	/* … */
+  primaryBg: 'bg-[#121c38]',
+  primaryText: 'text-white',
+  focusRing: 'focus:ring-indigo-500',
+  focusBorder: 'focus:border-indigo-500',
+  /* … */
 }
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
 
-## Subpath exports
+---
+
+## Subpath Exports
 
 | Import path                        | Contents                                                                                                                                  |
 | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
@@ -664,10 +737,12 @@ defineListConfig({ colorTheme: brand, /* … */ })
 | `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                    |
 | `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                   |
 | `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                              |
-| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — RSC-safe (no React/DOM)                                                         |
+| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                         |
 | `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — read `ListQuery` filters |
 | `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — Postgres-flavoured query fragments                                                                      |
 | `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                           |
+
+---
 
 ## License
 
