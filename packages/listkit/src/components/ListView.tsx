@@ -7,6 +7,7 @@ import {
 	flattenFilters,
 	readActiveFilters,
 } from '../filters/serialize'
+import { invalidateListCache } from '../hooks/useListData'
 import { useListParams } from '../hooks/useListParams'
 import { useListShortcuts } from '../hooks/useListShortcuts'
 import { useListState } from '../hooks/useListState'
@@ -102,10 +103,13 @@ export function ListView<T>({
 
 	const [filtersOpen, setFiltersOpen] = useState(false)
 
-	// Bumped to force a refetch (e.g. after a row mutation). Exposed via
-	// ListRefreshProvider so descendants can call useListRefresh().
+	// refresh(): invalidate this list's cache, then bump the token to refetch.
+	// Exposed via ListRefreshProvider for descendants (useListRefresh).
 	const [refreshToken, setRefreshToken] = useState(0)
-	const refresh = useCallback(() => setRefreshToken(t => t + 1), [])
+	const refresh = useCallback(() => {
+		invalidateListCache(config.id)
+		setRefreshToken(t => t + 1)
+	}, [config.id])
 
 	const removeFilter = (id: string) => {
 		params.setMany({ [filterParamKey(id)]: null, page: null })
