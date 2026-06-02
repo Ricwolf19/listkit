@@ -12,19 +12,26 @@ import type { ListQuery } from '../types/data'
 export type SearchParamsLike = Record<string, string | string[] | undefined>
 
 /**
- * Rebuilds, on the server, the exact `ListQuery` the client list will derive
- * from the same URL. Use it in a server component to fetch the first page and
- * pass both the data and this query as `initialData` / `initialQuery` to
- * `<ListView>`:
+ * Rebuilds, on the server, the exact {@link ListQuery} the client list will
+ * derive from the same URL.
  *
+ * @typeParam T - The row type.
+ * @param config - The list config (`pageSize` and `filters` shape the query).
+ * @param searchParams - The route's resolved `searchParams`.
+ * @returns The query to both fetch with and pass as `initialQuery`.
+ *
+ * @remarks
+ * The shape (and property order) mirrors the client's query builder so the two
+ * `JSON.stringify` outputs are byte-identical and the first render hydrates
+ * without a refetch. Prefer {@link loadInitialList}, which wraps this plus the
+ * fetch + error fallback.
+ *
+ * @example
  * ```tsx
  * const query = buildListQuery(ordersConfig, await searchParams)
  * const initial = await listOrdersForList(query)
  * return <OrdersListView initialData={initial} initialQuery={query} />
  * ```
- *
- * The shape (and property order) mirrors the client's query builder so the
- * serialized keys match and the first render hydrates without a refetch.
  */
 export function buildListQuery<T>(
 	config: ListConfig<T>,

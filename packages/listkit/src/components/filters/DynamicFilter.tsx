@@ -22,6 +22,7 @@ type DynamicFilterProps = {
 	colorTheme?: ColorTheme
 }
 
+/** Renders the right filter input for a {@link FilterDefinition}'s `type`. */
 export function DynamicFilter({
 	def,
 	value,

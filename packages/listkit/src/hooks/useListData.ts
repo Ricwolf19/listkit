@@ -47,9 +47,20 @@ function writeCache<T>(key: string, entry: CacheEntry<T>): void {
 }
 
 /**
- * Drops cached pages so the next read refetches. Pass a `config.id` to clear one
- * list, or nothing to clear all. `useListRefresh()` calls this for in-tree
- * mutations; call it directly from outside the list tree (e.g. a create page).
+ * Drops cached pages so the next read refetches from the adapter.
+ *
+ * @param listId - A `config.id` to clear one list; omit to clear all (e.g. on sign-out).
+ *
+ * @remarks
+ * {@link useListRefresh} calls this for in-tree mutations. Call it directly for
+ * mutations *outside* the list tree (e.g. a create/edit page that navigates back).
+ *
+ * @example
+ * ```ts
+ * import { invalidateListCache } from '@pibytelabs/listkit'
+ * await createUser(data)
+ * invalidateListCache('users')
+ * ```
  */
 export function invalidateListCache(listId?: string): void {
 	if (listId == null || listId === '') {

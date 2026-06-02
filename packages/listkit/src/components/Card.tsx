@@ -8,6 +8,7 @@ type CardProps = {
 	onClick?: () => void
 }
 
+/** Default card chrome (border, padding, shadow, hover) wrapping card content. */
 export function Card({ children, className, onClick }: CardProps) {
 	return (
 		<div

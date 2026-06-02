@@ -2,9 +2,13 @@ import { useCallback, useState } from 'react'
 
 import { useListKitRouter } from '../context/ListKitContext'
 
+/** The shared param store returned by {@link useListParams}. */
 export type ListParams = {
+	/** Read a param. */
 	get: (key: string) => string | null
+	/** Write a single param (`null` clears it). */
 	set: (key: string, value: string | null) => void
+	/** Write several params in one navigation. */
 	setMany: (updates: Record<string, string | null>) => void
 }
 
