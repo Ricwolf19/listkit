@@ -141,6 +141,7 @@ export function ListView<T>({
 		staleTime,
 		initialData,
 		initialQuery,
+		listId: config.id,
 	})
 
 	const isLoading = externalLoading || dataLoading
