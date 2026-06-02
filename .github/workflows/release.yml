@@ -59,7 +59,8 @@ jobs:
           if gh release view "$TAG" > /dev/null 2>&1; then
             echo "Release $TAG already exists. Skipping."
           else
-            gh release create "$TAG" --title "v$VERSION" --notes "See packages/listkit/CHANGELOG.md for details." --verify-tag
+            awk '/^## /{if(found)exit; found=1} found{print}' packages/listkit/CHANGELOG.md | tail -n +2 > /tmp/release_notes.md
+            gh release create "$TAG" --title "v$VERSION" --notes-file /tmp/release_notes.md --verify-tag
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
