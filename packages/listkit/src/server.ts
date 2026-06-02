@@ -1,9 +1,8 @@
-// Server-safe entry: pure helpers usable from React Server Components.
-// Nothing here imports React or touches the DOM, so it can run during SSR to
-// seed `<ListView initialData={…} initialQuery={…}>`.
-//
-// `defineListConfig` is re-exported here (it's also in the main entry) so a
-// config built in a Server Component — to feed `buildListQuery` — doesn't pull
-// the main barrel's client context (`createContext`) and crash the RSC render.
+// Server-safe entry: pure helpers usable from React Server Components. Nothing
+// here imports React or touches the DOM, so it runs during SSR to seed
+// `<ListView initialData={…} initialQuery={…}>`. `defineListConfig` is
+// re-exported (also in the main entry) so building a config in an RSC doesn't
+// pull the client context and crash the render.
 export { defineListConfig } from './config/defineListConfig'
 export { buildListQuery, type SearchParamsLike } from './utils/buildListQuery'
+export { type InitialList, loadInitialList } from './utils/loadInitialList'

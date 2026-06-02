@@ -151,13 +151,10 @@ export function FilterSidebar<T>({
 				onClose()
 				return
 			}
-			// Enter applies the filters from anywhere in the panel, not just from a
-			// native input that happens to trigger the form's implicit submit (custom
-			// controls like selects or the date picker don't). Buttons and textareas
-			// keep their own Enter behaviour.
+
 			if (e.key === 'Enter') {
 				const tag = (e.target as HTMLElement | null)?.tagName.toLowerCase()
-				if (tag === 'button' || tag === 'textarea') return
+				if (tag === 'textarea') return
 				e.preventDefault()
 				apply()
 				onClose()

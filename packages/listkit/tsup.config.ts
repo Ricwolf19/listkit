@@ -3,10 +3,12 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
 	entry: {
 		index: 'src/index.ts',
-		next: 'src/next.ts',
+		next: 'src/next.tsx',
 		'react-router': 'src/react-router.ts',
 		adapters: 'src/adapters.ts',
 		server: 'src/server.ts',
+		query: 'src/query.ts',
+		sql: 'src/sql.ts',
 	},
 	format: ['esm', 'cjs'],
 	dts: true,

@@ -1,4 +1,4 @@
-import { createContext, type ReactNode, useContext } from 'react'
+import { createContext, type ReactNode, useContext, useMemo } from 'react'
 
 import type { ColorTheme } from '../theme/colorTheme'
 import type { RouterAdapter } from '../types/router'
@@ -11,29 +11,30 @@ type ListKitContextValue = {
 const ListKitContext = createContext<ListKitContextValue>({})
 
 export type ListKitProviderProps = {
-	/**
-	 * Optional router adapter. When provided, list state (search, page, filters)
-	 * syncs to the URL. When omitted, state lives in component-local React state.
-	 */
+	/** Router adapter. When set, list state (search/page/filters/sort) syncs to the URL. */
 	router?: RouterAdapter
-	/**
-	 * Default color theme for every list under this provider. A `colorTheme` on an
-	 * individual config still wins. Accepts a built-in name or a custom
-	 * `ThemeClasses` object.
-	 */
+	/** Default theme for lists under this provider; a config `colorTheme` still wins. */
 	theme?: ColorTheme
 	children: ReactNode
 }
 
+// Unspecified props inherit from a parent ListKitProvider, so a wrapper like
+// `NextListView` can inject only the router while a root provider supplies the theme.
 export function ListKitProvider({
 	router,
 	theme,
 	children,
 }: ListKitProviderProps) {
+	const parent = useContext(ListKitContext)
+	const value = useMemo(
+		() => ({
+			router: router ?? parent.router,
+			theme: theme ?? parent.theme,
+		}),
+		[router, theme, parent.router, parent.theme]
+	)
 	return (
-		<ListKitContext.Provider value={{ router, theme }}>
-			{children}
-		</ListKitContext.Provider>
+		<ListKitContext.Provider value={value}>{children}</ListKitContext.Provider>
 	)
 }
 

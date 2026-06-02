@@ -22,15 +22,16 @@ export function FilterBoolean({
 	const opt = (label: string, val: boolean) => (
 		<button
 			type='button'
+			title={label}
 			onClick={() => onChange(value === val ? undefined : val)}
 			className={cn(
-				'h-9 flex-1 cursor-pointer rounded-md text-sm font-medium transition-colors',
+				'flex h-9 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-md px-3 text-sm font-medium transition-colors',
 				value === val
 					? cn(theme.primaryBg, theme.primaryText)
 					: 'bg-gray-100 text-gray-600 hover:text-gray-900'
 			)}
 		>
-			{label}
+			<span className='truncate'>{label}</span>
 		</button>
 	)
 	return (

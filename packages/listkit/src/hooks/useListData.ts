@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import type {
 	DataAdapter,
@@ -47,6 +47,22 @@ function writeCache<T>(key: string, entry: CacheEntry<T>): void {
 }
 
 /**
+ * Drops cached pages so the next read refetches. Pass a `config.id` to clear one
+ * list, or nothing to clear all. `useListRefresh()` calls this for in-tree
+ * mutations; call it directly from outside the list tree (e.g. a create page).
+ */
+export function invalidateListCache(listId?: string): void {
+	if (listId == null || listId === '') {
+		cache.clear()
+		return
+	}
+	const prefix = `${listId}::`
+	for (const key of Array.from(cache.keys())) {
+		if (key.startsWith(prefix)) cache.delete(key)
+	}
+}
+
+/**
  * Drives an adapter: refetches whenever the query changes and tracks
  * loading/error. Each distinct query gets its own cache key, so a late response
  * always lands on its own entry and can't clobber a newer query's state; the
@@ -74,13 +90,14 @@ export function useListData<T>(
 	listId: string = ''
 ): State<T> {
 	const queryKey = JSON.stringify(query)
-	// `listId` namespaces the shared cache per list. Without it, two lists that
-	// derive the same query (e.g. several admin tables at page 1 / 25 per page)
-	// would collide on one entry and serve each other's rows — correct count,
-	// wrong (often blank) cells. `defineListConfig`'s `id` provides it.
-	const cacheKey = `${listId}::${refreshToken}::${queryKey}`
-	// The SSR snapshot only applies when it answers the query we're rendering.
+	// `listId` namespaces the cache per list (so sibling lists sharing a query
+	// don't serve each other's rows). `refreshToken` is intentionally absent:
+	// `refresh()` invalidates the entries instead of namespacing them, so a
+	// remount can't read a pre-refresh entry.
+	const cacheKey = `${listId}::${queryKey}`
 	const seedMatches = !!seed && JSON.stringify(seed.query) === queryKey
+	// Guards the once-per-mount, authoritative seed overwrite below.
+	const seededRef = useRef(false)
 
 	// Initialise from cache when possible to avoid a loading flash on mount.
 	const [state, setState] = useState<State<T>>(() => {
@@ -112,10 +129,10 @@ export function useListData<T>(
 	useEffect(() => {
 		let active = true
 
-		// Prime the cache from the SSR snapshot on the initial token so the client
-		// treats it as a fresh hit and skips the redundant first fetch. A refresh
-		// (refreshToken > 0) changes the key, so it always refetches as expected.
-		if (seedMatches && refreshToken === 0 && !readCache<T>(cacheKey)?.data) {
+		// SSR seed is authoritative on mount: overwrite the cache so returning to a
+		// list after a mutation elsewhere (with `revalidatePath`) shows fresh data.
+		if (seedMatches && refreshToken === 0 && !seededRef.current) {
+			seededRef.current = true
 			writeCache(cacheKey, { data: seed!.data, ts: Date.now() })
 		}
 
@@ -179,8 +196,9 @@ export function useListData<T>(
 		return () => {
 			active = false
 		}
+		// `refreshToken` retriggers the fetch after `refresh()` invalidated the cache.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [adapter, cacheKey, staleTime])
+	}, [adapter, cacheKey, staleTime, refreshToken])
 
 	// Prefetch the next page on idle so forward pagination is instant. The result
 	// lands in the shared cache under the next page's key; when the user advances,
@@ -191,7 +209,7 @@ export function useListData<T>(
 		if (query.page * query.pageSize >= state.total) return // already last page
 
 		const nextQuery = { ...query, page: query.page + 1 }
-		const nextKey = `${listId}::${refreshToken}::${JSON.stringify(nextQuery)}`
+		const nextKey = `${listId}::${JSON.stringify(nextQuery)}`
 		if (readCache<T>(nextKey)?.data) return
 
 		let cancelled = false

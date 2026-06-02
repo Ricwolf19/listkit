@@ -265,6 +265,13 @@ function DeleteButton({ onConfirm }) {
 }
 ```
 
+`refresh()` truly invalidates this list's cached pages (it doesn't just bump a token), so the refetched data also wins on a later remount — a deleted row can't reappear when you navigate away and back.
+
+For mutations that happen **outside** the list tree (e.g. a separate create/edit page), you have two options:
+
+- Call `revalidatePath(...)` in the server action. On return, the server re-renders and hands `<ListView>` a fresh `initialData` seed, which is treated as authoritative on mount — no stale flash.
+- Or invalidate imperatively from anywhere: `import { invalidateListCache } from '@pibytelabs/listkit'` then `invalidateListCache('your-config-id')` (omit the id to clear all lists, e.g. on sign-out).
+
 In-memory lists (the `data` prop) refresh automatically when `data` changes — this is only needed for async adapters.
 
 ### Offsetting the pagination bar
@@ -368,6 +375,63 @@ while the live query equals `initialQuery`; the moment the user changes a
 page/filter (or calls `useListRefresh()`), the list fetches normally. It's
 fully opt-in: lists without `initialData` keep client-fetching unchanged.
 
+### Less boilerplate (Next.js)
+
+Three helpers cover the wiring every SSR/Next app would otherwise hand-roll:
+
+- **`NextListView`** (`@pibytelabs/listkit/next`) — `<ListView>` pre-wired with the App Router adapter, so search/page/filters/sort sync to the URL. No manual `ListKitProvider` + `useNextRouterAdapter`. Pass `theme` here, or set it once on a root `<ListKitProvider theme={…}>` and `NextListView` inherits it (a provider inherits any prop you don't pass).
+- **`loadInitialList(config, searchParams, fetcher)`** (`@pibytelabs/listkit/server`) — wraps `buildListQuery` + the first-page fetch and degrades to a client fetch on error. Returns `{ initialData, initialQuery }`.
+- **`ListSkeleton`** (`@pibytelabs/listkit`) — a ready-made `<Suspense>` fallback (toolbar bar + skeleton table) for the streaming SSR pattern.
+
+```tsx
+// app/orders/page.tsx — Server Component
+import { Suspense } from 'react'
+import { loadInitialList } from '@pibytelabs/listkit/server'
+import { ListSkeleton } from '@pibytelabs/listkit'
+import { ordersConfig } from './config'
+import { listOrders } from './actions'
+import { OrdersList } from './OrdersList'
+
+export default function OrdersPage({ searchParams }) {
+	return (
+		<Suspense fallback={<ListSkeleton />}>
+			<OrdersData searchParams={searchParams} />
+		</Suspense>
+	)
+}
+
+async function OrdersData({ searchParams }) {
+	const { initialData, initialQuery } = await loadInitialList(
+		ordersConfig,
+		await searchParams,
+		listOrders
+	)
+	return <OrdersList initialData={initialData} initialQuery={initialQuery} />
+}
+```
+
+```tsx
+// OrdersList.tsx — Client Component
+'use client'
+import { NextListView } from '@pibytelabs/listkit/next'
+import { serverActionAdapter } from '@pibytelabs/listkit'
+import { ordersConfig } from './config'
+import { listOrders } from './actions'
+
+export function OrdersList({ initialData, initialQuery }) {
+	const adapter = serverActionAdapter(q => listOrders(q))
+	return (
+		<NextListView
+			theme='blue'
+			config={ordersConfig}
+			adapter={adapter}
+			initialData={initialData}
+			initialQuery={initialQuery}
+		/>
+	)
+}
+```
+
 ### Built-in cache (zero dependencies)
 
 By default `useListData` keeps the last response in memory for **30 seconds** (`staleTime`). This means:
@@ -375,7 +439,7 @@ By default `useListData` keeps the last response in memory for **30 seconds** (`
 - Going back to a page you already visited shows data **instantly** — no loading flash.
 - If the cache is stale, the old data is shown immediately while a background refresh runs (stale-while-revalidate).
 - Identical in-flight requests are **deduplicated** so rapid filter changes don't fire duplicate calls.
-- Calling `useListRefresh()` bumps the internal `refreshToken` and bypasses the cache.
+- Calling `useListRefresh()` invalidates this list's cached pages and refetches (see [Refreshing after a mutation](#refreshing-after-a-mutation)); `invalidateListCache(id?)` does the same imperatively from anywhere.
 - The cache is **bounded** (least-recently-used eviction, ~100 entries shared across all lists), so a long-running app can't grow it without limit. If you need a larger, GC-tunable, cross-component cache, inject TanStack Query (below) and let it own the lifecycle.
 
 You can tune or disable it per list:
@@ -594,14 +658,16 @@ defineListConfig({ colorTheme: brand, /* … */ })
 
 ## Subpath exports
 
-| Import path                        | Contents                                                                                |
-| ---------------------------------- | --------------------------------------------------------------------------------------- |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, adapters, hooks, primitives, types   |
-| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`                                                                  |
-| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                 |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`            |
-| `@pibytelabs/listkit/server`       | `buildListQuery`, `defineListConfig` — RSC-safe (no React/DOM), for SSR configs/queries |
-| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                         |
+| Import path                        | Contents                                                                                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, adapters, hooks, primitives, types              |
+| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                    |
+| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                   |
+| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                              |
+| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — RSC-safe (no React/DOM)                                                         |
+| `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — read `ListQuery` filters |
+| `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — Postgres-flavoured query fragments                                                                      |
+| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                           |
 
 ## License
 
