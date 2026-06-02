@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 
+import { useLabels } from '../context/ListKitContext'
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import { cn } from '../utils/cn'
 import { Button } from './Button'
@@ -46,6 +47,7 @@ function getPageNumbers(
 	return result
 }
 
+/** Fixed bottom pagination bar with page numbers and prev/next controls. */
 export function Pagination({
 	currentPage,
 	totalPages,
@@ -58,6 +60,7 @@ export function Pagination({
 }: PaginationProps) {
 	const ref = useRef<HTMLDivElement>(null)
 	const theme = getColorTheme(colorTheme)
+	const labels = useLabels()
 
 	useEffect(() => {
 		const handleKeyDown = (event: KeyboardEvent) => {
@@ -108,24 +111,28 @@ export function Pagination({
 								theme.paginationSpinnerBorder
 							)}
 						/>
-						<span className='hidden sm:inline'>Cargando…</span>
+						<span className='hidden sm:inline'>{labels.loading}</span>
 					</span>
 				) : totalItems === 0 ? (
-					<span className='font-medium text-gray-900'>0 resultados</span>
+					<span className='font-medium text-gray-900'>{labels.results(0)}</span>
 				) : (
 					<div className='flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3'>
 						<span>
-							<span className='hidden text-gray-500 sm:inline'>Mostrando </span>
+							<span className='hidden text-gray-500 sm:inline'>
+								{labels.showing}{' '}
+							</span>
 							<span className='font-semibold text-gray-900'>
 								{startItem}–{endItem}
 							</span>{' '}
-							<span className='text-gray-500'>de {totalItems}</span>
+							<span className='text-gray-500'>
+								{labels.of} {totalItems}
+							</span>
 						</span>
 						<span className='hidden text-gray-300 sm:inline'>|</span>
 						<span className='text-xs text-gray-500 sm:text-sm'>
-							Página{' '}
+							{labels.page}{' '}
 							<span className='font-semibold text-gray-900'>{currentPage}</span>{' '}
-							de{' '}
+							{labels.of}{' '}
 							<span className='font-semibold text-gray-900'>{totalPages}</span>
 						</span>
 					</div>
@@ -139,7 +146,8 @@ export function Pagination({
 					onClick={() => goTo(1)}
 					disabled={currentPage === 1 || isLoading || isDisabled}
 					className={cn('hidden sm:flex', arrowBtn, theme.softHoverBg)}
-					title='Primera página'
+					title={labels.firstPage}
+					aria-label={labels.firstPage}
 				>
 					<ChevronsLeft className='h-4 w-4' />
 				</Button>
@@ -149,7 +157,8 @@ export function Pagination({
 					onClick={() => goTo(currentPage - 1)}
 					disabled={currentPage === 1 || isLoading || isDisabled}
 					className={cn(arrowBtn, theme.softHoverBg)}
-					title='Página anterior'
+					title={labels.previousPage}
+					aria-label={labels.previousPage}
 				>
 					<ChevronLeft className='h-4 w-4' />
 				</Button>
@@ -200,7 +209,8 @@ export function Pagination({
 					onClick={() => goTo(currentPage + 1)}
 					disabled={currentPage === totalPages || isLoading || isDisabled}
 					className={cn(arrowBtn, theme.softHoverBg)}
-					title='Página siguiente'
+					title={labels.nextPage}
+					aria-label={labels.nextPage}
 				>
 					<ChevronRight className='h-4 w-4' />
 				</Button>
@@ -210,7 +220,8 @@ export function Pagination({
 					onClick={() => goTo(totalPages)}
 					disabled={currentPage === totalPages || isLoading || isDisabled}
 					className={cn('hidden sm:flex', arrowBtn, theme.softHoverBg)}
-					title='Última página'
+					title={labels.lastPage}
+					aria-label={labels.lastPage}
 				>
 					<ChevronsRight className='h-4 w-4' />
 				</Button>

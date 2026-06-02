@@ -1,5 +1,6 @@
 import { LayoutGrid, Table as TableIcon } from 'lucide-react'
 
+import { useLabels } from '../context/ListKitContext'
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import type { ViewType } from '../types/list'
 import { cn } from '../utils/cn'
@@ -13,6 +14,7 @@ type ViewToggleProps = {
 	shortcutHint?: string
 }
 
+/** Segmented control to switch between the table and cards views. */
 export function ViewToggle({
 	view,
 	onViewChange,
@@ -21,10 +23,14 @@ export function ViewToggle({
 	shortcutHint,
 }: ViewToggleProps) {
 	const theme = getColorTheme(colorTheme)
+	const labels = useLabels()
 
+	// Icon-only so the control reads the same in any language. The view name
+	// lives in `aria-label`/`title` (English default) for accessibility, not as
+	// visible text.
 	const buttonClass = (active: boolean) =>
 		cn(
-			'flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-all duration-150 active:scale-[0.98]',
+			'flex h-9 w-10 cursor-pointer items-center justify-center rounded-lg transition-all duration-150 active:scale-[0.98]',
 			active
 				? cn(
 						theme.viewToggleActiveBg,
@@ -33,6 +39,13 @@ export function ViewToggle({
 					)
 				: 'text-gray-500 hover:text-gray-900'
 		)
+
+	const tableLabel = shortcutHint
+		? `${labels.tableView} (${shortcutHint})`
+		: labels.tableView
+	const cardsLabel = shortcutHint
+		? `${labels.cardsView} (${shortcutHint})`
+		: labels.cardsView
 
 	return (
 		<div
@@ -45,25 +58,21 @@ export function ViewToggle({
 				type='button'
 				onClick={() => onViewChange('table')}
 				className={buttonClass(view === 'table')}
-				title={
-					shortcutHint ? `Vista de tabla (${shortcutHint})` : 'Vista de tabla'
-				}
+				title={tableLabel}
+				aria-label={tableLabel}
+				aria-pressed={view === 'table'}
 			>
 				<TableIcon className='h-4 w-4' />
-				<span className='hidden sm:inline'>Tabla</span>
 			</button>
 			<button
 				type='button'
 				onClick={() => onViewChange('cards')}
 				className={buttonClass(view === 'cards')}
-				title={
-					shortcutHint
-						? `Vista de tarjetas (${shortcutHint})`
-						: 'Vista de tarjetas'
-				}
+				title={cardsLabel}
+				aria-label={cardsLabel}
+				aria-pressed={view === 'cards'}
 			>
 				<LayoutGrid className='h-4 w-4' />
-				<span className='hidden sm:inline'>Tarjetas</span>
 			</button>
 		</div>
 	)

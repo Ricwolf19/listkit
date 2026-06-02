@@ -1,5 +1,6 @@
 import { X } from 'lucide-react'
 
+import { useLabels } from '../../../context/ListKitContext'
 import { type ColorTheme, getColorTheme } from '../../../theme/colorTheme'
 import { cn } from '../../../utils/cn'
 
@@ -14,11 +15,14 @@ export type FilterBooleanProps = {
 export function FilterBoolean({
 	value,
 	onChange,
-	trueLabel = 'Sí',
-	falseLabel = 'No',
+	trueLabel,
+	falseLabel,
 	colorTheme = 'red',
 }: FilterBooleanProps) {
 	const theme = getColorTheme(colorTheme)
+	const labels = useLabels()
+	const yes = trueLabel ?? labels.yes
+	const no = falseLabel ?? labels.no
 	const opt = (label: string, val: boolean) => (
 		<button
 			type='button'
@@ -36,13 +40,13 @@ export function FilterBoolean({
 	)
 	return (
 		<div className='flex items-center gap-2'>
-			{opt(trueLabel, true)}
-			{opt(falseLabel, false)}
+			{opt(yes, true)}
+			{opt(no, false)}
 			{value !== undefined && (
 				<button
 					type='button'
 					onClick={() => onChange(undefined)}
-					aria-label='Limpiar'
+					aria-label={labels.clearFilters}
 					className='cursor-pointer rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
 				>
 					<X className='h-4 w-4' />

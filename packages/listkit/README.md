@@ -727,20 +727,69 @@ const brand: ThemeClasses = {
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
 
+### Labels (i18n)
+
+Controls describable by an icon (view toggle, filter button, results count) are
+icon-only, so they read the same in any language; their names live in
+`aria-label`/`title`. Every other built-in string comes from a `labels` object
+that **defaults to English** — override it app-wide on the provider, or per list
+via `config.labels`.
+
+Quickest path — `DEFAULT_LABELS` (English) and `ES_LABELS` (Spanish) cover the
+common cases in one line (override individual keys on top if needed):
+
+```tsx
+import { ListKitProvider, ES_LABELS } from '@pibytelabs/listkit'
+// whole app in Spanish (English is the default, so no prop needed for English)
+;<ListKitProvider labels={ES_LABELS}>…</ListKitProvider>
+```
+
+Or hand-pick the strings:
+
+```tsx
+// app-wide (the app's language)
+;<ListKitProvider
+	labels={{
+		tableView: 'Vista tabla',
+		cardsView: 'Vista tarjetas',
+		filters: 'Filtros',
+		applyFilters: 'Aplicar',
+		clearFilters: 'Limpiar',
+		empty: 'Sin resultados',
+		yes: 'Sí',
+		no: 'No',
+		results: n => `${n} resultado${n === 1 ? '' : 's'}`,
+	}}
+>
+	…
+</ListKitProvider>
+
+// or per list (wins over the provider)
+defineListConfig({ labels: { empty: 'Sin pedidos' } /* … */ })
+```
+
+`NextListView` accepts the same `labels` (and `theme`) prop and forwards it to
+its internal provider: `<NextListView labels={ES_LABELS} config={…} adapter={…} />`.
+
+Resolution order: `config.labels` → provider `labels` → `DEFAULT_LABELS`. The
+existing per-item props still win where they exist (`config.emptyMessage`,
+`config.filtersTitle`, a filter's `trueLabel`/`falseLabel`). See `ListLabels`
+for the full key list.
+
 ---
 
 ## Subpath Exports
 
-| Import path                        | Contents                                                                                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, adapters, hooks, primitives, types              |
-| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                    |
-| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                   |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                              |
-| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                         |
-| `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — read `ListQuery` filters |
-| `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — Postgres-flavoured query fragments                                                                      |
-| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                           |
+| Import path                        | Contents                                                                                                                                                                |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types |
+| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                  |
+| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                 |
+| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                            |
+| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                       |
+| `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — read `ListQuery` filters                               |
+| `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — Postgres-flavoured query fragments                                                                                                    |
+| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                         |
 
 ---
 
