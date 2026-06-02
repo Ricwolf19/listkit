@@ -21,6 +21,11 @@ type CardsProps<T> = {
 	bare?: boolean
 }
 
+/**
+ * Responsive grid of cards with loading and empty states.
+ *
+ * @typeParam T - The row type.
+ */
 export function Cards<T>({
 	data,
 	renderCard,

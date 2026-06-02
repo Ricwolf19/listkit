@@ -1,5 +1,7 @@
+import { List } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { useLabels } from '../context/ListKitContext'
 import type { ColorTheme } from '../theme/colorTheme'
 import type { ToolbarAction } from '../types/config'
 import type { ViewType } from '../types/list'
@@ -9,6 +11,7 @@ import { FilterButton } from './filters/FilterButton'
 import { SearchInput } from './SearchInput'
 import { ViewToggle } from './ViewToggle'
 
+/** Props for {@link Toolbar}. */
 export type ToolbarProps = {
 	searchTerm: string
 	onSearchChange: (term: string) => void
@@ -29,13 +32,14 @@ export type ToolbarProps = {
 	viewShortcutHint?: string
 }
 
+/** List toolbar: search box, filter button, view toggle, and custom actions. */
 export function Toolbar({
 	searchTerm,
 	onSearchChange,
 	viewType,
 	onViewChange,
 	totalResults,
-	placeholder = 'Buscar...',
+	placeholder,
 	colorTheme = 'red',
 	actions = [],
 	showSearch = true,
@@ -48,6 +52,7 @@ export function Toolbar({
 	filterShortcutHint,
 	viewShortcutHint,
 }: ToolbarProps) {
+	const labels = useLabels()
 	const renderAction = (action: ToolbarAction, index: number) => (
 		<Button
 			key={index}
@@ -72,7 +77,7 @@ export function Toolbar({
 						{showSearch && (
 							<div className='flex-1'>
 								<SearchInput
-									placeholder={placeholder}
+									placeholder={placeholder ?? labels.searchPlaceholder}
 									value={searchTerm}
 									onChange={onSearchChange}
 									colorTheme={colorTheme}
@@ -93,8 +98,16 @@ export function Toolbar({
 
 				<div className='flex items-center gap-3'>
 					{totalResults !== undefined && (
-						<span className='text-sm text-gray-500'>
-							{totalResults} resultado{totalResults !== 1 ? 's' : ''}
+						// Icon + count instead of a localized "N results" string, so the
+						// toolbar reads the same in any language. The count is announced
+						// to screen readers via aria-label.
+						<span
+							className='inline-flex items-center gap-1.5 text-sm text-gray-500'
+							aria-label={labels.results(totalResults)}
+							title={labels.results(totalResults)}
+						>
+							<List className='h-4 w-4' aria-hidden='true' />
+							<span className='tabular-nums'>{totalResults}</span>
 						</span>
 					)}
 

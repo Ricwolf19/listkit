@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
 import type { ReactNode } from 'react'
 
+import { useLabels } from '../context/ListKitContext'
 import { type ColorTheme } from '../theme/colorTheme'
 import type { ColumnDef } from '../types/config'
 import type { SortState } from '../types/data'
@@ -28,9 +29,12 @@ type TableProps<T> = {
 	onSort?: (field: string) => void
 }
 
-function valueToString(value: unknown): ReactNode {
+function valueToString(
+	value: unknown,
+	bool: { yes: string; no: string }
+): ReactNode {
 	if (value === null || value === undefined) return ''
-	if (typeof value === 'boolean') return value ? 'Sí' : 'No'
+	if (typeof value === 'boolean') return value ? bool.yes : bool.no
 	if (typeof value === 'number') return value.toString()
 	if (typeof value === 'string') return value
 	return ''
@@ -43,13 +47,18 @@ const alignClass = (align?: 'left' | 'center' | 'right') =>
 			? 'text-right'
 			: 'text-left'
 
+/**
+ * Data table with sortable headers, loading and empty states.
+ *
+ * @typeParam T - The row type.
+ */
 export function Table<T>({
 	data,
 	columns,
 	keyExtractor,
 	rowClassName,
 	loading = false,
-	emptyMessage = 'No hay datos para mostrar',
+	emptyMessage,
 	displayMode = 'auto',
 	compact = false,
 	showHeader = true,
@@ -59,6 +68,7 @@ export function Table<T>({
 	// colorTheme = 'red',
 }: TableProps<T>) {
 	// const theme = getColorTheme(colorTheme)
+	const labels = useLabels()
 	if (displayMode === 'hide') return null
 
 	const visibility = displayVisibility(displayMode, 'table')
@@ -184,7 +194,8 @@ export function Table<T>({
 														{col.render
 															? col.render(item, i)
 															: valueToString(
-																	(item as Record<string, unknown>)[col.key]
+																	(item as Record<string, unknown>)[col.key],
+																	labels
 																)}
 													</td>
 												))}

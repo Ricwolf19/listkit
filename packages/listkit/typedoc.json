@@ -1,0 +1,26 @@
+{
+	"$schema": "https://typedoc.org/schema.json",
+	"name": "@pibytelabs/listkit",
+	"entryPoints": [
+		"src/index.ts",
+		"src/next.tsx",
+		"src/server.ts",
+		"src/query.ts",
+		"src/sql.ts",
+		"src/adapters.ts",
+		"src/react-router.ts"
+	],
+	"out": "docs",
+	"readme": "README.md",
+	"excludeInternal": true,
+	"excludePrivate": true,
+	"categorizeByGroup": true,
+	"validation": {
+		"notExported": false,
+		"invalidLink": true,
+		"notDocumented": false
+	},
+	"navigationLinks": {
+		"GitHub": "https://github.com/Ricwolf19/listkit"
+	}
+}

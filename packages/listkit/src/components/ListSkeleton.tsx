@@ -1,12 +1,28 @@
 import { SkeletonTable } from './SkeletonTable'
 
+/** Props for {@link ListSkeleton}. */
 type ListSkeletonProps = {
+	/** Placeholder rows. @defaultValue 8 */
 	rows?: number
+	/** Placeholder columns. @defaultValue 6 */
 	columns?: number
 }
 
-// Page-level `<Suspense>` fallback for the SSR list pattern: a toolbar bar plus
-// a skeleton table, streamed while the server fetches the first page.
+/**
+ * Page-level `<Suspense>` fallback for the SSR list pattern: a toolbar bar plus
+ * a skeleton table, streamed while the server fetches the first page.
+ *
+ * @remarks
+ * Import from `@pibytelabs/listkit/server` in a Server Component (e.g. a
+ * `page.tsx`); the main entry pulls client context and would crash the RSC render.
+ *
+ * @example
+ * ```tsx
+ * <Suspense fallback={<ListSkeleton />}>
+ *   <OrdersData />
+ * </Suspense>
+ * ```
+ */
 export function ListSkeleton({ rows = 8, columns = 6 }: ListSkeletonProps) {
 	return (
 		<div aria-hidden>

@@ -5,6 +5,8 @@ export { defineListConfig } from './config/defineListConfig'
 export {
 	ListKitProvider,
 	type ListKitProviderProps,
+	useLabels,
+	useListKitLabels,
 	useListRefresh,
 } from './context/ListKitContext'
 
@@ -76,5 +78,11 @@ export type {
 	Path,
 	TextMatch,
 } from './types/filters'
+export {
+	DEFAULT_LABELS,
+	ES_LABELS,
+	type ListLabels,
+	resolveLabels,
+} from './types/labels'
 export type { DisplayMode, PaginationState, ViewType } from './types/list'
 export type { RouterAdapter } from './types/router'

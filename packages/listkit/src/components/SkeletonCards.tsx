@@ -17,6 +17,7 @@ const shimmerStyle = `
   }
 `
 
+/** Shimmering placeholder grid shown while the cards view loads. */
 export function SkeletonCards({
 	count = 8,
 	gridCols = 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',

@@ -1,3 +1,4 @@
+/** Names of the built-in color palettes. */
 export type BuiltInColorTheme =
 	| 'blue'
 	| 'red'
@@ -8,6 +9,10 @@ export type BuiltInColorTheme =
 	| 'orange'
 	| 'teal'
 
+/**
+ * A fully custom theme: Tailwind class strings for each themed surface. Pass it
+ * as a {@link ColorTheme} to brand a list without using a built-in palette.
+ */
 export type ThemeClasses = {
 	focusRing: string
 	focusBorder: string
@@ -166,8 +171,13 @@ const themes: Record<BuiltInColorTheme, ThemeClasses> = {
 	},
 }
 
+/** The default theme used when none is set on the config or provider. */
 export const DEFAULT_COLOR_THEME: BuiltInColorTheme = 'red'
 
+/**
+ * Resolve a {@link ColorTheme} (built-in name or custom object) to its
+ * {@link ThemeClasses}.
+ */
 export function getColorTheme(
 	theme: ColorTheme = DEFAULT_COLOR_THEME
 ): ThemeClasses {

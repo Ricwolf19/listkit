@@ -18,6 +18,7 @@ const shimmerStyle = `
   }
 `
 
+/** Shimmering placeholder table shown while the table view loads. */
 export function SkeletonTable({
 	rows = 5,
 	columns = 6,

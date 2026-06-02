@@ -19,6 +19,7 @@ type SearchInputProps = {
 	colorTheme?: ColorTheme
 }
 
+/** Debounced search box with a leading icon and clear button. */
 export function SearchInput({
 	// id,
 	value,

@@ -3,12 +3,25 @@ import type { DataAdapter, ListQuery } from '../types/data'
 import type { ActiveFilterValue } from '../types/filters'
 import { getPath } from '../utils/getPath'
 
+/**
+ * How {@link memoryAdapter} searches: a list of `fields` to substring-match, or
+ * a custom `fn`.
+ *
+ * @typeParam T - The row type.
+ */
 export type MemorySearch<T> =
 	| { fields: string[]; fn?: never }
 	| { fn: (data: T[], term: string) => T[]; fields?: never }
 
+/**
+ * Options for {@link memoryAdapter}.
+ *
+ * @typeParam T - The row type.
+ */
 export type MemoryAdapterOptions<T> = {
+	/** Search strategy. Omit to disable search. */
 	search?: MemorySearch<T>
+	/** Default sort, used when no column sort is active. */
 	sort?: (data: T[]) => T[]
 }
 
@@ -39,6 +52,16 @@ function applyFilters<T>(items: T[], filters: ActiveFilterValue[]): T[] {
 /**
  * In-memory data source. Handles search, advanced filters, sort, and pagination
  * over a plain array — the default when a `ListView` is given `data`.
+ *
+ * @typeParam T - The row type.
+ * @param items - The full dataset.
+ * @param options - Search strategy and default sort.
+ * @returns A data adapter for `<ListView>`.
+ *
+ * @example
+ * ```ts
+ * const adapter = memoryAdapter(products, { search: { fields: ['name', 'sku'] } })
+ * ```
  */
 export function memoryAdapter<T>(
 	items: T[],

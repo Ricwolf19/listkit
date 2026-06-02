@@ -1,6 +1,7 @@
 import { SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 
+import { useLabels } from '../../context/ListKitContext'
 import { useFilters } from '../../hooks/useFilters'
 import type { ListParams } from '../../hooks/useListParams'
 import { type ColorTheme, getColorTheme } from '../../theme/colorTheme'
@@ -11,6 +12,11 @@ import { DynamicFilter } from './DynamicFilter'
 
 const ANIMATION_MS = 300
 
+/**
+ * Props for {@link FilterSidebar}.
+ *
+ * @typeParam T - The row type.
+ */
 export type FilterSidebarProps<T> = {
 	open: boolean
 	onClose: () => void
@@ -112,15 +118,22 @@ function FilterField({
 	)
 }
 
+/**
+ * Slide-over panel that edits the advanced filters; Enter or "Apply" commits the
+ * draft to the URL.
+ *
+ * @typeParam T - The row type.
+ */
 export function FilterSidebar<T>({
 	open,
 	onClose,
 	sections,
 	params,
-	title = 'Filtros',
+	title,
 	colorTheme = 'red',
 }: FilterSidebarProps<T>) {
 	const theme = getColorTheme(colorTheme)
+	const labels = useLabels()
 	const { draft, setValue, apply, reset, clear } = useFilters(sections, params)
 
 	// Keep mounted through the exit transition, and drive enter/exit with `shown`.
@@ -221,10 +234,10 @@ export function FilterSidebar<T>({
 							<SlidersHorizontal className='h-5 w-5' />
 						</div>
 						<div>
-							<h2 className='text-xl font-bold text-gray-900'>{title}</h2>
-							<p className='text-xs text-gray-500'>
-								Ajusta los filtros y presiona Enter para aplicar
-							</p>
+							<h2 className='text-xl font-bold text-gray-900'>
+								{title ?? labels.filters}
+							</h2>
+							<p className='text-xs text-gray-500'>{labels.filtersHint}</p>
 						</div>
 					</div>
 					<button
@@ -272,7 +285,7 @@ export function FilterSidebar<T>({
 							onClick={clear}
 							className='text-gray-500 hover:text-gray-700'
 						>
-							Limpiar todo
+							{labels.clearFilters}
 						</Button>
 						<Button
 							type='submit'
@@ -284,7 +297,7 @@ export function FilterSidebar<T>({
 								theme.primaryHover
 							)}
 						>
-							Aplicar filtros
+							{labels.applyFilters}
 						</Button>
 					</footer>
 				</form>

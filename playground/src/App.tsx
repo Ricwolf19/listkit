@@ -1,4 +1,8 @@
-import { ListKitProvider, useBrowserRouterAdapter } from '@pibytelabs/listkit'
+import {
+	ES_LABELS,
+	ListKitProvider,
+	useBrowserRouterAdapter,
+} from '@pibytelabs/listkit'
 
 import { HelloListKit } from './examples/HelloListKit'
 
@@ -8,7 +12,7 @@ export function App() {
 	const router = useBrowserRouterAdapter()
 
 	return (
-		<ListKitProvider router={router}>
+		<ListKitProvider router={router} labels={ES_LABELS}>
 			<div className='min-h-screen bg-gray-50 p-8'>
 				<header className='mb-8'>
 					<h1 className='text-3xl font-bold text-gray-900'>

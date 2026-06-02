@@ -35,6 +35,13 @@ type UseListStateOptions<T> = {
 	listId?: string
 }
 
+/**
+ * Orchestrates a list's runtime state — search (debounced), pagination, sort,
+ * view toggle and data fetching — wiring the param store to the adapter. Used
+ * internally by {@link ListView}; call it directly only to build a custom shell.
+ *
+ * @typeParam T - The row type.
+ */
 export function useListState<T>({
 	adapter,
 	params,

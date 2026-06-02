@@ -13,19 +13,38 @@ export type DexieCollectionLike<T> = {
 	toArray(): Promise<T[]>
 }
 
+/**
+ * Structural subset of a Dexie `Table` — a real Dexie table satisfies this.
+ *
+ * @typeParam T - The row type.
+ */
 export type DexieTableLike<T> = {
 	toCollection(): DexieCollectionLike<T>
 }
 
+/**
+ * Options for {@link createDexieAdapter}.
+ *
+ * @typeParam T - The row type.
+ */
 export type DexieAdapterOptions<T> = {
+	/** Fields to substring-match the search term against. Omit to disable search. */
 	searchFields?: (keyof T & string)[]
 }
 
 /**
- * IndexedDB data source for Dexie consumers (e.g. café-combate). Search is a
- * case-insensitive substring match over `searchFields`; advanced filters are
- * evaluated with the shared matcher. For large stores or indexed queries, write
- * a custom DataAdapter instead.
+ * IndexedDB data source for Dexie consumers. Search is a case-insensitive
+ * substring match over `searchFields`; advanced filters are evaluated with the
+ * shared matcher.
+ *
+ * @typeParam T - The row type.
+ * @param table - A Dexie `Table` (or anything matching {@link DexieTableLike}).
+ * @param options - Search configuration.
+ * @returns A data adapter for `<ListView>`.
+ *
+ * @remarks
+ * For large stores or indexed queries, write a custom {@link DataAdapter} that
+ * uses Dexie's `where(...)` indexes instead of a full-collection filter.
  */
 export function createDexieAdapter<T>(
 	table: DexieTableLike<T>,
