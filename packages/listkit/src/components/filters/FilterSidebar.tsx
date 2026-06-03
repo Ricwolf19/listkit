@@ -1,5 +1,5 @@
 import { SlidersHorizontal, X } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import { useLabels } from '../../context/ListKitContext'
 import { useFilters } from '../../hooks/useFilters'
@@ -139,18 +139,30 @@ export function FilterSidebar<T>({
 	// Keep mounted through the exit transition, and drive enter/exit with `shown`.
 	const [mounted, setMounted] = useState(open)
 	const [shown, setShown] = useState(false)
+	const panelRef = useRef<HTMLDivElement>(null)
 
-	// Enter/exit transition — keyed on `open` only so a re-render can't restart it.
+	// Mount on open; keep mounted through the exit transition before unmounting.
 	useEffect(() => {
 		if (open) {
 			setMounted(true)
-			const id = requestAnimationFrame(() => setShown(true))
-			return () => cancelAnimationFrame(id)
+			return
 		}
 		setShown(false)
 		const id = setTimeout(() => setMounted(false), ANIMATION_MS)
 		return () => clearTimeout(id)
 	}, [open])
+
+	// Once the panel is in the DOM for an open request, force the closed state
+	// (translate-x-full / opacity-0) to lay out, then flip to open on the next
+	// frame so the slide ALWAYS animates — including reopening before the
+	// previous close finished. A bare rAF can fire before that layout is
+	// established, which is why reopening sometimes appeared with no transition.
+	useEffect(() => {
+		if (!open || !mounted) return
+		if (panelRef.current) void panelRef.current.offsetWidth
+		const raf = requestAnimationFrame(() => setShown(true))
+		return () => cancelAnimationFrame(raf)
+	}, [open, mounted])
 
 	// Sync the draft from the param store when the panel opens.
 	useEffect(() => {
@@ -210,6 +222,7 @@ export function FilterSidebar<T>({
 
 			{/* Panel */}
 			<div
+				ref={panelRef}
 				className={cn(
 					'relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl transition-transform',
 					shown ? 'translate-x-0' : 'translate-x-full'

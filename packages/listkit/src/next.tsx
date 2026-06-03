@@ -32,7 +32,11 @@ export function useNextRouterAdapter(): RouterAdapter {
 			}
 		}
 		const query = params.toString()
-		router.replace(query ? `${pathname}?${query}` : pathname)
+		// `scroll: false` so paging/filtering/sorting updates the URL in place
+		// instead of jumping the page to the top on every change.
+		router.replace(query ? `${pathname}?${query}` : pathname, {
+			scroll: false,
+		})
 	}
 
 	return {

@@ -150,6 +150,7 @@ export function HelloListKit() {
 				adapter={mode === 'async' ? asyncAdapter : undefined}
 				data={mode === 'memory' ? PRODUCTS : undefined}
 				staleTime={mode === 'async' ? 10_000 : 0}
+				paginationVariant='sticky'
 				toolbarActions={[
 					{
 						label: 'Nuevo',

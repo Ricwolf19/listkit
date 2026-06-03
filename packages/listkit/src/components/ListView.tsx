@@ -28,7 +28,7 @@ import { resolveLabels } from '../types/labels'
 import { Cards } from './Cards'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
 import { FilterSidebar } from './filters/FilterSidebar'
-import { Pagination } from './Pagination'
+import { Pagination, type PaginationVariant } from './Pagination'
 import { Table } from './Table'
 import { Toolbar } from './Toolbar'
 
@@ -60,8 +60,14 @@ export type ListViewProps<T> = {
 	portals?: ReactNode
 	/** Message shown when the adapter errors. */
 	errorMessage?: string
-	/** Extra classes for the fixed pagination bar (e.g. to offset around a sidebar). */
+	/** Extra classes for the pagination bar (e.g. to offset a fixed bar around a sidebar). */
 	paginationClassName?: string
+	/**
+	 * Pagination layout: `'fixed'` (default) pins a full-width bar to the bottom
+	 * of the viewport; `'sticky'` renders a floating, semi-transparent card in
+	 * the content flow — better for landing/storefront pages.
+	 */
+	paginationVariant?: PaginationVariant
 	/** Data hook override (e.g. a TanStack Query implementation). */
 	useListData?: UseListDataHook<T>
 	/** Milliseconds to keep adapter responses in memory. @defaultValue 30_000 */
@@ -105,6 +111,7 @@ export function ListView<T>({
 	portals,
 	errorMessage,
 	paginationClassName,
+	paginationVariant = 'fixed',
 	useListData,
 	staleTime,
 	initialData,
@@ -209,7 +216,7 @@ export function ListView<T>({
 	return (
 		<ListRefreshProvider value={refresh}>
 			<LabelsProvider value={labels}>
-				<div className='pb-20'>
+				<div className={paginationVariant === 'sticky' ? 'pb-4' : 'pb-20'}>
 					{(config.title || config.subtitle) && (
 						<header className='mb-2'>
 							{config.title && (
@@ -319,6 +326,7 @@ export function ListView<T>({
 						isLoading={isLoading}
 						colorTheme={colorTheme}
 						className={paginationClassName}
+						variant={paginationVariant}
 					/>
 
 					{hasFilters && (

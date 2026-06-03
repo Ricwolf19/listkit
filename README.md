@@ -4,6 +4,14 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> [!IMPORTANT]
+>
+> ## 📖 The real, complete documentation lives in the package README
+>
+> This root file only documents the **monorepo / development** setup. For install, the full API, every option, theming, i18n, and copy-paste examples, read the package docs:
+>
+> ### 👉 **[📘 Full documentation — English](./packages/listkit/README.md)** &nbsp;·&nbsp; **[📗 Documentación completa — Español](./packages/listkit/README.es.md)**
+
 `@pibytelabs/listkit` is a React library that gives you a complete list view (toolbar, table, cards, pagination, filters) from a single declarative config. Designed to work across Next.js, Vite/React Router, and any data source (REST APIs, server actions, IndexedDB, in-memory arrays).
 
 ## Project layout
