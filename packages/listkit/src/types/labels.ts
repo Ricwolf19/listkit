@@ -21,6 +21,8 @@ export type ListLabels = {
 	cardsView: string
 	/** Filter button (aria-label/title) and default sidebar title. */
 	filters: string
+	/** Overflow "⋯" button that holds toolbar actions on small screens. */
+	moreActions: string
 	/** Search box placeholder (when `config.searchPlaceholder` is unset). */
 	searchPlaceholder: string
 	/** Results count, e.g. `n => \`${n} results\``. */
@@ -64,6 +66,7 @@ export const DEFAULT_LABELS: ListLabels = {
 	tableView: 'Table view',
 	cardsView: 'Cards view',
 	filters: 'Filters',
+	moreActions: 'More actions',
 	searchPlaceholder: 'Search…',
 	results: total => `${total} ${total === 1 ? 'result' : 'results'}`,
 	applyFilters: 'Apply filters',
@@ -93,6 +96,7 @@ export const ES_LABELS: ListLabels = {
 	tableView: 'Vista de tabla',
 	cardsView: 'Vista de tarjetas',
 	filters: 'Filtros',
+	moreActions: 'Más acciones',
 	searchPlaceholder: 'Buscar…',
 	results: total => `${total} ${total === 1 ? 'resultado' : 'resultados'}`,
 	applyFilters: 'Aplicar filtros',
