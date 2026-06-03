@@ -1,5 +1,36 @@
 # @pibytelabs/listkit
 
+## 2.4.0
+
+### Minor Changes
+
+- d08d4e9: Premium mobile layout:
+  - **Toolbar (mobile):** the search box gets its own full-width row (so its
+    placeholder is fully visible), and the filter button drops to a second controls
+    row alongside the results count (left) and the view toggle + a new auto **"⋯"
+    overflow menu** (right). The overflow collects `toolbarActions` +
+    `toolbarContent` so any number of buttons never wraps or breaks the layout
+    (accessible popover, closes on outside-click / Escape). Desktop keeps the
+    filter next to the search and everything else inline. New localizable label
+    `moreActions` (en: "More actions", es: "Más acciones").
+  - **Pagination footer (mobile):** the summary no longer stacks two lines —
+    it shows a single compact line ("1–12 of 23"); the redundant "Page X of Y"
+    is hidden on mobile (the controls already show a "X / Y" indicator).
+
+- d08d4e9: Pagination layout choice, no scroll jump, and a more reliable filter sidebar:
+  - **`paginationVariant`** prop on `<ListView>` / `NextListView`: `'fixed'`
+    (default — the full-width bar pinned to the bottom of the viewport) or
+    `'sticky'` — a floating, semi-transparent card that stays in the content flow.
+    Use `'sticky'` on landing/storefront pages where a fixed bar would overlap the
+    footer, instead of injecting CSS to override it. Exported `PaginationVariant`.
+  - **No scroll-to-top on page change:** `useNextRouterAdapter` now updates the URL
+    with `{ scroll: false }`, so paging/filtering/sorting happens in place instead
+    of jumping the page to the top. Removes the need for a custom scroll-safe adapter.
+  - **Filter sidebar animation:** reworked the enter transition to force the closed
+    state to lay out (reflow) before opening, so the slide reliably animates —
+    including when reopening the panel before the previous close finished
+    (previously it could appear abruptly with the backdrop popping in).
+
 ## 2.3.0
 
 ### Minor Changes
