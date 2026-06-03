@@ -32,7 +32,7 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
   - [Custom cards with actions and theme](#custom-cards-with-actions-and-theme)
   - [Fully custom cards (`bareCard`)](#fully-custom-cards-barecard)
   - [Refreshing after a mutation](#refreshing-after-a-mutation)
-  - [Offsetting the pagination bar](#offsetting-the-pagination-bar)
+  - [Pagination bar: fixed vs sticky](#pagination-bar-fixed-vs-sticky)
   - [Async data (server-side)](#async-data-server-side)
   - [Server-side rendering (`initialData`)](#server-side-rendering-initialdata)
   - [Less boilerplate (Next.js)](#less-boilerplate-nextjs)
@@ -356,15 +356,29 @@ For mutations that happen **outside** the list tree (e.g. a separate create/edit
 
 In-memory lists (the `data` prop) refresh automatically when `data` changes — this is only needed for async adapters.
 
-### Offsetting the pagination bar
+### Pagination bar: fixed vs sticky
 
-The pagination bar is `position: fixed`. Pass `paginationClassName` to clear app chrome such as a sidebar (merged via tailwind-merge, so a `left-*` overrides the default `left-0`):
+`paginationVariant` chooses the layout:
 
-```tsx
-<ListView config={config} adapter={adapter} paginationClassName='lg:left-64' />
-```
+- **`'fixed'`** (default) — a full-width bar pinned to the bottom of the viewport. Best for admin/dashboard shells. Pass `paginationClassName` to clear app chrome such as a sidebar (merged via tailwind-merge, so a `left-*` overrides the default `left-0`):
 
-For a sidebar whose width changes (collapse), drive it with a CSS variable the sidebar sets and a class that reads it, e.g. `left-[var(--sidebar-w)]`.
+  ```tsx
+  <ListView
+  	config={config}
+  	adapter={adapter}
+  	paginationClassName='lg:left-64'
+  />
+  ```
+
+  For a sidebar whose width changes (collapse), drive it with a CSS variable, e.g. `left-[var(--sidebar-w)]`.
+
+- **`'sticky'`** — a floating, semi-transparent card that stays in the content flow, so it never overlaps a page footer. Best for landing/storefront pages:
+
+  ```tsx
+  <ListView config={config} adapter={adapter} paginationVariant='sticky' />
+  ```
+
+Paging, filtering and sorting update the URL **without scrolling to the top** (the Next.js adapter uses `{ scroll: false }`), so the list stays put as you page.
 
 ### Async data (server-side)
 

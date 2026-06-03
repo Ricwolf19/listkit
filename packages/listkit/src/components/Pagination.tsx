@@ -11,6 +11,9 @@ import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import { cn } from '../utils/cn'
 import { Button } from './Button'
 
+/** Layout of the pagination bar. */
+export type PaginationVariant = 'fixed' | 'sticky'
+
 type PaginationProps = {
 	currentPage: number
 	totalPages: number
@@ -20,6 +23,7 @@ type PaginationProps = {
 	isLoading?: boolean
 	colorTheme?: ColorTheme
 	className?: string
+	variant?: PaginationVariant
 }
 
 function getPageNumbers(
@@ -47,7 +51,15 @@ function getPageNumbers(
 	return result
 }
 
-/** Fixed bottom pagination bar with page numbers and prev/next controls. */
+/**
+ * Pagination bar with page numbers and prev/next controls.
+ *
+ * @remarks
+ * `variant='fixed'` (default) pins it across the bottom of the viewport;
+ * `variant='sticky'` renders it as a floating, semi-transparent card that stays
+ * in the content flow — better for landing/storefront pages where a full-width
+ * fixed bar would overlap the footer.
+ */
 export function Pagination({
 	currentPage,
 	totalPages,
@@ -57,6 +69,7 @@ export function Pagination({
 	isLoading = false,
 	colorTheme = 'red',
 	className,
+	variant = 'fixed',
 }: PaginationProps) {
 	const ref = useRef<HTMLDivElement>(null)
 	const theme = getColorTheme(colorTheme)
@@ -92,14 +105,29 @@ export function Pagination({
 
 	const arrowBtn = 'h-9 w-9 p-2 text-gray-600'
 
+	const isSticky = variant === 'sticky'
+	const containerClass = isSticky
+		? // Floating card in the content flow — semi-transparent + blur, never
+			// spans full width, so it sits above the list without overlapping a
+			// page footer.
+			cn(
+				'sticky bottom-4 z-30 mt-5 flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-md sm:px-6',
+				className
+			)
+		: cn(
+				'fixed right-0 bottom-0 left-0 z-10 flex items-center justify-between gap-4 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:px-6',
+				className
+			)
+
 	return (
 		<div
 			ref={ref}
-			className={cn(
-				'fixed right-0 bottom-0 left-0 z-10 flex items-center justify-between gap-4 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:px-6',
-				className
-			)}
-			style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }}
+			className={containerClass}
+			style={
+				isSticky
+					? undefined
+					: { paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }
+			}
 			aria-label='Paginación'
 		>
 			<div className='min-w-0 flex-1 truncate text-xs text-gray-600 sm:text-sm'>
@@ -116,7 +144,10 @@ export function Pagination({
 				) : totalItems === 0 ? (
 					<span className='font-medium text-gray-900'>{labels.results(0)}</span>
 				) : (
-					<div className='flex flex-col gap-0.5 sm:flex-row sm:items-center sm:gap-3'>
+					// Single line on every width. On mobile only the range shows
+					// ("1–12 of 23"); the "Page X of Y" part is hidden because the
+					// controls already render a compact "X / Y" indicator.
+					<div className='flex items-center gap-3 whitespace-nowrap'>
 						<span>
 							<span className='hidden text-gray-500 sm:inline'>
 								{labels.showing}{' '}
@@ -129,7 +160,7 @@ export function Pagination({
 							</span>
 						</span>
 						<span className='hidden text-gray-300 sm:inline'>|</span>
-						<span className='text-xs text-gray-500 sm:text-sm'>
+						<span className='hidden text-xs text-gray-500 sm:inline sm:text-sm'>
 							{labels.page}{' '}
 							<span className='font-semibold text-gray-900'>{currentPage}</span>{' '}
 							{labels.of}{' '}
