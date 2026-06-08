@@ -21,11 +21,13 @@ import {
 	flattenFilters,
 	readActiveFilters,
 } from '../filters/serialize'
+import { useColumnPrefs } from '../hooks/useColumnPrefs'
 import { invalidateListCache } from '../hooks/useListData'
 import { useListParams } from '../hooks/useListParams'
 import { useListShortcuts } from '../hooks/useListShortcuts'
 import { useListState } from '../hooks/useListState'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
+import type { ColumnStorage } from '../types/columns'
 import type { CardContext, ListConfig, ToolbarAction } from '../types/config'
 import type {
 	DataAdapter,
@@ -35,6 +37,7 @@ import type {
 } from '../types/data'
 import { resolveLabels } from '../types/labels'
 import { Cards } from './Cards'
+import { ColumnManager } from './ColumnManager'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
 import { FilterSidebar } from './filters/FilterSidebar'
 import { Pagination, type PaginationVariant } from './Pagination'
@@ -61,6 +64,12 @@ export type ListViewProps<T> = {
 	toolbarContent?: ReactNode
 	/** Content rendered above the toolbar. */
 	headerSection?: ReactNode
+	/**
+	 * Positioned content rendered in a row **above the title** — for quick
+	 * metrics, badges, or small components. Each slot is optional, so you can
+	 * place indicators on the left, center, right, or any combination.
+	 */
+	headerContent?: { left?: ReactNode; center?: ReactNode; right?: ReactNode }
 	/** Content rendered just below the toolbar. */
 	afterToolbar?: ReactNode
 	/** Content rendered just above the pagination bar. */
@@ -89,6 +98,11 @@ export type ListViewProps<T> = {
 	initialData?: ListResult<T>
 	/** The query `initialData` answers. Build it with {@link buildListQuery} / {@link loadInitialList}. */
 	initialQuery?: ListQuery
+	/**
+	 * Where `table.columnControl` persists column hide/order choices.
+	 * @defaultValue localStorage
+	 */
+	columnStorage?: ColumnStorage
 }
 
 /**
@@ -115,6 +129,7 @@ export function ListView<T>({
 	toolbarActions,
 	toolbarContent,
 	headerSection,
+	headerContent,
 	afterToolbar,
 	beforePagination,
 	portals,
@@ -125,6 +140,7 @@ export function ListView<T>({
 	staleTime,
 	initialData,
 	initialQuery,
+	columnStorage,
 }: ListViewProps<T>) {
 	const providerTheme = useListKitTheme()
 	const colorTheme = config.colorTheme ?? providerTheme ?? DEFAULT_COLOR_THEME
@@ -187,6 +203,11 @@ export function ListView<T>({
 	}, [])
 
 	const [filtersOpen, setFiltersOpen] = useState(false)
+	const [autoFocusFilterSearch, setAutoFocusFilterSearch] = useState(false)
+	const openFilters = (focusSearch = false) => {
+		setAutoFocusFilterSearch(focusSearch)
+		setFiltersOpen(true)
+	}
 
 	// refresh(): invalidate this list's cache, then bump the token to refetch.
 	// Exposed via ListRefreshProvider for descendants (useListRefresh).
@@ -205,6 +226,24 @@ export function ListView<T>({
 		for (const def of flatDefs) updates[filterParamKey(def.id)] = null
 		params.setMany(updates)
 	}
+
+	// Table column hide/show + reorder (persisted) when `table.columnControl` is set.
+	const columnControlEnabled = !!config.table?.columnControl
+	const tableColumns = useMemo(
+		() => config.table?.columns ?? [],
+		[config.table]
+	)
+	const {
+		resolvedColumns,
+		items: columnItems,
+		toggle: toggleColumn,
+		move: moveColumn,
+		reorder: reorderColumns,
+		reset: resetColumns,
+	} = useColumnPrefs(config.id, tableColumns, {
+		enabled: columnControlEnabled,
+		storage: columnStorage,
+	})
 
 	const {
 		localSearchTerm,
@@ -242,10 +281,15 @@ export function ListView<T>({
 		onFocusSearch: () => {
 			document.getElementById(searchInputId)?.focus()
 		},
-		onOpenFilters: hasFilters ? () => setFiltersOpen(true) : undefined,
+		onOpenFilters: hasFilters ? () => openFilters(false) : undefined,
+		onOpenFilterSearch: hasFilters ? () => openFilters(true) : undefined,
 		onToggleView:
 			config.table && config.card
 				? () => handleViewChange(viewType === 'table' ? 'cards' : 'table')
+				: undefined,
+		onRemoveLastFilter:
+			activeFilters.length > 0
+				? () => removeFilter(activeFilters[activeFilters.length - 1]!.id)
 				: undefined,
 	})
 
@@ -253,6 +297,22 @@ export function ListView<T>({
 		<ListRefreshProvider value={refresh}>
 			<LabelsProvider value={labels}>
 				<div className={paginationVariant === 'sticky' ? 'pb-4' : 'pb-20'}>
+					{(headerContent?.left ||
+						headerContent?.center ||
+						headerContent?.right) && (
+						<div className='mb-3 flex flex-wrap items-center gap-3'>
+							<div className='flex min-w-0 items-center gap-3'>
+								{headerContent.left}
+							</div>
+							<div className='flex min-w-0 flex-1 items-center justify-center gap-3'>
+								{headerContent.center}
+							</div>
+							<div className='flex min-w-0 items-center justify-end gap-3'>
+								{headerContent.right}
+							</div>
+						</div>
+					)}
+
 					{(config.title || config.subtitle) && (
 						<header className='mb-2'>
 							{config.title && (
@@ -279,6 +339,18 @@ export function ListView<T>({
 						actions={toolbarActions}
 						showSearch={showSearch}
 						showViewToggle={!!config.table && !!config.card}
+						columnControl={
+							columnControlEnabled && viewType === 'table' ? (
+								<ColumnManager
+									items={columnItems}
+									onToggle={toggleColumn}
+									onMove={moveColumn}
+									onReorder={reorderColumns}
+									onReset={resetColumns}
+									colorTheme={colorTheme}
+								/>
+							) : undefined
+						}
 						customContent={toolbarContent}
 						onOpenFilters={hasFilters ? () => setFiltersOpen(true) : undefined}
 						onClearFilters={hasFilters ? clearAllFilters : undefined}
@@ -322,7 +394,7 @@ export function ListView<T>({
 							{config.table && (
 								<Table<T>
 									data={rows}
-									columns={config.table.columns}
+									columns={resolvedColumns}
 									keyExtractor={getItemKey}
 									rowClassName={config.table.rowClassName}
 									compact={config.table.compact}
@@ -368,11 +440,15 @@ export function ListView<T>({
 					{hasFilters && (
 						<FilterSidebar
 							open={filtersOpen}
-							onClose={() => setFiltersOpen(false)}
+							onClose={() => {
+								setFiltersOpen(false)
+								setAutoFocusFilterSearch(false)
+							}}
 							sections={filterSections}
 							params={params}
 							title={config.filtersTitle}
 							colorTheme={colorTheme}
+							autoFocusSearch={autoFocusFilterSearch}
 						/>
 					)}
 

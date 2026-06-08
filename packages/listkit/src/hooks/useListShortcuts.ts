@@ -6,6 +6,10 @@ type Handlers = {
 	onFocusSearch?: () => void
 	onOpenFilters?: () => void
 	onToggleView?: () => void
+	/** Remove the most recently applied filter. Bound to `-`. */
+	onRemoveLastFilter?: () => void
+	/** Open the filter sidebar focused on its quick-search box. Bound to `+`. */
+	onOpenFilterSearch?: () => void
 }
 
 export function useListShortcuts(handlers: Handlers) {
@@ -18,7 +22,13 @@ export function useListShortcuts(handlers: Handlers) {
 		const searchShortcut = getSearchShortcut()
 
 		const handle = (e: KeyboardEvent) => {
-			const { onFocusSearch, onOpenFilters, onToggleView } = handlersRef.current
+			const {
+				onFocusSearch,
+				onOpenFilters,
+				onToggleView,
+				onRemoveLastFilter,
+				onOpenFilterSearch,
+			} = handlersRef.current
 
 			// Skip if the user is typing inside an input/textarea/select
 			const target = e.target as HTMLElement
@@ -68,6 +78,36 @@ export function useListShortcuts(handlers: Handlers) {
 			) {
 				e.preventDefault()
 				onToggleView()
+				return
+			}
+
+			// Open filters focused on the quick-search box: `+` (Shift + = on most
+			// layouts). Falls back to plainly opening the sidebar.
+			const openSearch = onOpenFilterSearch ?? onOpenFilters
+			if (
+				openSearch &&
+				!isEditable &&
+				!e.metaKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				e.key === '+'
+			) {
+				e.preventDefault()
+				openSearch()
+				return
+			}
+
+			// Remove the most recently applied filter: `-`.
+			if (
+				onRemoveLastFilter &&
+				!isEditable &&
+				!e.metaKey &&
+				!e.ctrlKey &&
+				!e.altKey &&
+				e.key === '-'
+			) {
+				e.preventDefault()
+				onRemoveLastFilter()
 				return
 			}
 		}
