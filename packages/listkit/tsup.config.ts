@@ -9,6 +9,7 @@ export default defineConfig({
 		server: 'src/server.ts',
 		query: 'src/query.ts',
 		sql: 'src/sql.ts',
+		mongo: 'src/mongo.ts',
 	},
 	format: ['esm', 'cjs'],
 	dts: true,

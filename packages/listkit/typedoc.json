@@ -7,6 +7,7 @@
 		"src/server.ts",
 		"src/query.ts",
 		"src/sql.ts",
+		"src/mongo.ts",
 		"src/adapters.ts",
 		"src/react-router.ts"
 	],
