@@ -24,6 +24,8 @@ export type ColumnDef<T> = {
 	key: string
 	/** Header cell content. */
 	header: ReactNode
+	/** Plain-text name for the column manager (falls back to a string `header`, else `key`). */
+	label?: string
 	/** Custom cell renderer. When omitted, listkit renders `String(item[key])`. */
 	render?: (item: T, index: number) => ReactNode
 	/** Horizontal alignment of the cell content. @defaultValue 'left' */
@@ -55,6 +57,12 @@ export type TableConfig<T> = {
 	showHeader?: boolean
 	/** Per-row class names, e.g. to highlight a status. */
 	rowClassName?: (item: T, index: number) => string
+	/**
+	 * Show a column manager next to the view toggle so users can hide/show and
+	 * reorder columns. Choices persist via `<ListView columnStorage>` (localStorage
+	 * by default).
+	 */
+	columnControl?: boolean
 }
 
 /**

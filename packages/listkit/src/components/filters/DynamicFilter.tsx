@@ -11,6 +11,7 @@ import {
 	FilterDateRange,
 	FilterMultiSelect,
 	FilterNumberRange,
+	FilterRangeSlider,
 	FilterSelect,
 	FilterText,
 } from './inputs'
@@ -70,7 +71,17 @@ export function DynamicFilter({
 				/>
 			)
 		case 'number-range':
-			return (
+			return def.display === 'slider' && def.min != null && def.max != null ? (
+				<FilterRangeSlider
+					value={value as NumberRangeFilterValue | undefined}
+					onChange={onChange}
+					min={def.min}
+					max={def.max}
+					step={def.step}
+					formatValue={def.formatValue}
+					colorTheme={colorTheme}
+				/>
+			) : (
 				<FilterNumberRange
 					value={value as NumberRangeFilterValue | undefined}
 					onChange={onChange}

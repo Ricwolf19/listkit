@@ -1,5 +1,5 @@
-import { SlidersHorizontal, X } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Search, SlidersHorizontal, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useLabels } from '../../context/ListKitContext'
 import { useFilters } from '../../hooks/useFilters'
@@ -24,6 +24,8 @@ export type FilterSidebarProps<T> = {
 	params: ListParams
 	title?: string
 	colorTheme?: ColorTheme
+	/** Focus the quick-search box when the panel opens (e.g. opened via `+`). */
+	autoFocusSearch?: boolean
 }
 
 function SectionFilters<T>({
@@ -32,12 +34,20 @@ function SectionFilters<T>({
 	colorTheme,
 	draft,
 	setValue,
+	collapsible,
+	collapsed,
+	onToggle,
+	toggleLabel,
 }: {
 	section: FilterSection<T>
 	theme: ReturnType<typeof getColorTheme>
 	colorTheme: ColorTheme
 	draft: Record<string, unknown>
 	setValue: (id: string, value: unknown) => void
+	collapsible: boolean
+	collapsed: boolean
+	onToggle: () => void
+	toggleLabel: string
 }) {
 	const hasGrid = section.filters.some(f => f.columns === 2)
 
@@ -46,38 +56,57 @@ function SectionFilters<T>({
 			key={section.id}
 			className='rounded-xl border border-gray-100 bg-gray-50/40 p-4'
 		>
-			{(section.title || section.description) && (
-				<div className='mb-4 flex items-center gap-2.5'>
-					<div className={cn('h-5 w-1 rounded-full', theme.primaryBg)} />
-					<div>
-						{section.title && (
-							<h3 className='text-sm font-semibold text-gray-900'>
-								{section.title}
-							</h3>
-						)}
-						{section.description && (
-							<p className='text-xs text-gray-500'>{section.description}</p>
-						)}
+			{(section.title || section.description || collapsible) && (
+				<div className='flex items-center justify-between gap-2.5'>
+					<div className='flex min-w-0 items-center gap-2.5'>
+						<div className={cn('h-5 w-1 rounded-full', theme.primaryBg)} />
+						<div className='min-w-0'>
+							{section.title && (
+								<h3 className='truncate text-sm font-semibold text-gray-900'>
+									{section.title}
+								</h3>
+							)}
+							{section.description && (
+								<p className='truncate text-xs text-gray-500'>
+									{section.description}
+								</p>
+							)}
+						</div>
 					</div>
+					{collapsible && (
+						<button
+							type='button'
+							onClick={onToggle}
+							className={cn(
+								'shrink-0 cursor-pointer text-xs font-semibold whitespace-nowrap hover:underline',
+								theme.accentText
+							)}
+							aria-expanded={!collapsed}
+						>
+							{toggleLabel}
+						</button>
+					)}
 				</div>
 			)}
-			<div
-				className={cn(
-					'space-y-5',
-					hasGrid && 'grid grid-cols-2 space-y-0 gap-x-4 gap-y-6'
-				)}
-			>
-				{section.filters.map(def => (
-					<FilterField
-						key={def.id}
-						def={def}
-						value={draft[def.id]}
-						onChange={value => setValue(def.id, value)}
-						colorTheme={colorTheme}
-						hasGrid={hasGrid}
-					/>
-				))}
-			</div>
+			{!collapsed && (
+				<div
+					className={cn(
+						'mt-4 space-y-5',
+						hasGrid && 'grid grid-cols-2 space-y-0 gap-x-4 gap-y-6'
+					)}
+				>
+					{section.filters.map(def => (
+						<FilterField
+							key={def.id}
+							def={def}
+							value={draft[def.id]}
+							onChange={value => setValue(def.id, value)}
+							colorTheme={colorTheme}
+							hasGrid={hasGrid}
+						/>
+					))}
+				</div>
+			)}
 		</section>
 	)
 }
@@ -131,10 +160,50 @@ export function FilterSidebar<T>({
 	params,
 	title,
 	colorTheme = 'red',
+	autoFocusSearch = false,
 }: FilterSidebarProps<T>) {
 	const theme = getColorTheme(colorTheme)
 	const labels = useLabels()
 	const { draft, setValue, apply, reset, clear } = useFilters(sections, params)
+
+	const [search, setSearch] = useState('')
+	const searchInputRef = useRef<HTMLInputElement>(null)
+	const [collapsed, setCollapsed] = useState<Set<string>>(
+		() =>
+			new Set(
+				sections.filter(s => s.collapsible && s.defaultCollapsed).map(s => s.id)
+			)
+	)
+	const toggleCollapsed = (id: string) =>
+		setCollapsed(prev => {
+			const next = new Set(prev)
+			if (next.has(id)) next.delete(id)
+			else next.add(id)
+			return next
+		})
+
+	const totalFilters = useMemo(
+		() => sections.reduce((n, s) => n + s.filters.length, 0),
+		[sections]
+	)
+	const query = search.trim().toLowerCase()
+	const visibleSections = useMemo(() => {
+		if (!query) return sections
+		const matches = (text?: string) =>
+			!!text && text.toLowerCase().includes(query)
+		return sections
+			.map(s =>
+				matches(s.title)
+					? s
+					: {
+							...s,
+							filters: s.filters.filter(
+								f => matches(f.label) || matches(f.description)
+							),
+						}
+			)
+			.filter(s => s.filters.length > 0)
+	}, [sections, query])
 
 	// Keep mounted through the exit transition, and drive enter/exit with `shown`.
 	const [mounted, setMounted] = useState(open)
@@ -164,11 +233,24 @@ export function FilterSidebar<T>({
 		return () => cancelAnimationFrame(raf)
 	}, [open, mounted])
 
-	// Sync the draft from the param store when the panel opens.
+	// Sync the draft from the param store when the panel opens; clear the search.
 	useEffect(() => {
-		if (open) reset()
+		if (open) {
+			reset()
+			setSearch('')
+		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [open])
+
+	// Focus the quick-search box after the open animation when requested (`+`).
+	useEffect(() => {
+		if (!open || !autoFocusSearch) return
+		const id = setTimeout(
+			() => searchInputRef.current?.focus(),
+			ANIMATION_MS + 20
+		)
+		return () => clearTimeout(id)
+	}, [open, autoFocusSearch])
 
 	useEffect(() => {
 		const onKey = (e: KeyboardEvent) => {
@@ -275,18 +357,52 @@ export function FilterSidebar<T>({
 					}}
 				>
 					<div className='min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5'>
-						<div className='space-y-5'>
-							{sections.map(section => (
-								<SectionFilters
-									key={section.id}
-									section={section}
-									theme={theme}
-									colorTheme={colorTheme}
-									draft={draft}
-									setValue={setValue}
+						{totalFilters >= 6 && (
+							<div className='relative mb-4'>
+								<Search className='pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400' />
+								<input
+									ref={searchInputRef}
+									type='text'
+									value={search}
+									onChange={e => setSearch(e.target.value)}
+									placeholder={labels.searchFilters}
+									aria-label={labels.searchFilters}
+									className={cn(
+										'w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-9 text-sm text-gray-900 transition outline-none focus:ring-2',
+										theme.focusBorder,
+										theme.focusRing
+									)}
 								/>
-							))}
-						</div>
+							</div>
+						)}
+						{visibleSections.length === 0 ? (
+							<p className='py-10 text-center text-sm text-gray-500'>
+								{labels.noFilterMatches}
+							</p>
+						) : (
+							<div className='space-y-5'>
+								{visibleSections.map(section => {
+									const isCollapsed =
+										!query && !!section.collapsible && collapsed.has(section.id)
+									return (
+										<SectionFilters
+											key={section.id}
+											section={section}
+											theme={theme}
+											colorTheme={colorTheme}
+											draft={draft}
+											setValue={setValue}
+											collapsible={!!section.collapsible && !query}
+											collapsed={isCollapsed}
+											onToggle={() => toggleCollapsed(section.id)}
+											toggleLabel={
+												isCollapsed ? labels.showOptions : labels.hideOptions
+											}
+										/>
+									)
+								})}
+							</div>
+						)}
 					</div>
 
 					{/* Footer inside form so the submit button is native */}

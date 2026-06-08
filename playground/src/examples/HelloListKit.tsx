@@ -151,6 +151,14 @@ export function HelloListKit() {
 				data={mode === 'memory' ? PRODUCTS : undefined}
 				staleTime={mode === 'async' ? 10_000 : 0}
 				paginationVariant='sticky'
+				headerContent={{
+					left: <Metric label='Catálogo' value={PRODUCTS.length} />,
+					right: (
+						<span className='rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700'>
+							v2.8 showcase
+						</span>
+					),
+				}}
 				toolbarActions={[
 					{
 						label: 'Nuevo',
@@ -173,5 +181,14 @@ function RefreshBadge() {
 			<RefreshCw size={14} />
 			Refrescar lista
 		</button>
+	)
+}
+
+function Metric({ label, value }: { label: string; value: number }) {
+	return (
+		<span className='inline-flex items-baseline gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm shadow-sm ring-1 ring-gray-100'>
+			<span className='font-bold text-gray-900'>{value}</span>
+			<span className='text-gray-500'>{label}</span>
+		</span>
 	)
 }
