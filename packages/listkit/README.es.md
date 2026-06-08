@@ -353,6 +353,16 @@ defineListConfig<Post>({
 })
 ```
 
+Cuando se configuran `card` y `table`, listkit muestra un toggle de vista y por defecto usa **tabla en escritorio** y **tarjetas en pantallas angostas**. Pon `defaultView: 'cards'` para abrir en tarjetas también en escritorio (la tabla sigue disponible en el toggle, y un cambio manual del usuario gana):
+
+```tsx
+defineListConfig<Post>({
+	defaultView: 'cards',
+	card: post => <MyPostCard {...post} />,
+	table: { columns },
+})
+```
+
 ### Refrescar después de una mutación
 
 Con un adaptador asíncrono, listkit fetchea en el cliente, así que una mutación en el servidor no se verá hasta que cambie la query. Llama `useListRefresh()` desde cualquier descendiente de `<ListView>` (el botón eliminar de una fila, un modal) para forzar un refetch — sin recargar la página. Es un no-op fuera de un `ListView`, así que los botones compartidos siguen siendo seguros:

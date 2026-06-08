@@ -13,9 +13,10 @@ const TABLE_MIN_WIDTH = 1024
  * always follows the device on the next load.
  *
  * Starts as 'table' on the server and the first client render to stay
- * hydration-safe, then syncs to the real viewport after mount.
+ * hydration-safe, then syncs to the real viewport after mount. On desktop the
+ * default follows `defaultView` (when both views are configured).
  */
-export function useViewType() {
+export function useViewType(defaultView: ViewType = 'table') {
 	const [viewType, setViewType] = useState<ViewType>('table')
 	const wasMobile = useRef<boolean | null>(null)
 
@@ -28,13 +29,15 @@ export function useViewType() {
 			// breakpoint is actually crossed, so a manual toggle survives plain resizes.
 			if (force || isMobile !== wasMobile.current) {
 				wasMobile.current = isMobile
-				setViewType(isMobile ? 'cards' : 'table')
+				setViewType(isMobile ? 'cards' : defaultView)
 			}
 		}
 		sync(true)
 		const handleResize = () => sync(false)
 		window.addEventListener('resize', handleResize)
 		return () => window.removeEventListener('resize', handleResize)
+		// defaultView is read on mount/resize; changing it later is not expected.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [])
 
 	return { viewType, handleViewChange }

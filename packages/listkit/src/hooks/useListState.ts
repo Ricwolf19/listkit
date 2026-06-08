@@ -11,7 +11,7 @@ import type {
 	UseListDataHook,
 } from '../types/data'
 import type { ActiveFilterValue } from '../types/filters'
-import type { DisplayMode, PaginationState } from '../types/list'
+import type { DisplayMode, PaginationState, ViewType } from '../types/list'
 import { useListData as defaultUseListData } from './useListData'
 import type { ListParams } from './useListParams'
 import { useViewType } from './useViewType'
@@ -33,6 +33,8 @@ type UseListStateOptions<T> = {
 	initialQuery?: ListQuery
 	/** List identity, namespaces the response cache so lists don't collide. */
 	listId?: string
+	/** Preferred desktop view when both views are configured. @defaultValue 'table' */
+	defaultView?: ViewType
 }
 
 /**
@@ -54,9 +56,10 @@ export function useListState<T>({
 	initialData,
 	initialQuery,
 	listId,
+	defaultView,
 }: UseListStateOptions<T>) {
 	const { get, set } = params
-	const { viewType, handleViewChange } = useViewType()
+	const { viewType, handleViewChange } = useViewType(defaultView)
 
 	const currentSearch = get('search') ?? ''
 	const currentPage = Math.max(1, parseInt(get('page') ?? '1', 10) || 1)

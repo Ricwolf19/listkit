@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { ColorTheme } from '../theme/colorTheme'
 import type { FilterSection } from './filters'
 import type { ListLabels } from './labels'
+import type { ViewType } from './list'
 
 /**
  * A single table column.
@@ -160,6 +161,12 @@ export type ListConfig<T> = {
 	emptyMessage?: string
 	/** Tailwind grid-column classes for the cards view (e.g. `'sm:grid-cols-2 lg:grid-cols-3'`). */
 	gridCols?: string
+	/**
+	 * Preferred view on desktop when both `table` and `card` are configured.
+	 * Narrow viewports still default to cards, and the user's manual toggle wins.
+	 * @defaultValue 'table'
+	 */
+	defaultView?: ViewType
 	/**
 	 * Enables the search box. Pass a {@link SearchConfig} (fields or fn) for
 	 * in-memory `data`, or `true` when an adapter performs the search server-side.

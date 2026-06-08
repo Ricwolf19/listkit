@@ -353,6 +353,16 @@ defineListConfig<Post>({
 })
 ```
 
+When both a `card` and a `table` are configured, listkit shows a view toggle and defaults to **table on desktop**, **cards on narrow screens**. Set `defaultView: 'cards'` to open in cards on desktop too (the table stays available via the toggle, and a manual switch still wins):
+
+```tsx
+defineListConfig<Post>({
+	defaultView: 'cards',
+	card: post => <MyPostCard {...post} />,
+	table: { columns },
+})
+```
+
 ### Refreshing after a mutation
 
 With an async adapter, listkit fetches on the client, so a server mutation won't show until the query changes. Call `useListRefresh()` from any descendant of `<ListView>` (a row's delete button, a modal) to force a refetch — no full page reload. It's a no-op outside a `ListView`, so shared buttons stay safe:

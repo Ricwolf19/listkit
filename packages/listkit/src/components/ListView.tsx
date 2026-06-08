@@ -231,6 +231,7 @@ export function ListView<T>({
 		initialData,
 		initialQuery,
 		listId: config.id,
+		defaultView: config.defaultView,
 	})
 
 	const isLoading = externalLoading || dataLoading
