@@ -18,6 +18,8 @@ export const productsConfig = defineListConfig<Product>({
 	subtitle: 'Catálogo completo con filtros avanzados, cache y paginación',
 	pageSize: 12,
 	colorTheme: brandTheme,
+	// 2.7+: explicit desktop default view ('cards' or 'table').
+	defaultView: 'table',
 	searchPlaceholder: 'Buscar por nombre, SKU o categoría…',
 	emptyMessage: 'No se encontraron productos',
 	search: { fields: ['name', 'sku', 'category'] },
@@ -63,6 +65,8 @@ export const productsConfig = defineListConfig<Product>({
 		{
 			id: 'origin',
 			title: 'Origen y proveedor',
+			// 2.8: collapsible section — starts open, hides behind "Show options".
+			collapsible: true,
 			filters: [
 				{
 					id: 'supplier',
@@ -98,19 +102,30 @@ export const productsConfig = defineListConfig<Product>({
 					field: 'price',
 					label: 'Precio (MXN)',
 					type: 'number-range',
-					columns: 2,
-				},
-				{
-					id: 'stock',
-					field: 'stock',
-					label: 'Existencias',
-					type: 'number-range',
-					columns: 2,
+					// 2.8: dual-thumb slider instead of two inputs.
+					display: 'slider',
+					min: 0,
+					max: 1000,
+					step: 10,
+					formatValue: currency,
+					columns: 1,
 				},
 				{
 					id: 'rating',
 					field: 'rating',
 					label: 'Calificación (0–5)',
+					type: 'number-range',
+					display: 'slider',
+					min: 0,
+					max: 5,
+					step: 0.5,
+					formatValue: n => `${n}★`,
+					columns: 1,
+				},
+				{
+					id: 'stock',
+					field: 'stock',
+					label: 'Existencias (con inputs)',
 					type: 'number-range',
 					columns: 2,
 				},
@@ -135,6 +150,8 @@ export const productsConfig = defineListConfig<Product>({
 					type: 'boolean',
 					trueLabel: 'En stock',
 					falseLabel: 'Agotado',
+					// 2.6: pre-applied on a pristine list (shows a default chip).
+					defaultValue: true,
 					columns: 2,
 				},
 			],
@@ -142,6 +159,9 @@ export const productsConfig = defineListConfig<Product>({
 		{
 			id: 'flags',
 			title: 'Otros',
+			// 2.8: collapsible section that starts collapsed.
+			collapsible: true,
+			defaultCollapsed: true,
 			filters: [
 				{
 					id: 'featured',
@@ -161,6 +181,8 @@ export const productsConfig = defineListConfig<Product>({
 	},
 
 	table: {
+		// 2.8: column manager (hide/show + reorder, persisted to localStorage).
+		columnControl: true,
 		columns: [
 			{ key: 'name', header: 'Nombre', sortable: true },
 			{ key: 'sku', header: 'SKU' },

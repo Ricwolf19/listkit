@@ -60,7 +60,11 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
 - **Theming** — 8 paletas integradas o tu propio tema personalizado; por lista o global.
 - **Tarjetas personalizadas** — usa el chrome de tarjeta integrado, o `bareCard` para insertar un componente de tarjeta completamente personalizado.
 - **Refrescar en mutación** — `useListRefresh()` refetchea la lista después de un delete/edit, sin recargar la página.
-- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `Shift + F` abre filtros, `Shift + V` cambia la vista.
+- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `Shift + F` abre filtros, `Shift + V` cambia la vista, `+` abre filtros, `-` quita el último filtro.
+- **Slots de encabezado** — coloca métricas/badges sobre el título con `headerContent={{ left, center, right }}`.
+- **Gestor de columnas** — `table.columnControl` permite ocultar/mostrar y reordenar columnas; persiste en localStorage (o tu propio `ColumnStorage`).
+- **Filtros colapsables + búsqueda rápida** — los sidebars largos tienen secciones colapsables (`collapsible`) y una caja de búsqueda de filtros.
+- **Slider de rango** — un filtro `number-range` puede renderizar como slider de dos manijas (`display: 'slider'`, `min`/`max`/`step`/`formatValue`).
 - **Componible + type-safe** — usa `<ListView>`, o baja de nivel a `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
 
 ---

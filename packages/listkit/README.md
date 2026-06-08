@@ -60,7 +60,11 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
 - **Custom cards** — use the built-in card chrome, or `bareCard` to drop in a fully custom card component.
 - **Refresh on mutation** — `useListRefresh()` refetches the list after a delete/edit, no full page reload.
-- **Keyboard shortcuts** — `⌘ K` focus search, `Shift + F` open filters, `Shift + V` toggle view.
+- **Keyboard shortcuts** — `⌘ K` focus search, `Shift + F` open filters, `Shift + V` toggle view, `+` open filters, `-` remove the last filter.
+- **Header slots** — drop quick metrics/badges above the title with `headerContent={{ left, center, right }}`.
+- **Column manager** — `table.columnControl` lets users hide/show and reorder columns; persisted to localStorage (or your own `ColumnStorage`).
+- **Collapsible filters + quick-search** — long sidebars get collapsible sections (`collapsible`) and a filter search box.
+- **Range slider** — a `number-range` filter can render as a dual-thumb slider (`display: 'slider'`, `min`/`max`/`step`/`formatValue`).
 - **Composable + type-safe** — use `<ListView>`, or drop down to `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
 
 ---
