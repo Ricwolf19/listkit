@@ -90,6 +90,11 @@ export type FilterDefinition<T = unknown> =
 			placeholder?: string
 			/** Initial match mode. @defaultValue 'partial' */
 			defaultMatch?: TextMatch
+			/**
+			 * Pre-applied value on a pristine list (no filters in the URL yet).
+			 * Several filters may each set one; the user can still change or clear them.
+			 */
+			defaultValue?: TextFilterValue
 	  })
 	| (BaseFilter<T> & {
 			type: 'select'
@@ -99,6 +104,8 @@ export type FilterDefinition<T = unknown> =
 			placeholder?: string
 			/** Show a search box inside the dropdown for long option lists. */
 			searchable?: boolean
+			/** Pre-applied option value on a pristine list. @see the `text` variant's `defaultValue`. */
+			defaultValue?: string
 	  })
 	| (BaseFilter<T> & {
 			type: 'multi-select'
@@ -106,19 +113,29 @@ export type FilterDefinition<T = unknown> =
 			options: FilterOption[]
 			/** Input placeholder. */
 			placeholder?: string
+			/** Pre-applied selected values on a pristine list. @see the `text` variant's `defaultValue`. */
+			defaultValue?: MultiSelectFilterValue
 	  })
 	| (BaseFilter<T> & {
 			type: 'date-range'
 			/** Include a time component in the picker. */
 			withTime?: boolean
+			/** Pre-applied range on a pristine list. @see the `text` variant's `defaultValue`. */
+			defaultValue?: DateRangeFilterValue
 	  })
-	| (BaseFilter<T> & { type: 'number-range' })
+	| (BaseFilter<T> & {
+			type: 'number-range'
+			/** Pre-applied range on a pristine list. @see the `text` variant's `defaultValue`. */
+			defaultValue?: NumberRangeFilterValue
+	  })
 	| (BaseFilter<T> & {
 			type: 'boolean'
 			/** Label for the "true" toggle. @defaultValue 'Sí' */
 			trueLabel?: string
 			/** Label for the "false" toggle. @defaultValue 'No' */
 			falseLabel?: string
+			/** Pre-applied value on a pristine list. @see the `text` variant's `defaultValue`. */
+			defaultValue?: boolean
 	  })
 
 /**
