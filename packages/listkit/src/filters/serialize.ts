@@ -82,6 +82,39 @@ export function decodeFilterValue(
 	return isFilterValueActive(type, value) ? value : null
 }
 
+/**
+ * The filters that carry a `defaultValue`, as adapter-ready active values.
+ * Used to pre-apply defaults on a pristine list (no filters in the URL yet).
+ */
+export function buildDefaultActiveFilters<T>(
+	defs: FilterDefinition<T>[]
+): ActiveFilterValue[] {
+	const active: ActiveFilterValue[] = []
+	for (const def of defs) {
+		const value = (def as { defaultValue?: unknown }).defaultValue
+		if (value != null && isFilterValueActive(def.type, value)) {
+			active.push({
+				id: def.id,
+				field: def.field as string,
+				type: def.type,
+				value,
+			})
+		}
+	}
+	return active
+}
+
+/** Encode active filters as a `{ paramKey: encodedValue }` patch for the store. */
+export function activeFiltersToParams(
+	active: ActiveFilterValue[]
+): Record<string, string> {
+	const updates: Record<string, string> = {}
+	for (const a of active) {
+		updates[filterParamKey(a.id)] = encodeFilterValue(a.value)
+	}
+	return updates
+}
+
 /** Reads the applied filters from the param store into adapter-ready values. */
 export function readActiveFilters<T>(
 	filters: FilterDefinition<T>[],

@@ -262,6 +262,34 @@ defineListConfig<Product>({
 
 Los filtros aplicados aparecen como chips removibles sobre la lista y se sincronizan con la URL. Con un adaptador asíncrono, lee `query.filters` (un `ActiveFilterValue[]`) en tu fetcher y tradúcelo a SQL/HTTP.
 
+#### Valores por defecto de los filtros
+
+Dale a cualquier filtro un `defaultValue` para **pre-aplicarlo en una lista en blanco** — cuando la URL aún no tiene filtros. Varios filtros pueden definir uno cada uno (p. ej. mostrar solo filas activas _y_ el mes actual por defecto):
+
+```ts
+const filters: FilterDefinition<Order>[] = [
+	{
+		id: 'status',
+		field: 'status',
+		label: 'Estatus',
+		type: 'select',
+		options: statusOptions,
+		defaultValue: 'active',
+	},
+	{
+		id: 'created',
+		field: 'createdAt',
+		label: 'Creado',
+		type: 'date-range',
+		defaultValue: { from: '2026-06-01', to: '2026-06-30' },
+	},
+]
+```
+
+`defaultValue` usa la misma forma que el adaptador recibe para ese tipo: `select` → `string`, `multi-select` → `string[]`, `boolean` → `boolean`, `text` → `{ value, match }`, `date-range` → `{ from?, to? }`, `number-range` → `{ min?, max? }`.
+
+Los valores por defecto solo siembran la vista **inicial**: se aplican en el primer render (así el primer fetch ya los incluye) y se escriben en la URL; después, las ediciones/limpiezas del usuario siempre ganan. Las listas con `initialData` (SSR) se dejan intactas — aplica los defaults en tu query del servidor.
+
 ### Ordenamiento de columnas
 
 Marca cualquier columna de tabla como `sortable`. Al hacer clic en su encabezado cicla **ascendente → descendente → apagado**, sincroniza el sort activo en un parámetro `sort` de la URL, y fluye al adaptador como `query.sort` (`{ field, dir }`):
@@ -378,6 +406,34 @@ const adapter = serverActionAdapter<Product>(async query => {
 
 <ListView config={productsConfig} adapter={adapter} />
 ```
+
+### Backend MongoDB (`@pibytelabs/listkit/mongo`)
+
+El front-end es el mismo en cualquier app de React (`fetchAdapter` → tu endpoint REST). En el servidor, traduce el `ListQuery` entrante a objetos planos de Mongo con `@pibytelabs/listkit/mongo` — **sin dependencia de `mongoose`/driver** y nunca ejecuta una query, así que funciona con Mongoose o el driver nativo. Los nombres de campo provienen solo de listas blancas que tú controlas (sin inyección NoSQL) y los valores de texto se escapan para regex.
+
+```ts
+import { buildMongoQuery } from '@pibytelabs/listkit/mongo'
+
+// query es el ListQuery de listkit parseado desde la request
+const { filter, sort, skip, limit } = buildMongoQuery(query, {
+	fields: {
+		legalName: 'legalName', // text  → $regex sin distinción de mayúsculas
+		type: 'type', // select → igualdad
+		status: 'csf.generalData.status', // ruta anidada, según el tipo de filtro
+		created: 'createdAt', // date-range → $gte/$lte
+	},
+	sort: { name: 'legalName', created: 'createdAt' },
+	fallbackSort: { legalName: 1 },
+})
+
+const [data, total] = await Promise.all([
+	Model.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+	Model.countDocuments(filter),
+])
+return { data, total } // la forma { data, total } que espera fetchAdapter
+```
+
+Combina condiciones extra (alcance de auth, id de tenant, un `$in` por referencia de una colección anidada) con `combineFilters`, y usa los helpers de más bajo nivel `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` cuando necesites control fino.
 
 ### Renderizado en servidor (`initialData`)
 
@@ -740,6 +796,7 @@ defineListConfig({ colorTheme: brand, /* … */ })
 | `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — seguro para RSC (sin React/DOM)                                                    |
 | `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — leer filtros de `ListQuery` |
 | `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — fragmentos de query con sabor a Postgres                                                                   |
+| `@pibytelabs/listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex` — objetos de query de MongoDB      |
 | `@pibytelabs/listkit/tailwind.css` | Registro de fuente Tailwind v4                                                                                                               |
 
 ---

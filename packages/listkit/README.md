@@ -262,6 +262,34 @@ defineListConfig<Product>({
 
 Applied filters appear as removable chips above the list and sync to the URL. With an async adapter, read `query.filters` (an `ActiveFilterValue[]`) in your fetcher and translate to SQL/HTTP.
 
+#### Default filter values
+
+Give any filter a `defaultValue` to **pre-apply it on a pristine list** — when the URL has no filters yet. Multiple filters can each set one (e.g. show only active rows _and_ default to the current month):
+
+```ts
+const filters: FilterDefinition<Order>[] = [
+	{
+		id: 'status',
+		field: 'status',
+		label: 'Status',
+		type: 'select',
+		options: statusOptions,
+		defaultValue: 'active',
+	},
+	{
+		id: 'created',
+		field: 'createdAt',
+		label: 'Created',
+		type: 'date-range',
+		defaultValue: { from: '2026-06-01', to: '2026-06-30' },
+	},
+]
+```
+
+`defaultValue` uses the same shape the adapter receives for that type: `select` → `string`, `multi-select` → `string[]`, `boolean` → `boolean`, `text` → `{ value, match }`, `date-range` → `{ from?, to? }`, `number-range` → `{ min?, max? }`.
+
+Defaults seed the **initial** view only: they're applied on the first render (so the first fetch already includes them) and written to the URL, after which the user's edits/clears always win. Lists rendered with `initialData` (SSR) are left as-is — apply the defaults in your server query instead.
+
 ### Column sorting
 
 Mark any table column `sortable`. Clicking its header cycles **ascending → descending → off**, syncs the active sort to a `sort` URL param, and flows into the adapter as `query.sort` (`{ field, dir }`):

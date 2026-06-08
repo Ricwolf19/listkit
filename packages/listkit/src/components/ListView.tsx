@@ -1,4 +1,11 @@
-import { type ReactNode, useCallback, useMemo, useState } from 'react'
+import {
+	type ReactNode,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from 'react'
 
 import { memoryAdapter } from '../adapters/memory'
 import {
@@ -8,6 +15,8 @@ import {
 	useListKitTheme,
 } from '../context/ListKitContext'
 import {
+	activeFiltersToParams,
+	buildDefaultActiveFilters,
 	filterParamKey,
 	flattenFilters,
 	readActiveFilters,
@@ -149,7 +158,33 @@ export function ListView<T>({
 	)
 	// Computed every render so it always reflects the current URL/param values
 	// (cheap: a short loop over the filter definitions).
-	const activeFilters = readActiveFilters(flatDefs, params.get)
+	const urlActiveFilters = readActiveFilters(flatDefs, params.get)
+
+	// Filter `defaultValue`s pre-apply on a pristine list (no filters in the URL,
+	// no SSR seed). They're overlaid on the very first render so the first fetch
+	// already carries them (no wasted request), then written to the URL on mount
+	// so chips, clearing, and link-sharing all work through the normal paths.
+	const defaultActiveFilters = useMemo(
+		() => buildDefaultActiveFilters(flatDefs),
+		[flatDefs]
+	)
+	const defaultsSeeded = useRef(false)
+	const usingDefaults =
+		!defaultsSeeded.current &&
+		!initialData &&
+		urlActiveFilters.length === 0 &&
+		defaultActiveFilters.length > 0
+	const activeFilters = usingDefaults ? defaultActiveFilters : urlActiveFilters
+
+	useEffect(() => {
+		if (defaultsSeeded.current) return
+		defaultsSeeded.current = true
+		if (initialData || urlActiveFilters.length > 0) return
+		const updates = activeFiltersToParams(defaultActiveFilters)
+		if (Object.keys(updates).length > 0) params.setMany(updates)
+		// Mount-only: defaults seed the initial view; later edits/clears win.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [])
 
 	const [filtersOpen, setFiltersOpen] = useState(false)
 
