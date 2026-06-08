@@ -127,6 +127,16 @@ export type FilterDefinition<T = unknown> =
 			type: 'number-range'
 			/** Pre-applied range on a pristine list. @see the `text` variant's `defaultValue`. */
 			defaultValue?: NumberRangeFilterValue
+			/** Input style: two number inputs (default) or a dual-thumb slider. @defaultValue 'inputs' */
+			display?: 'inputs' | 'slider'
+			/** Slider track lower bound. Required for `display: 'slider'`. */
+			min?: number
+			/** Slider track upper bound. Required for `display: 'slider'`. */
+			max?: number
+			/** Slider step size. @defaultValue 1 */
+			step?: number
+			/** Format the slider's value labels (e.g. a currency formatter). */
+			formatValue?: (value: number) => string
 	  })
 	| (BaseFilter<T> & {
 			type: 'boolean'
@@ -152,6 +162,13 @@ export type FilterSection<T = unknown> = {
 	description?: string
 	/** Filters in this section. */
 	filters: FilterDefinition<T>[]
+	/**
+	 * Let the user collapse this section behind a "Show options" toggle — useful
+	 * for keeping a long sidebar (many sections) scannable.
+	 */
+	collapsible?: boolean
+	/** Start collapsed (only applies when `collapsible`). @defaultValue false */
+	defaultCollapsed?: boolean
 }
 
 /**
