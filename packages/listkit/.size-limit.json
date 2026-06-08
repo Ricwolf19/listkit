@@ -46,5 +46,10 @@
 		"path": "dist/adapters.js",
 		"limit": "3 KB",
 		"ignore": ["react", "react-dom"]
+	},
+	{
+		"name": "/mongo subpath (ESM)",
+		"path": "dist/mongo.js",
+		"limit": "2 KB"
 	}
 ]

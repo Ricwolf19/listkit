@@ -115,6 +115,16 @@
 				"default": "./dist/sql.cjs"
 			}
 		},
+		"./mongo": {
+			"import": {
+				"types": "./dist/mongo.d.ts",
+				"default": "./dist/mongo.js"
+			},
+			"require": {
+				"types": "./dist/mongo.d.cts",
+				"default": "./dist/mongo.cjs"
+			}
+		},
 		"./tailwind.css": "./tailwind.css",
 		"./package.json": "./package.json"
 	},

@@ -393,6 +393,34 @@ const adapter = serverActionAdapter<Product>(async query => {
 <ListView config={productsConfig} adapter={adapter} />
 ```
 
+### MongoDB backend (`@pibytelabs/listkit/mongo`)
+
+The front-end is the same in any React app (`fetchAdapter` → your REST endpoint). On the server, translate the incoming `ListQuery` into plain Mongo objects with `@pibytelabs/listkit/mongo` — it has **no `mongoose`/driver dependency** and never runs a query, so it works with Mongoose or the native driver. Field names come only from whitelists you control (no NoSQL injection), and text values are regex-escaped.
+
+```ts
+import { buildMongoQuery } from '@pibytelabs/listkit/mongo'
+
+// query is the listkit ListQuery parsed from the request
+const { filter, sort, skip, limit } = buildMongoQuery(query, {
+	fields: {
+		legalName: 'legalName', // text  → case-insensitive $regex
+		type: 'type', // select → equality
+		status: 'csf.generalData.status', // nested path, dispatched by filter type
+		created: 'createdAt', // date-range → $gte/$lte
+	},
+	sort: { name: 'legalName', created: 'createdAt' },
+	fallbackSort: { legalName: 1 },
+})
+
+const [data, total] = await Promise.all([
+	Model.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+	Model.countDocuments(filter),
+])
+return { data, total } // the { data, total } shape fetchAdapter expects
+```
+
+Compose extra conditions (auth scope, tenant id, a reference `$in` from a nested-collection lookup) with `combineFilters`, and reach for the lower-level `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` helpers when you need finer control.
+
 ### Server-side rendering (`initialData`)
 
 By default the list fetches on the **client**: the server renders an empty/loading shell and rows appear after hydration. For SEO, a faster first paint, and no loading flash, fetch the **first page on the server** and hand it to `<ListView>` as `initialData` — it renders those rows in the initial HTML and **skips the client's first fetch**. Paging and filtering afterwards still run on the client.
@@ -803,6 +831,7 @@ for the full key list.
 | `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                       |
 | `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — read `ListQuery` filters                               |
 | `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — Postgres-flavoured query fragments                                                                                                    |
+| `@pibytelabs/listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex` — MongoDB query objects                                       |
 | `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                         |
 
 ---
