@@ -13,6 +13,7 @@ export {
 // Sub-components for advanced composition
 export { Card } from './components/Card'
 export { Cards } from './components/Cards'
+export { Checkbox, type CheckboxProps } from './components/Checkbox'
 export { EmptyState } from './components/EmptyState'
 export { ListSkeleton } from './components/ListSkeleton'
 export { Pagination, type PaginationVariant } from './components/Pagination'
@@ -24,6 +25,10 @@ export { Toolbar, type ToolbarProps } from './components/Toolbar'
 export { ViewToggle } from './components/ViewToggle'
 
 // Filters (v2.0)
+export {
+	ColumnManager,
+	type ColumnManagerProps,
+} from './components/ColumnManager'
 export { ActiveFilterChips } from './components/filters/ActiveFilterChips'
 export { DynamicFilter } from './components/filters/DynamicFilter'
 export { FilterButton } from './components/filters/FilterButton'
@@ -31,11 +36,19 @@ export { FilterSidebar } from './components/filters/FilterSidebar'
 
 // Hooks
 export { useBrowserRouterAdapter } from './hooks/useBrowserRouterAdapter'
+export { type ColumnPrefItem, useColumnPrefs } from './hooks/useColumnPrefs'
 export { useFilters } from './hooks/useFilters'
 export { invalidateListCache, useListData } from './hooks/useListData'
 export { type ListParams, useListParams } from './hooks/useListParams'
 export { useListState } from './hooks/useListState'
 export { useViewType } from './hooks/useViewType'
+
+// Column preferences (custom persistence)
+export {
+	type ColumnPrefs,
+	type ColumnStorage,
+	localStorageColumns,
+} from './types/columns'
 
 // Data layer (built-in adapters; more live in @pibytelabs/listkit/adapters)
 export { fetchAdapter } from './adapters/fetch'

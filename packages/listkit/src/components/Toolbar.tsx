@@ -23,6 +23,8 @@ export type ToolbarProps = {
 	actions?: ToolbarAction[]
 	showSearch?: boolean
 	showViewToggle?: boolean
+	/** Column manager, rendered next to the view toggle (table view only). */
+	columnControl?: ReactNode
 	customContent?: ReactNode
 	onOpenFilters?: () => void
 	onClearFilters?: () => void
@@ -44,6 +46,7 @@ export function Toolbar({
 	actions = [],
 	showSearch = true,
 	showViewToggle = true,
+	columnControl,
 	customContent,
 	onOpenFilters,
 	onClearFilters,
@@ -127,9 +130,10 @@ export function Toolbar({
 
 				{/* Desktop: everything inline on the right (there's room). */}
 				<div className='hidden items-center gap-3 sm:flex'>
-					{counter}
 					{customContent}
 					{desktopActions.map(renderAction)}
+					{columnControl}
+					{counter}
 					{viewToggle}
 				</div>
 

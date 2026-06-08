@@ -33,6 +33,18 @@ export type ListLabels = {
 	clearFilters: string
 	/** Helper text in the filter sidebar header. */
 	filtersHint: string
+	/** Placeholder for the filter quick-search box in the sidebar. */
+	searchFilters: string
+	/** Shown when the filter quick-search matches nothing. */
+	noFilterMatches: string
+	/** Toggle to reveal a collapsed filter section's options. */
+	showOptions: string
+	/** Toggle to hide a filter section's options. */
+	hideOptions: string
+	/** Column-manager button (aria-label/title) and popover heading. */
+	columns: string
+	/** Reset-columns action in the column manager. */
+	resetColumns: string
 	/** Empty-state title when there are no rows. */
 	empty: string
 	/** Error message when the adapter fails. */
@@ -72,6 +84,12 @@ export const DEFAULT_LABELS: ListLabels = {
 	applyFilters: 'Apply filters',
 	clearFilters: 'Clear all',
 	filtersHint: 'Adjust the filters and press Enter to apply',
+	searchFilters: 'Search filters…',
+	noFilterMatches: 'No filters match your search',
+	showOptions: 'Show options',
+	hideOptions: 'Hide options',
+	columns: 'Columns',
+	resetColumns: 'Reset',
 	empty: 'No results',
 	error: 'Failed to load data.',
 	loading: 'Loading…',
@@ -102,6 +120,12 @@ export const ES_LABELS: ListLabels = {
 	applyFilters: 'Aplicar filtros',
 	clearFilters: 'Limpiar todo',
 	filtersHint: 'Ajusta los filtros y presiona Enter para aplicar',
+	searchFilters: 'Buscar filtros…',
+	noFilterMatches: 'Ningún filtro coincide con tu búsqueda',
+	showOptions: 'Mostrar opciones',
+	hideOptions: 'Ocultar opciones',
+	columns: 'Columnas',
+	resetColumns: 'Restablecer',
 	empty: 'Sin resultados',
 	error: 'No se pudieron cargar los datos.',
 	loading: 'Cargando…',
