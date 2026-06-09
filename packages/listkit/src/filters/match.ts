@@ -4,6 +4,7 @@ import type {
 	NumberRangeFilterValue,
 	TextFilterValue,
 } from '../types/filters'
+import { foldText } from '../utils/foldText'
 import { getPath } from '../utils/getPath'
 
 function toTime(value: unknown): number | null {
@@ -22,18 +23,16 @@ function matchesFilter(item: unknown, filter: ActiveFilterValue): boolean {
 	switch (filter.type) {
 		case 'text': {
 			const { value, match } = filter.value as TextFilterValue
-			const target = String(raw ?? '').toLowerCase()
-			const needle = value.toLowerCase()
+			const target = foldText(raw)
+			const needle = foldText(value)
 			return match === 'exact' ? target === needle : target.includes(needle)
 		}
 		case 'select':
-			return (
-				String(raw ?? '').toLowerCase() === String(filter.value).toLowerCase()
-			)
+			return foldText(raw) === foldText(filter.value)
 		case 'multi-select': {
-			const selected = (filter.value as string[]).map(v => v.toLowerCase())
+			const selected = (filter.value as string[]).map(foldText)
 			const values = Array.isArray(raw) ? raw : [raw]
-			return values.some(v => selected.includes(String(v ?? '').toLowerCase()))
+			return values.some(v => selected.includes(foldText(v)))
 		}
 		case 'number-range': {
 			const { min, max } = filter.value as NumberRangeFilterValue

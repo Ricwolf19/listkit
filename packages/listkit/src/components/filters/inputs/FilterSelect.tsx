@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { type ColorTheme, getColorTheme } from '../../../theme/colorTheme'
 import type { FilterOption } from '../../../types/filters'
 import { cn } from '../../../utils/cn'
+import { foldText } from '../../../utils/foldText'
 import { fieldClass } from './shared'
 
 export type FilterSelectProps = {
@@ -50,7 +51,7 @@ export function FilterSelect({
 
 	const selected = options.find(o => o.value === value)
 	const visible = query
-		? options.filter(o => o.label.toLowerCase().includes(query.toLowerCase()))
+		? options.filter(o => foldText(o.label).includes(foldText(query)))
 		: options
 
 	useEffect(() => {

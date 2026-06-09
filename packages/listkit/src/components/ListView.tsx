@@ -274,6 +274,24 @@ export function ListView<T>({
 	})
 
 	const isLoading = externalLoading || dataLoading
+
+	// Placeholder count for the loading state. Derived from the (persisted)
+	// pagination so skeletons fill exactly the page being fetched: a full page
+	// mid-list, the partial remainder on the last page. Keeping the list's height
+	// stable across page changes stops the fixed/sticky pagination bar from
+	// jumping. Falls back to a full page when the total isn't known yet (first load).
+	const perPage = pagination.itemsPerPage || config.pageSize || 8
+	const skeletonCount =
+		pagination.totalItems > 0
+			? Math.max(
+					1,
+					Math.min(
+						perPage,
+						pagination.totalItems - (pagination.currentPage - 1) * perPage
+					)
+				)
+			: perPage
+
 	const getItemKey = config.getItemKey ?? ((_item: T, index: number) => index)
 	const cardCtx: CardContext<T> = { actions: config.actions ?? {}, colorTheme }
 
@@ -405,6 +423,7 @@ export function ListView<T>({
 									colorTheme={colorTheme}
 									sort={sort}
 									onSort={handleSortChange}
+									skeletonRows={skeletonCount}
 								/>
 							)}
 
@@ -418,6 +437,7 @@ export function ListView<T>({
 									displayMode={config.table ? cardsMode : 'show'}
 									gridCols={config.gridCols}
 									bare={config.bareCard}
+									skeletonCount={skeletonCount}
 								/>
 							)}
 						</div>

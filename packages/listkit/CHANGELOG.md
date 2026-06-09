@@ -1,5 +1,17 @@
 # @pibytelabs/listkit
 
+## 2.9.0
+
+### Minor Changes
+
+- 419e915: `@pibytelabs/listkit/mongo` field maps now accept a `{ match }` spec for computed and cross-field filters. `build` always wraps its result under a single `path` (`{ [path]: expr }`), so it can only express one field; `match` returns a complete condition that is merged as-is, letting a single filter span several fields — e.g. a "certificate active" bucket that requires the files to be present AND the date to be in the future. Existing string and `{ path, build }` specs are unchanged.
+- 419e915: Add a first-class TanStack Query integration at `@pibytelabs/listkit/react-query`. `useReactQueryListData` is a drop-in `useListData` hook that backs a list's pages with React Query instead of the built-in cache, so lists share the app's cache, retries, and devtools — pass it via `<ListView useListData={useReactQueryListData} />`. `invalidateList(queryClient, listId?)` refetches one list (or all) from anywhere, e.g. a mutation `onSuccess` outside the list tree, and `listQueryKey` exposes the key shape. `@tanstack/react-query` is an optional peer dependency, so the module loads only for apps that import it. `useListRefresh()` keeps working (it bumps `refreshToken`, which is part of the key) and `keepPreviousData` avoids an empty flash on page/filter changes.
+
+### Patch Changes
+
+- 419e915: Search and filter matching are now accent- and case-insensitive. Quick search (in-memory adapter), advanced `text`/`select`/`multi-select` filters, the filter sidebar's quick-search, and searchable-select option lists all fold diacritics before comparing, so typing `jose` matches `José` and `arbol` matches `Árbol` — no need to type exact accents. (Server-side adapters still match per their own collation.)
+- 6177c80: Loading skeletons now fill the exact page being fetched (a full page mid-list, the partial remainder on the last page) instead of a fixed 6/8 placeholders. This keeps the list's height stable across page changes so the fixed/sticky pagination bar no longer jumps while data loads. `Table` gains a `skeletonRows` prop and `Cards` a `skeletonCount` prop; `ListView` derives both from the current pagination state.
+
 ## 2.8.0
 
 ### Minor Changes

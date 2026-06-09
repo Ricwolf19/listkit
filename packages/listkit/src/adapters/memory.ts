@@ -1,6 +1,7 @@
 import { itemMatchesFilters } from '../filters/match'
 import type { DataAdapter, ListQuery } from '../types/data'
 import type { ActiveFilterValue } from '../types/filters'
+import { foldText } from '../utils/foldText'
 import { getPath } from '../utils/getPath'
 
 /**
@@ -32,13 +33,13 @@ function applySearch<T>(
 ): T[] {
 	if (!term.trim()) return items
 	if (search.fn) return search.fn(items, term)
-	const q = term.toLowerCase()
+	const q = foldText(term)
 	return items.filter(item =>
 		search.fields!.some(field => {
 			const value = getPath(item, field)
 			return (
 				(typeof value === 'string' || typeof value === 'number') &&
-				String(value).toLowerCase().includes(q)
+				foldText(value).includes(q)
 			)
 		})
 	)

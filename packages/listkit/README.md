@@ -449,6 +449,14 @@ const { filter, sort, skip, limit } = buildMongoQuery(query, {
 		type: 'type', // select → equality
 		status: 'csf.generalData.status', // nested path, dispatched by filter type
 		created: 'createdAt', // date-range → $gte/$lte
+		hasCsf: { path: 'csf', build: existenceMatch }, // one field, custom expr
+		// Computed bucket over several fields — `match` is merged as-is:
+		certStatus: {
+			match: v =>
+				v === 'active'
+					? { cerFile: { $ne: null }, certificateValidTo: { $gt: new Date() } }
+					: null,
+		},
 	},
 	sort: { name: 'legalName', created: 'createdAt' },
 	fallbackSort: { legalName: 1 },
@@ -461,7 +469,7 @@ const [data, total] = await Promise.all([
 return { data, total } // the { data, total } shape fetchAdapter expects
 ```
 
-Compose extra conditions (auth scope, tenant id, a reference `$in` from a nested-collection lookup) with `combineFilters`, and reach for the lower-level `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` helpers when you need finer control.
+A field map entry is a trusted path string, `{ path, build }` to customize the expression for **one** field, or `{ match }` to build a **complete** condition merged as-is — the latter is how a single filter spans several fields (computed buckets, cross-field rules). Compose extra conditions (auth scope, tenant id, a reference `$in` from a nested-collection lookup) with `combineFilters`, and reach for the lower-level `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` helpers when you need finer control.
 
 ### Server-side rendering (`initialData`)
 
@@ -609,7 +617,35 @@ You can tune or disable it per list:
 
 ### Using with TanStack Query
 
-If your app already uses TanStack Query and you want its cross-component cache, background refetch, and retries, inject your own hook instead of the built-in one:
+If your app already uses TanStack Query and you want its cross-component cache, background refetch, retries, and devtools, back your lists with React Query instead of the built-in cache. Import the ready-made hook from `@pibytelabs/listkit/react-query` — no need to hand-roll one:
+
+```tsx
+import { ListView } from '@pibytelabs/listkit'
+import {
+	useReactQueryListData,
+	invalidateList,
+} from '@pibytelabs/listkit/react-query'
+
+// A QueryClientProvider must sit above the list.
+;<ListView
+	config={customersConfig}
+	adapter={customersAdapter}
+	useListData={useReactQueryListData}
+/>
+```
+
+The hook keys each page by the list's `config.id` + query, honors the `staleTime` listkit passes, keeps the current rows visible while the next page loads (`keepPreviousData`), and uses an SSR `seed` as `initialData` when present.
+
+`@tanstack/react-query` is an **optional peer dependency** — install it only if you use this module.
+
+**Refresh after a mutation.** `useListRefresh()` works as usual (it bumps a token that's part of the query key). For mutations that run _outside_ the list tree, call `invalidateList(queryClient, listId)` — the React Query counterpart to `invalidateListCache`:
+
+```ts
+await deleteCustomer(id)
+invalidateList(queryClient, 'customers') // refetch this list; omit the id for all
+```
+
+**Roll your own.** Prefer full control over the query options? Inject any `UseListDataHook` — when you pass `useListData`, listkit delegates every fetch to it and never touches the built-in `Map` cache:
 
 ```tsx
 import { useQuery } from '@tanstack/react-query'
@@ -625,7 +661,6 @@ const useCachedListData: UseListDataHook<Customer> = (
 		queryFn: () => adapter.fetch(query),
 		staleTime: 5 * 60 * 1000,
 	})
-
 	return {
 		data: data?.data ?? [],
 		total: data?.total ?? 0,
@@ -633,16 +668,7 @@ const useCachedListData: UseListDataHook<Customer> = (
 		error,
 	}
 }
-
-// Pass it to the list
-;<ListView
-	config={customersConfig}
-	adapter={customersAdapter}
-	useListData={useCachedListData}
-/>
 ```
-
-**No conflict with the built-in cache** — when you pass `useListData`, listkit delegates every fetch to your hook. The built-in `Map` cache is never touched, so TanStack Query owns the entire lifecycle (stale-while-revalidate, garbage collection, prefetching, etc.).
 
 ### Complete example — without React Query (built-in cache)
 
@@ -874,6 +900,7 @@ for the full key list.
 | `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — read `ListQuery` filters                               |
 | `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — Postgres-flavoured query fragments                                                                                                    |
 | `@pibytelabs/listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex` — MongoDB query objects                                       |
+| `@pibytelabs/listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                              |
 | `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                         |
 
 ---

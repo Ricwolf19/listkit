@@ -7,6 +7,7 @@ import type { ListParams } from '../../hooks/useListParams'
 import { type ColorTheme, getColorTheme } from '../../theme/colorTheme'
 import type { FilterDefinition, FilterSection } from '../../types/filters'
 import { cn } from '../../utils/cn'
+import { foldText } from '../../utils/foldText'
 import { Button } from '../Button'
 import { DynamicFilter } from './DynamicFilter'
 
@@ -186,11 +187,10 @@ export function FilterSidebar<T>({
 		() => sections.reduce((n, s) => n + s.filters.length, 0),
 		[sections]
 	)
-	const query = search.trim().toLowerCase()
+	const query = foldText(search.trim())
 	const visibleSections = useMemo(() => {
 		if (!query) return sections
-		const matches = (text?: string) =>
-			!!text && text.toLowerCase().includes(query)
+		const matches = (text?: string) => !!text && foldText(text).includes(query)
 		return sections
 			.map(s =>
 				matches(s.title)
