@@ -19,6 +19,12 @@ type CardsProps<T> = {
 	onCardClick?: (item: T, index: number) => void
 	/** Skip the default `<Card>` wrapper and render `renderCard` output directly. */
 	bare?: boolean
+	/**
+	 * Number of placeholder cards rendered while `isLoading`. Pass the expected
+	 * page item count so the grid keeps a full page's height during page changes
+	 * and the (sticky/fixed) pagination bar never shifts.
+	 */
+	skeletonCount?: number
 }
 
 /**
@@ -37,6 +43,7 @@ export function Cards<T>({
 	className,
 	onCardClick,
 	bare = false,
+	skeletonCount,
 }: CardsProps<T>) {
 	if (displayMode === 'hide') return null
 
@@ -48,7 +55,7 @@ export function Cards<T>({
 				className={cn('space-y-4 pt-1', visibility.className)}
 				aria-hidden={visibility.ariaHidden}
 			>
-				<SkeletonCards gridCols={gridCols} />
+				<SkeletonCards gridCols={gridCols} count={skeletonCount} />
 			</div>
 		)
 	}

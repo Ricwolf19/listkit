@@ -27,6 +27,12 @@ type TableProps<T> = {
 	sort?: SortState
 	/** Called with a column's sort field when a sortable header is clicked. */
 	onSort?: (field: string) => void
+	/**
+	 * Number of placeholder rows rendered while `loading`. Defaults to 6; pass the
+	 * expected page row count so the table keeps a full page's height during page
+	 * changes and the (sticky/fixed) pagination bar never shifts.
+	 */
+	skeletonRows?: number
 }
 
 function valueToString(
@@ -65,6 +71,7 @@ export function Table<T>({
 	className,
 	sort,
 	onSort,
+	skeletonRows = 6,
 	// colorTheme = 'red',
 }: TableProps<T>) {
 	// const theme = getColorTheme(colorTheme)
@@ -78,7 +85,7 @@ export function Table<T>({
 			<div className={visibility.className} aria-hidden={visibility.ariaHidden}>
 				<SkeletonTable
 					columns={columns.length || 6}
-					rows={6}
+					rows={skeletonRows}
 					hasHeader={showHeader}
 				/>
 			</div>
