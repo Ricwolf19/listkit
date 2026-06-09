@@ -129,10 +129,18 @@ export const existenceMatch = (value: unknown): MongoCondition | null => {
 }
 
 /**
- * How a filter `id` maps to a Mongo field. A bare string is the trusted field
- * path (matching is dispatched by the filter's `type`). The object form adds a
- * `build` override for fields that need custom logic (existence, computed
- * conditions, cross-field expressions).
+ * How a filter `id` maps to a Mongo field.
+ *
+ * - A bare string is the trusted field path; matching is dispatched by the
+ *   filter's `type`.
+ * - `{ path, build }` overrides the *value expression* for one field. `build`
+ *   returns the expression placed under `path` (e.g. `existenceMatch` returns
+ *   `{ $ne: null }` → `{ [path]: { $ne: null } }`).
+ * - `{ match }` builds a *complete* condition that is used as-is — for computed
+ *   buckets and cross-field expressions that touch more than one field (e.g.
+ *   "active" = certificate files present AND not expired). Use this whenever the
+ *   condition is not a single `{ field: expr }`; `build`'s result is always
+ *   wrapped under `path`, so it cannot express multiple fields.
  */
 export type MongoFieldSpec =
 	| string
@@ -144,6 +152,14 @@ export type MongoFieldSpec =
 			 * the trusted path; return a single-key condition, or `null` to skip.
 			 */
 			build?: (value: unknown, path: string) => MongoCondition | null
+	  }
+	| {
+			/**
+			 * Build a complete match condition from the applied value, merged as-is
+			 * (one or more fields). Field paths come only from this trusted config,
+			 * never user input. Return `null` to skip the filter.
+			 */
+			match: (value: unknown) => MongoCondition | null
 	  }
 
 /**
@@ -232,6 +248,13 @@ export const combineFilters = (
  *   type: 'type',
  *   status: 'csf.generalData.status',
  *   hasCsf: { path: 'csf', build: existenceMatch },
+ *   // Computed bucket spanning several fields — merged as-is:
+ *   certStatus: {
+ *     match: v =>
+ *       v === 'active'
+ *         ? { cerFile: { $ne: null }, certificateValidTo: { $gt: new Date() } }
+ *         : null,
+ *   },
  * })
  * const total = await Model.countDocuments(filter)
  * ```
@@ -246,6 +269,13 @@ export const buildMongoFilter = (
 	for (const filter of query.filters ?? []) {
 		const spec = fields[filter.id]
 		if (!spec) continue
+
+		// `{ match }` returns a full condition (possibly multi-field), used as-is.
+		if (typeof spec === 'object' && 'match' in spec) {
+			const cond = spec.match(byId.get(filter.id))
+			if (cond != null && Object.keys(cond).length) conditions.push(cond)
+			continue
+		}
 
 		const path = typeof spec === 'string' ? spec : spec.path
 		const override = typeof spec === 'string' ? undefined : spec.build

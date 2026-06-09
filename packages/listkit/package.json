@@ -125,6 +125,16 @@
 				"default": "./dist/mongo.cjs"
 			}
 		},
+		"./react-query": {
+			"import": {
+				"types": "./dist/react-query.d.ts",
+				"default": "./dist/react-query.js"
+			},
+			"require": {
+				"types": "./dist/react-query.d.cts",
+				"default": "./dist/react-query.cjs"
+			}
+		},
 		"./tailwind.css": "./tailwind.css",
 		"./package.json": "./package.json"
 	},
@@ -141,6 +151,7 @@
 		"docs:watch": "typedoc --watch"
 	},
 	"peerDependencies": {
+		"@tanstack/react-query": "^5.0.0",
 		"lucide-react": ">=0.400.0",
 		"next": "^14.0.0 || ^15.0.0 || ^16.0.0",
 		"react": "^18.0.0 || ^19.0.0",
@@ -150,6 +161,9 @@
 		"zod": "^3.23.0 || ^4.0.0"
 	},
 	"peerDependenciesMeta": {
+		"@tanstack/react-query": {
+			"optional": true
+		},
 		"lucide-react": {
 			"optional": false
 		},
@@ -172,6 +186,7 @@
 		"tailwind-merge": "^2.5.5"
 	},
 	"devDependencies": {
+		"@tanstack/react-query": "^5.83.0",
 		"@types/react": "^19.0.2",
 		"@types/react-dom": "^19.0.2",
 		"lucide-react": "^1.14.0",
