@@ -1,5 +1,53 @@
 # @pibytelabs/listkit
 
+## [2.10.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.9.0...listkit-2.10.0) (2026-06-11)
+
+
+### Features
+
+* **adapters:** add filter support to dexie and fetch; remove mongo adapter ([37e0bc3](https://github.com/Ricwolf19/listkit/commit/37e0bc3604d2260d141cf8c9c64afe2f13a4c400))
+* add ssr helpers, next.js wrapper, and query/sql utilities ([1e3d612](https://github.com/Ricwolf19/listkit/commit/1e3d61243af97fae264e18660bb1ca881caa9d22))
+* **columns:** add column manager component and preferences hook ([ede2fe4](https://github.com/Ricwolf19/listkit/commit/ede2fe404ec64232059461a05963c62dc1e4df78))
+* **core:** integrate header slots, new shortcuts and v2.8 features into ListView ([c695e80](https://github.com/Ricwolf19/listkit/commit/c695e80768158df497ac918943b9a44cb92a6762))
+* **data:** bound cache + react query compatibility on chore + fix bugs ([6593688](https://github.com/Ricwolf19/listkit/commit/659368820175fa444b00081082e9bd49cbdbe443))
+* **data:** built-in cache with staleTime and pluggable useListData hook ([589b5ec](https://github.com/Ricwolf19/listkit/commit/589b5ec9b3b9829306e410dd196e11061dfa83fe))
+* default value to any advanced filter + refine documentation ([b427874](https://github.com/Ricwolf19/listkit/commit/b427874c438524b01fdb5e86430dadde71f39822))
+* **filters:** add range slider, quick search and collapsible sections ([a815606](https://github.com/Ricwolf19/listkit/commit/a815606289b3404fd852cc9d3f0ab5221df2b10b))
+* **filters:** advanced filters v2 with Zod validation and URL sync ([9044659](https://github.com/Ricwolf19/listkit/commit/9044659750b746dcd525c50125876c9a85440e17))
+* **filters:** grid layout, enter-to-apply, and visual section cards ([ffa13d8](https://github.com/Ricwolf19/listkit/commit/ffa13d8935d6727f965d13e26f5cfffca94c914c))
+* **listkit:** custom cards, pagination offset, list refresh, table alignment ([e04a128](https://github.com/Ricwolf19/listkit/commit/e04a128bb6dfc9543810f65fdae0da37eae75e6f))
+* **listkit:** data layer — pluggable DataAdapter for async/server lists ([f1bfd86](https://github.com/Ricwolf19/listkit/commit/f1bfd86421f16fe6097d04f97ec15c0ab2a9944b))
+* **listkit:** implement i18n labels system and refine toolbar to icon-first ([a5f08f2](https://github.com/Ricwolf19/listkit/commit/a5f08f2640962f9f70a48a5c16619cb9c101a4bc))
+* **listkit:** responsive persistent view toggle + UI polish ([9aad366](https://github.com/Ricwolf19/listkit/commit/9aad366bf7f0d28115166536b733488084227f60))
+* **listkit:** v0.1 foundation — ListView, defineListConfig, router ([66f2ca0](https://github.com/Ricwolf19/listkit/commit/66f2ca0a3bcc9787c40ce1c34f3bccdada1f32a8))
+* **listkit:** view always follows the viewport, never persisted ([74290df](https://github.com/Ricwolf19/listkit/commit/74290df5f9d7e439b59792d160027b4f80bc42aa))
+* mongo utils out of the box for advanced compatibility with liskit ([a742e97](https://github.com/Ricwolf19/listkit/commit/a742e97c4c88239cd99d4465b9975c707b3bc12c))
+* new option for default view in cases where the cards are better to ([18f0285](https://github.com/Ricwolf19/listkit/commit/18f0285d8097d1d3dc9ce14d1e7ba2f011c14dc5))
+* **pagination:** add sticky layout variant for landing pages ([3dc430f](https://github.com/Ricwolf19/listkit/commit/3dc430f0ac0648374b996acd1120b17aa82a999c))
+* react-query module for easier cache management + mongo module ([419e915](https://github.com/Ricwolf19/listkit/commit/419e915f3c963035e12886910a2a6f34aa9597e1))
+* SSR initialData, column sort, next-page prefetch ([c9dbf13](https://github.com/Ricwolf19/listkit/commit/c9dbf1381354a298c88ba4f3d474156588448643))
+* **theme:** custom ThemeClasses, provider theme, and surface theming ([cb79afa](https://github.com/Ricwolf19/listkit/commit/cb79afacf209ba3f72501f23bd3377ae37d3bec4))
+* **toolbar:** add responsive overflow menu and improve mobile layout ([d669792](https://github.com/Ricwolf19/listkit/commit/d669792aad2031ab40cdd7d61275c16faca6bda7))
+* **ui:** keyboard shortcuts, toolbar hints, and table header polish ([bdb4cdc](https://github.com/Ricwolf19/listkit/commit/bdb4cdc36f04c19fe02baf9ddc9c906387a22b38))
+
+
+### Bug Fixes
+
+* **cache:** add invalidateListCache and improve refresh behavior ([fe1f86f](https://github.com/Ricwolf19/listkit/commit/fe1f86fd331ba3be4241ac177b21f4fd30306940))
+* **ci:** extract changelog for github releases ([71f4fc3](https://github.com/Ricwolf19/listkit/commit/71f4fc3f1c97a68f93aa4edf92542f05cf95359e))
+* export ListSkeleton from server entry to prevent RSC crashes ([69501ad](https://github.com/Ricwolf19/listkit/commit/69501ad16b6950b8ef0957f298d23d55c89fa62b))
+* **filters:** advanced filters not applying with the Next.js / React Router adapters ([f574963](https://github.com/Ricwolf19/listkit/commit/f5749639de76a7563ce1870c8c8e900487931f49))
+* **filters:** improve sidebar enter key and boolean input overflow ([dfc6d7b](https://github.com/Ricwolf19/listkit/commit/dfc6d7b2ed6e4126f2b78a8d63073ca9b0600d97))
+* **filters:** stabilize FilterSidebar animation and activeFilters recomputation ([dbcde0d](https://github.com/Ricwolf19/listkit/commit/dbcde0dcb888ea5f7b11533d8b27b6ca4ade5835))
+* **listkit:** resolve SearchInput keyboard-shortcut hint client-side ([bb26244](https://github.com/Ricwolf19/listkit/commit/bb262449f5c0b172ec6605576c3a3b7d1390cff4))
+* memory cache improved with new optional key for a better pattern ([97a4c1b](https://github.com/Ricwolf19/listkit/commit/97a4c1b497098e6e5fd145bac9a77b2b7d5393b9))
+* **next:** prevent page jump on route updates by disabling scroll ([506d1fd](https://github.com/Ricwolf19/listkit/commit/506d1fd8c85fd259d8b24b1170638495a9d175ff))
+* **release:** add explicit readme field, switch to pnpm publish for Verdaccio ([a5a597b](https://github.com/Ricwolf19/listkit/commit/a5a597b98275342070e16b9e5b7134d30bf48401))
+* **server:** export defineListConfig from /server (RSC-safe configs) ([73ce8f9](https://github.com/Ricwolf19/listkit/commit/73ce8f9e33ae59f79ccb729ae987853c2d3e8516))
+* **sidebar:** force layout recomputation to guarantee slide animation ([e5b2be5](https://github.com/Ricwolf19/listkit/commit/e5b2be599ee17e1614b09ebb53112beabc0adcff))
+* UI bugs + SSR hydration mismatch on nextjs apps ([8ab2006](https://github.com/Ricwolf19/listkit/commit/8ab2006b8853b1e38d1e42f9cd62b1bbac0931f5))
+* uneccesary code commented ([cc8ad8c](https://github.com/Ricwolf19/listkit/commit/cc8ad8c630172a9b25f5d803e65e2cccf90fda7a))
+
 ## 2.9.0
 
 ### Minor Changes
