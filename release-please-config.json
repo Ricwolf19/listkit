@@ -1,0 +1,11 @@
+{
+	"$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+	"packages": {
+		"packages/listkit": {
+			"release-type": "node",
+			"package-name": "@pibytelabs/listkit",
+			"changelog-path": "CHANGELOG.md",
+			"include-v-in-tag": false
+		}
+	}
+}
