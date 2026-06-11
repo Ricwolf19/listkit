@@ -33,14 +33,9 @@
 		"knip:fix": "knip --fix",
 		"depcruise": "depcruise --config .dependency-cruiser.cjs packages/listkit/src playground/src",
 		"depcruise:graph": "depcruise --config .dependency-cruiser.cjs --output-type dot packages/listkit/src | dot -T svg > dependency-graph.svg",
-		"changeset": "changeset",
-		"release:prepare": "pnpm exec changeset version && git add . && git diff --staged --quiet || git commit -m \"chore: release\"",
-		"version": "changeset version",
-		"release": "changeset publish",
-		"prepare": "husky && chmod +x .husky/pre-commit .husky/pre-push 2>/dev/null || true"
+		"prepare": "husky && chmod +x .husky/pre-commit .husky/pre-push .husky/commit-msg 2>/dev/null || true"
 	},
 	"devDependencies": {
-		"@changesets/cli": "^2.31.0",
 		"@commitlint/cli": "^21.0.1",
 		"@commitlint/config-conventional": "^21.0.1",
 		"@commitlint/types": "^21.0.1",
