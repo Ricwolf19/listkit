@@ -25,6 +25,8 @@ export type ToolbarProps = {
 	showViewToggle?: boolean
 	/** Column manager, rendered next to the view toggle (table view only). */
 	columnControl?: ReactNode
+	/** Table controls cluster (density, columns, export), rendered before the count. */
+	controls?: ReactNode
 	customContent?: ReactNode
 	onOpenFilters?: () => void
 	onClearFilters?: () => void
@@ -47,6 +49,7 @@ export function Toolbar({
 	showSearch = true,
 	showViewToggle = true,
 	columnControl,
+	controls,
 	customContent,
 	onOpenFilters,
 	onClearFilters,
@@ -133,6 +136,7 @@ export function Toolbar({
 					{customContent}
 					{desktopActions.map(renderAction)}
 					{columnControl}
+					{controls}
 					{counter}
 					{viewToggle}
 				</div>

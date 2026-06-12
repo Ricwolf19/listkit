@@ -26,6 +26,7 @@ import { invalidateListCache } from '../hooks/useListData'
 import { useListParams } from '../hooks/useListParams'
 import { useListShortcuts } from '../hooks/useListShortcuts'
 import { useListState } from '../hooks/useListState'
+import { useRowSelection } from '../hooks/useRowSelection'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
 import type { ColumnStorage } from '../types/columns'
 import type { CardContext, ListConfig, ToolbarAction } from '../types/config'
@@ -36,11 +37,15 @@ import type {
 	UseListDataHook,
 } from '../types/data'
 import { resolveLabels } from '../types/labels'
+import { exportRowsToCsv } from '../utils/exportCsv'
 import { Cards } from './Cards'
 import { ColumnManager } from './ColumnManager'
+import { DensityToggle } from './DensityToggle'
+import { ExportButton } from './ExportButton'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
 import { FilterSidebar } from './filters/FilterSidebar'
 import { Pagination, type PaginationVariant } from './Pagination'
+import { SelectionBar } from './SelectionBar'
 import { Table } from './Table'
 import { Toolbar } from './Toolbar'
 
@@ -227,8 +232,14 @@ export function ListView<T>({
 		params.setMany(updates)
 	}
 
-	// Table column hide/show + reorder (persisted) when `table.columnControl` is set.
+	// Table column hide/show + reorder + resize + density (all persisted) when any
+	// of the corresponding `table.*` options are set.
 	const columnControlEnabled = !!config.table?.columnControl
+	const reorderEnabled = !!config.table?.reorderable
+	const resizeEnabled = !!config.table?.resizable
+	const densityEnabled = !!config.table?.density
+	const tablePrefsEnabled =
+		columnControlEnabled || reorderEnabled || resizeEnabled || densityEnabled
 	const tableColumns = useMemo(
 		() => config.table?.columns ?? [],
 		[config.table]
@@ -239,10 +250,17 @@ export function ListView<T>({
 		toggle: toggleColumn,
 		move: moveColumn,
 		reorder: reorderColumns,
+		reorderByKey: reorderColumnByKey,
+		resize: resizeColumn,
+		density,
+		setDensity,
 		reset: resetColumns,
 	} = useColumnPrefs(config.id, tableColumns, {
-		enabled: columnControlEnabled,
+		enabled: tablePrefsEnabled,
 		storage: columnStorage,
+		defaultDensity:
+			config.table?.defaultDensity ??
+			(config.table?.compact ? 'compact' : 'comfortable'),
 	})
 
 	const {
@@ -259,6 +277,7 @@ export function ListView<T>({
 		tableMode,
 		sort,
 		handleSortChange,
+		query,
 	} = useListState<T>({
 		adapter: resolvedAdapter,
 		params,
@@ -293,7 +312,125 @@ export function ListView<T>({
 			: perPage
 
 	const getItemKey = config.getItemKey ?? ((_item: T, index: number) => index)
-	const cardCtx: CardContext<T> = { actions: config.actions ?? {}, colorTheme }
+
+	// Row selection: key-based, survives pagination, clears when the dataset
+	// changes (search/filters/sort/refresh) so a stale selection can't leak.
+	const selectionEnabled = !!config.selection
+	const selectionConfig =
+		typeof config.selection === 'object' ? config.selection : undefined
+	const selectionSignature = JSON.stringify({
+		search: params.get('search') ?? '',
+		filters: activeFilters,
+		sort: sort ?? null,
+		refresh: refreshToken,
+	})
+	const selection = useRowSelection<T>({
+		enabled: selectionEnabled,
+		signature: selectionSignature,
+		clearOnDataChange: selectionConfig?.clearOnDataChange,
+		onChange: selectionConfig?.onSelectionChange,
+	})
+
+	const pageEntries = useMemo(
+		() => rows.map((item, i) => ({ item, key: getItemKey(item, i) })),
+		// getItemKey may be a fresh closure each render; `rows` is the real input.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+		[rows]
+	)
+	const pageAllSelected =
+		pageEntries.length > 0 &&
+		pageEntries.every(e => selection.isSelected(e.key))
+	const pageSomeSelected = pageEntries.some(e => selection.isSelected(e.key))
+
+	const cardCtx: CardContext<T> = {
+		actions: config.actions ?? {},
+		colorTheme,
+		selection: selectionEnabled
+			? {
+					isSelected: item => selection.isSelected(getItemKey(item, 0)),
+					toggle: item => selection.toggle(item, getItemKey(item, 0)),
+				}
+			: undefined,
+	}
+
+	// CSV export. The current page always works; "export all" is auto-detected for
+	// in-memory data, or wired via `export.fetchAll` for a server source (listkit
+	// never loops the adapter page by page).
+	const exportEnabled = !!config.export && !!config.table
+	const exportConfig =
+		typeof config.export === 'object' ? config.export : undefined
+	const exportFileName = exportConfig?.fileName ?? config.id
+	const isMemoryAdapter = !adapter
+	const exportAllAvailable =
+		exportEnabled &&
+		exportConfig?.allowExportAll !== false &&
+		(isMemoryAdapter || !!exportConfig?.fetchAll)
+	const [exporting, setExporting] = useState(false)
+
+	const handleExportPage = useCallback(() => {
+		exportRowsToCsv(rows, resolvedColumns, exportFileName)
+	}, [rows, resolvedColumns, exportFileName])
+
+	const handleExportAll = useCallback(async () => {
+		setExporting(true)
+		try {
+			const all = exportConfig?.fetchAll
+				? await exportConfig.fetchAll()
+				: (
+						await resolvedAdapter.fetch({
+							...query,
+							page: 1,
+							pageSize: Math.max(pagination.totalItems, 1),
+						})
+					).data
+			exportRowsToCsv(all, resolvedColumns, exportFileName)
+		} finally {
+			setExporting(false)
+		}
+	}, [
+		exportConfig,
+		resolvedAdapter,
+		query,
+		pagination.totalItems,
+		resolvedColumns,
+		exportFileName,
+	])
+
+	const handleExportSelected = useCallback(() => {
+		exportRowsToCsv(selection.selectedItems, resolvedColumns, exportFileName)
+	}, [selection.selectedItems, resolvedColumns, exportFileName])
+
+	const tableCompact = densityEnabled
+		? density === 'compact'
+		: !!config.table?.compact
+
+	const tableControls =
+		viewType === 'table' &&
+		(densityEnabled || columnControlEnabled || exportEnabled) ? (
+			<>
+				{densityEnabled && (
+					<DensityToggle density={density} onChange={setDensity} />
+				)}
+				{columnControlEnabled && (
+					<ColumnManager
+						items={columnItems}
+						onToggle={toggleColumn}
+						onMove={moveColumn}
+						onReorder={reorderColumns}
+						onReset={resetColumns}
+						colorTheme={colorTheme}
+					/>
+				)}
+				{exportEnabled && (
+					<ExportButton
+						onExportPage={handleExportPage}
+						onExportAll={exportAllAvailable ? handleExportAll : undefined}
+						exporting={exporting}
+						colorTheme={colorTheme}
+					/>
+				)}
+			</>
+		) : undefined
 
 	useListShortcuts({
 		onFocusSearch: () => {
@@ -357,18 +494,7 @@ export function ListView<T>({
 						actions={toolbarActions}
 						showSearch={showSearch}
 						showViewToggle={!!config.table && !!config.card}
-						columnControl={
-							columnControlEnabled && viewType === 'table' ? (
-								<ColumnManager
-									items={columnItems}
-									onToggle={toggleColumn}
-									onMove={moveColumn}
-									onReorder={reorderColumns}
-									onReset={resetColumns}
-									colorTheme={colorTheme}
-								/>
-							) : undefined
-						}
+						controls={tableControls}
 						customContent={toolbarContent}
 						onOpenFilters={hasFilters ? () => setFiltersOpen(true) : undefined}
 						onClearFilters={hasFilters ? clearAllFilters : undefined}
@@ -387,6 +513,21 @@ export function ListView<T>({
 								colorTheme={colorTheme}
 							/>
 						</div>
+					)}
+
+					{selectionEnabled && (
+						<SelectionBar<T>
+							count={selection.selectedCount}
+							selected={selection.selectedItems}
+							actions={selectionConfig?.actions}
+							onClear={selection.clear}
+							onExportSelected={
+								exportEnabled && selectionConfig?.showExport !== false
+									? handleExportSelected
+									: undefined
+							}
+							colorTheme={colorTheme}
+						/>
 					)}
 
 					{afterToolbar}
@@ -415,7 +556,7 @@ export function ListView<T>({
 									columns={resolvedColumns}
 									keyExtractor={getItemKey}
 									rowClassName={config.table.rowClassName}
-									compact={config.table.compact}
+									compact={tableCompact}
 									showHeader={config.table.showHeader}
 									emptyMessage={config.emptyMessage}
 									displayMode={config.card ? tableMode : 'show'}
@@ -424,6 +565,20 @@ export function ListView<T>({
 									sort={sort}
 									onSort={handleSortChange}
 									skeletonRows={skeletonCount}
+									stickyHeader={config.table.stickyHeader}
+									maxBodyHeight={config.table.maxBodyHeight}
+									reorderable={reorderEnabled}
+									onReorderColumn={reorderColumnByKey}
+									resizable={resizeEnabled}
+									onResizeColumn={resizeColumn}
+									selectable={selectionEnabled}
+									isRowSelected={selection.isSelected}
+									onToggleRow={selection.toggle}
+									pageAllSelected={pageAllSelected}
+									pageSomeSelected={pageSomeSelected}
+									onTogglePage={checked =>
+										selection.toggleMany(pageEntries, checked)
+									}
 								/>
 							)}
 
