@@ -29,6 +29,10 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
   - [Organizar la configuración](#organizar-la-configuración-archivo-vs-inline)
   - [Filtros avanzados](#filtros-avanzados)
   - [Ordenamiento de columnas](#ordenamiento-de-columnas)
+  - [Exportar a CSV](#exportar-a-csv)
+  - [Selección de filas y acciones masivas](#selección-de-filas-y-acciones-masivas)
+  - [Imágenes optimizadas (`ListImage`)](#imágenes-optimizadas-listimage)
+  - [UX de tabla: encabezado fijo, densidad, reordenar, redimensionar](#ux-de-tabla-encabezado-fijo-densidad-reordenar-redimensionar)
   - [Tarjetas personalizadas con acciones y tema](#tarjetas-personalizadas-con-acciones-y-tema)
   - [Tarjetas totalmente personalizadas (`bareCard`)](#tarjetas-totalmente-personalizadas-barecard)
   - [Refrescar después de una mutación](#refrescar-después-de-una-mutación)
@@ -63,6 +67,10 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
 - **Atajos de teclado** — `⌘ K` enfoca búsqueda, `Shift + F` abre filtros, `Shift + V` cambia la vista, `+` abre filtros, `-` quita el último filtro.
 - **Slots de encabezado** — coloca métricas/badges sobre el título con `headerContent={{ left, center, right }}`.
 - **Gestor de columnas** — `table.columnControl` permite ocultar/mostrar y reordenar columnas; persiste en localStorage (o tu propio `ColumnStorage`).
+- **Exportar a CSV** — agrega un botón de exportación en el toolbar con `export`: página actual por defecto; "exportar todo" se autodetecta para `data` en memoria, o se conecta con `fetchAll` para una fuente en el servidor (sin recorrer el adaptador página por página). Respeta las columnas visibles y su orden, con `exportValue`/`exportable` por columna.
+- **Selección de filas y acciones masivas** — `selection` agrega checkboxes y una barra de selección con tus acciones masivas. La selección es por clave, sobrevive a la paginación y se limpia cuando cambia el dataset; combina con "exportar selección".
+- **Imágenes optimizadas** — `<ListImage>` para tablas/tarjetas densas: lazy-load, decodificación asíncrona, placeholder shimmer, fallback de error y un slot para inyectar `next/image`.
+- **Encabezado fijo, densidad, reordenar y redimensionar** — opciones opcionales de `table` (`stickyHeader`, `density`, `reorderable`, `resizable`); las elecciones del usuario persisten en localStorage.
 - **Filtros colapsables + búsqueda rápida** — los sidebars largos tienen secciones colapsables (`collapsible`) y una caja de búsqueda de filtros.
 - **Slider de rango** — un filtro `number-range` puede renderizar como slider de dos manijas (`display: 'slider'`, `min`/`max`/`step`/`formatValue`).
 - **Componible + type-safe** — usa `<ListView>`, o baja de nivel a `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
@@ -313,6 +321,122 @@ table: {
 - `sortField` sobrescribe el nombre de campo enviado al adaptador (por defecto usa el `key` de la columna).
 
 Después de que carga una página, la siguiente se prefetch en idle dentro del caché, así que hacer clic en "siguiente" renderiza al instante sin flash de carga.
+
+### Exportar a CSV
+
+Agrega un botón de exportación al toolbar con `export`. Exporta las **columnas visibles en su orden actual** (respeta ocultar/reordenar), la **página actual** por defecto:
+
+```tsx
+defineListConfig<Product>({
+	export: true, // botón CSV de página actual
+	table: {
+		columns: [
+			{ key: 'name', header: 'Nombre' },
+			// render devuelve JSX → da un valor plano para serializar:
+			{
+				key: 'price',
+				header: 'Precio',
+				render: p => <b>{money(p.price)}</b>,
+				exportValue: p => p.price,
+			},
+			{ key: 'actions', header: '', render: rowActions, exportable: false }, // se omite
+		],
+	},
+})
+```
+
+- `exportValue?(item)` — valor plano para una columna cuyo `render` es JSX. Si se omite, usa `item[key]` (admite rutas con punto).
+- `exportable: false` — excluye una columna (ej. una columna de acciones).
+
+**Exportar todo.** Pasa un `ExportConfig` para ofrecer también la opción "exportar todo":
+
+```tsx
+export: {
+  fileName: 'productos',          // por defecto el id de la lista
+  fetchAll: () => listAll(query), // endpoint masivo del servidor
+}
+```
+
+- **`data` en memoria** — "exportar todo" se ofrece automáticamente (todo ya está en el navegador).
+- **`adapter` asíncrono** — "exportar todo" aparece solo cuando conectas `fetchAll`. listkit **nunca recorre tu adaptador página por página**; apunta `fetchAll` a un endpoint masivo/stream dedicado que aplique la query actual en el servidor. El botón muestra un spinner mientras corre.
+- Usa `allowExportAll: false` para forzar solo-página-actual.
+
+El CSV es nativo (sin dependencia extra) y lleva BOM UTF-8 para que Excel lea los acentos correctamente. Los helpers `exportRowsToCsv` / `rowsToCsv` / `downloadCsv` se exportan para botones personalizados.
+
+### Selección de filas y acciones masivas
+
+Habilita checkboxes y una barra de selección con `selection`. La selección es **por clave**, **sobrevive a la paginación** y **se limpia cuando cambia el dataset** (búsqueda/filtros/orden/refresh) para que una selección obsoleta no se filtre:
+
+```tsx
+import { Star, Trash2 } from 'lucide-react'
+
+defineListConfig<Product>({
+	getItemKey: p => p.id, // requerido para una selección estable
+	selection: {
+		actions: [
+			{
+				label: 'Destacar',
+				icon: <Star size={16} />,
+				onClick: rows => featureMany(rows),
+			},
+			{
+				label: 'Eliminar',
+				icon: <Trash2 size={16} />,
+				variant: 'danger',
+				onClick: rows => deleteMany(rows),
+			},
+		],
+		onSelectionChange: rows => setSelected(rows),
+	},
+})
+```
+
+- La tabla gana una columna de checkbox con un encabezado **seleccionar-toda-la-página** (indeterminado cuando solo algunas están seleccionadas).
+- Las filas se rastrean por clave, así que seleccionar entre páginas conserva los objetos completos para tu handler masivo — sin necesidad de React Query.
+- `clearOnDataChange: false` conserva la selección al cambiar filtros/orden (por defecto se limpia).
+- Cuando `export` está habilitado, la barra de selección también muestra **Exportar selección** (desactívalo con `showExport: false`).
+- En vista de tarjetas, `ctx.selection` (`isSelected`/`toggle`) permite que una tarjeta personalizada renderice su propio checkbox.
+
+### Imágenes optimizadas (`ListImage`)
+
+Para tablas/tarjetas densas llenas de miniaturas, `<ListImage>` reserva su caja (sin layout shift), hace lazy-load y decodificación asíncrona, muestra un placeholder shimmer y cae en un fallback ante errores:
+
+```tsx
+import { ListImage } from '@pibytelabs/listkit'
+
+{ key: 'photo', header: '', exportable: false,
+  render: p => <ListImage src={p.photo} alt={p.name} width={40} height={40} /> }
+```
+
+En Next.js, inyecta el componente optimizado — React puro cae a `<img>`:
+
+```tsx
+import Image from 'next/image'
+;<ListImage as={Image} src={src} alt={alt} width={48} height={48} />
+```
+
+> La compresión del lado del cliente pertenece al momento de **subida** (reducir antes de almacenar), no al renderizado — descargar una imagen completa solo para recomprimirla en JS hace el render más lento, no más rápido. Lazy-loading + optimización del framework es lo que acelera las listas con muchas imágenes.
+
+### UX de tabla: encabezado fijo, densidad, reordenar, redimensionar
+
+Todo opcional vía `table.*`, y todo persistido en localStorage junto al gestor de columnas:
+
+```tsx
+table: {
+  columnControl: true,    // ocultar/mostrar + reordenar desde el menú de columnas
+  reorderable: true,      // arrastra los encabezados para reordenar
+  resizable: true,        // arrastra el borde de una columna para redimensionar
+  density: true,          // toggle cómoda/compacta en el toolbar
+  defaultDensity: 'comfortable',
+  stickyHeader: true,     // el encabezado permanece mientras el cuerpo hace scroll
+  maxBodyHeight: '480px', // altura del área de scroll del encabezado fijo (por defecto '70vh')
+  columns,
+}
+```
+
+- `stickyHeader` fija el encabezado dentro de un área de scroll dimensionada por `maxBodyHeight` (por defecto `'70vh'`); solo en vista de tabla.
+- `density` + `defaultDensity` exponen el toggle cómoda ↔ compacta (sobrescribe el `compact` estático).
+- `reorderable` / `resizable` agregan reordenar arrastrando encabezados y redimensionar por el borde; los anchos redimensionados persisten por columna.
 
 ### Tarjetas personalizadas con acciones y tema
 

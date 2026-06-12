@@ -29,6 +29,10 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
   - [Organizing the config](#organizing-the-config-file-vs-inline)
   - [Advanced filters](#advanced-filters)
   - [Column sorting](#column-sorting)
+  - [CSV export](#csv-export)
+  - [Row selection & bulk actions](#row-selection--bulk-actions)
+  - [Optimized images (`ListImage`)](#optimized-images-listimage)
+  - [Table UX: sticky header, density, reorder, resize](#table-ux-sticky-header-density-reorder-resize)
   - [Custom cards with actions and theme](#custom-cards-with-actions-and-theme)
   - [Fully custom cards (`bareCard`)](#fully-custom-cards-barecard)
   - [Refreshing after a mutation](#refreshing-after-a-mutation)
@@ -63,6 +67,10 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
 - **Keyboard shortcuts** — `⌘ K` focus search, `Shift + F` open filters, `Shift + V` toggle view, `+` open filters, `-` remove the last filter.
 - **Header slots** — drop quick metrics/badges above the title with `headerContent={{ left, center, right }}`.
 - **Column manager** — `table.columnControl` lets users hide/show and reorder columns; persisted to localStorage (or your own `ColumnStorage`).
+- **CSV export** — add a toolbar export button with `export`: current page by default; "export all" is auto-detected for in-memory `data`, or wired via `fetchAll` for a server source (no browser page-loop). Respects the visible columns and their order, with per-column `exportValue`/`exportable`.
+- **Row selection & bulk actions** — `selection` adds checkboxes and a selection bar with your bulk actions. Selection is key-based, survives pagination, and clears when the dataset changes; pairs with "export selected".
+- **Optimized images** — `<ListImage>` for dense tables/cards: lazy-load, async decode, a shimmer placeholder, an error fallback, and a `next/image` injection slot.
+- **Sticky header, density, reorder & resize** — opt-in `table` options (`stickyHeader`, `density`, `reorderable`, `resizable`); the user's choices persist to localStorage.
 - **Collapsible filters + quick-search** — long sidebars get collapsible sections (`collapsible`) and a filter search box.
 - **Range slider** — a `number-range` filter can render as a dual-thumb slider (`display: 'slider'`, `min`/`max`/`step`/`formatValue`).
 - **Composable + type-safe** — use `<ListView>`, or drop down to `Toolbar`, `Table`, `Cards`, `Pagination`, `FilterSidebar`, …
@@ -313,6 +321,122 @@ table: {
 - `sortField` overrides the field name sent to the adapter (defaults to the column `key`).
 
 After a page loads, the next page is prefetched on idle into the cache, so clicking "next" renders instantly with no loading flash.
+
+### CSV export
+
+Add a toolbar export button with `export`. It exports the **visible columns in their current order** (so column hide/reorder is respected), the **current page** by default:
+
+```tsx
+defineListConfig<Product>({
+	export: true, // current-page CSV button
+	table: {
+		columns: [
+			{ key: 'name', header: 'Name' },
+			// render returns JSX → give a plain value to serialize:
+			{
+				key: 'price',
+				header: 'Price',
+				render: p => <b>{money(p.price)}</b>,
+				exportValue: p => p.price,
+			},
+			{ key: 'actions', header: '', render: rowActions, exportable: false }, // skipped
+		],
+	},
+})
+```
+
+- `exportValue?(item)` — plain value for a column whose `render` is JSX. Falls back to `item[key]` (dot-paths supported).
+- `exportable: false` — exclude a column (e.g. an actions column).
+
+**Export all.** Pass an `ExportConfig` to also offer an "export all" choice:
+
+```tsx
+export: {
+  fileName: 'products',           // defaults to the list id
+  fetchAll: () => listAll(query), // server-side bulk endpoint
+}
+```
+
+- **In-memory `data`** — "export all" is offered automatically (everything is already in the browser).
+- **Async `adapter`** — "export all" appears only when you wire `fetchAll`. listkit **never loops your adapter page-by-page**; point `fetchAll` at a dedicated bulk/stream endpoint that applies the current query server-side. The button shows a spinner while it runs.
+- Set `allowExportAll: false` to force current-page-only.
+
+CSV is native (no extra dependency) and UTF-8 BOM-prefixed so Excel reads accents correctly. The helpers `exportRowsToCsv` / `rowsToCsv` / `downloadCsv` are exported for custom buttons.
+
+### Row selection & bulk actions
+
+Enable checkboxes and a selection bar with `selection`. Selection is **key-based**, **survives pagination**, and **clears when the dataset changes** (search/filters/sort/refresh) so a stale selection can't leak:
+
+```tsx
+import { Star, Trash2 } from 'lucide-react'
+
+defineListConfig<Product>({
+	getItemKey: p => p.id, // required for stable selection
+	selection: {
+		actions: [
+			{
+				label: 'Feature',
+				icon: <Star size={16} />,
+				onClick: rows => featureMany(rows),
+			},
+			{
+				label: 'Delete',
+				icon: <Trash2 size={16} />,
+				variant: 'danger',
+				onClick: rows => deleteMany(rows),
+			},
+		],
+		onSelectionChange: rows => setSelected(rows),
+	},
+})
+```
+
+- The table gains a checkbox column with a header **select-all-this-page** (indeterminate when only some are selected).
+- Rows are tracked by key, so selecting across pages keeps the full row objects for your bulk handler — no React Query required.
+- `clearOnDataChange: false` keeps the selection across filter/sort changes (the default clears it).
+- When `export` is enabled, the selection bar also shows **Export selected** (disable with `showExport: false`).
+- In cards view, `ctx.selection` (`isSelected`/`toggle`) lets a custom card render its own checkbox.
+
+### Optimized images (`ListImage`)
+
+For dense tables/cards full of thumbnails, `<ListImage>` reserves its box (no layout shift), lazy-loads and async-decodes, shows a shimmer placeholder, and falls back on error:
+
+```tsx
+import { ListImage } from '@pibytelabs/listkit'
+
+{ key: 'photo', header: '', exportable: false,
+  render: p => <ListImage src={p.photo} alt={p.name} width={40} height={40} /> }
+```
+
+In Next.js, inject the optimized component — plain React falls back to `<img>`:
+
+```tsx
+import Image from 'next/image'
+;<ListImage as={Image} src={src} alt={alt} width={48} height={48} />
+```
+
+> Client-side compression belongs at the **upload** boundary (shrink before storing), not the render path — downloading a full image only to recompress it in JS makes rendering slower, not faster. Lazy-loading + framework optimization is what speeds up image-heavy lists.
+
+### Table UX: sticky header, density, reorder, resize
+
+All opt-in via `table.*`, and all persisted to localStorage alongside the column manager:
+
+```tsx
+table: {
+  columnControl: true,    // hide/show + reorder via the columns menu
+  reorderable: true,      // drag the header cells to reorder
+  resizable: true,        // drag a column's edge to resize
+  density: true,          // comfortable/compact toggle in the toolbar
+  defaultDensity: 'comfortable',
+  stickyHeader: true,     // header stays put while the body scrolls
+  maxBodyHeight: '480px', // scroll-area height for the sticky header (default '70vh')
+  columns,
+}
+```
+
+- `stickyHeader` pins the header inside a scroll area sized by `maxBodyHeight` (default `'70vh'`); table view only.
+- `density` + `defaultDensity` expose the comfortable ↔ compact toggle (overrides the static `compact`).
+- `reorderable` / `resizable` add header drag-to-reorder and edge-resize; resized widths persist per column.
 
 ### Custom cards with actions and theme
 
