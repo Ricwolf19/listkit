@@ -1,5 +1,5 @@
-import { Check } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { Check, Minus } from 'lucide-react'
+import { type ReactNode, useEffect, useRef } from 'react'
 
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import { cn } from '../utils/cn'
@@ -14,6 +14,8 @@ export type CheckboxProps = {
 	label?: ReactNode
 	disabled?: boolean
 	colorTheme?: ColorTheme
+	/** Mixed state (some-but-not-all), e.g. a partly selected page. */
+	indeterminate?: boolean
 	/** Accessible name when no visible `label` is given. */
 	'aria-label'?: string
 	className?: string
@@ -30,10 +32,16 @@ export function Checkbox({
 	label,
 	disabled = false,
 	colorTheme = 'red',
+	indeterminate = false,
 	className,
 	'aria-label': ariaLabel,
 }: CheckboxProps) {
 	const theme = getColorTheme(colorTheme)
+	const inputRef = useRef<HTMLInputElement>(null)
+	const filled = checked || indeterminate
+	useEffect(() => {
+		if (inputRef.current) inputRef.current.indeterminate = indeterminate
+	}, [indeterminate])
 	return (
 		<label
 			className={cn(
@@ -44,6 +52,7 @@ export function Checkbox({
 		>
 			<span className='relative flex h-[18px] w-[18px] shrink-0 items-center justify-center'>
 				<input
+					ref={inputRef}
 					type='checkbox'
 					checked={checked}
 					disabled={disabled}
@@ -51,7 +60,7 @@ export function Checkbox({
 					onChange={e => onChange(e.target.checked)}
 					className={cn(
 						'peer h-full w-full appearance-none rounded-[5px] border transition-colors focus:outline-none focus-visible:ring-2',
-						checked
+						filled
 							? cn(theme.primaryBg, 'border-transparent')
 							: 'border-gray-300 bg-white hover:border-gray-400',
 						!disabled && 'cursor-pointer',
@@ -63,7 +72,15 @@ export function Checkbox({
 					className={cn(
 						'pointer-events-none absolute h-3 w-3 transition-opacity',
 						theme.primaryText,
-						checked ? 'opacity-100' : 'opacity-0'
+						checked && !indeterminate ? 'opacity-100' : 'opacity-0'
+					)}
+				/>
+				<Minus
+					strokeWidth={3}
+					className={cn(
+						'pointer-events-none absolute h-3 w-3 transition-opacity',
+						theme.primaryText,
+						indeterminate ? 'opacity-100' : 'opacity-0'
 					)}
 				/>
 			</span>

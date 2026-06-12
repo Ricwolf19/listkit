@@ -6,6 +6,7 @@ import {
 	localStorageColumns,
 } from '../types/columns'
 import type { ColumnDef } from '../types/config'
+import type { Density } from '../types/list'
 
 /** One row in the column manager UI. */
 export type ColumnPrefItem = {
@@ -20,13 +21,29 @@ const columnLabel = <T>(col: ColumnDef<T> | undefined, key: string): string => {
 	return key
 }
 
+/** Keep only the width entries whose column still exists. */
+function pruneWidths(
+	widths: Record<string, number> | undefined,
+	known: Set<string>
+): Record<string, number> | undefined {
+	if (!widths) return undefined
+	const next: Record<string, number> = {}
+	for (const [k, v] of Object.entries(widths)) if (known.has(k)) next[k] = v
+	return Object.keys(next).length > 0 ? next : undefined
+}
+
 /** Merge stored prefs with the current columns: keep known order, append new, drop removed. */
 function reconcile(stored: ColumnPrefs | null, allKeys: string[]): ColumnPrefs {
 	if (!stored) return { order: [...allKeys], hidden: [] }
 	const known = new Set(allKeys)
 	const order = stored.order.filter(k => known.has(k))
 	for (const k of allKeys) if (!order.includes(k)) order.push(k)
-	return { order, hidden: stored.hidden.filter(k => known.has(k)) }
+	return {
+		order,
+		hidden: stored.hidden.filter(k => known.has(k)),
+		widths: pruneWidths(stored.widths, known),
+		density: stored.density,
+	}
 }
 
 /**
@@ -39,13 +56,22 @@ function reconcile(stored: ColumnPrefs | null, allKeys: string[]): ColumnPrefs {
  * @param opts - Options.
  * @param opts.enabled - When false, prefs are inert and `resolvedColumns` is the input. @defaultValue false
  * @param opts.storage - Persistence backend. @defaultValue {@link localStorageColumns}
+ * @param opts.defaultDensity - Density before the user picks one. @defaultValue 'comfortable'
  */
 export function useColumnPrefs<T>(
 	listId: string,
 	columns: ColumnDef<T>[],
-	opts: { enabled?: boolean; storage?: ColumnStorage } = {}
+	opts: {
+		enabled?: boolean
+		storage?: ColumnStorage
+		defaultDensity?: Density
+	} = {}
 ) {
-	const { enabled = false, storage = localStorageColumns } = opts
+	const {
+		enabled = false,
+		storage = localStorageColumns,
+		defaultDensity = 'comfortable',
+	} = opts
 	const storageKey = `listkit:cols:${listId}`
 	const allKeys = useMemo(() => columns.map(c => c.key), [columns])
 	const keysSignature = allKeys.join('|')
@@ -74,7 +100,16 @@ export function useColumnPrefs<T>(
 		return prefs.order
 			.map(k => byKey.get(k))
 			.filter((c): c is ColumnDef<T> => !!c)
-			.map(c => (prefs.hidden.includes(c.key) ? { ...c, hidden: true } : c))
+			.map(c => {
+				const width = prefs.widths?.[c.key]
+				const hidden = prefs.hidden.includes(c.key)
+				if (width == null && !hidden) return c
+				return {
+					...c,
+					...(width != null ? { width: `${width}px` } : {}),
+					...(hidden ? { hidden: true } : {}),
+				}
+			})
 	}, [enabled, columns, prefs])
 
 	const items: ColumnPrefItem[] = useMemo(
@@ -130,7 +165,36 @@ export function useColumnPrefs<T>(
 		persist({ ...prefs, order })
 	}
 
-	const reset = () => persist({ order: [...allKeys], hidden: [] })
+	// Drag-and-drop reorder addressed by column key (header DnD works on the
+	// visible subset, whose indices don't match the full order array).
+	const reorderByKey = (fromKey: string, toKey: string) =>
+		reorder(prefs.order.indexOf(fromKey), prefs.order.indexOf(toKey))
 
-	return { resolvedColumns, items, toggle, move, reorder, reset }
+	// Persist a user-resized column width in pixels (clamped to a sane minimum).
+	const resize = (key: string, width: number) => {
+		const widths = {
+			...(prefs.widths ?? {}),
+			[key]: Math.max(48, Math.round(width)),
+		}
+		persist({ ...prefs, widths })
+	}
+
+	const density: Density = prefs.density ?? defaultDensity
+	const setDensity = (next: Density) => persist({ ...prefs, density: next })
+
+	const reset = () =>
+		persist({ order: [...allKeys], hidden: [], density: prefs.density })
+
+	return {
+		resolvedColumns,
+		items,
+		toggle,
+		move,
+		reorder,
+		reorderByKey,
+		resize,
+		density,
+		setDensity,
+		reset,
+	}
 }
