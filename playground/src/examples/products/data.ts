@@ -78,6 +78,8 @@ function generateProduct(index: number): Product {
 	return {
 		id: `p-${index + 1}`,
 		name: `${baseName} ${adj}`,
+		// Deterministic thumbnail per product (demoes <ListImage> lazy-loading).
+		image: `https://picsum.photos/seed/listkit-${index + 1}/80/80`,
 		sku: `SKU-${10000 + index}`,
 		category,
 		tags: TAGS.filter((_, i) => seededRandom(seed * (i + 13)) > 0.55),

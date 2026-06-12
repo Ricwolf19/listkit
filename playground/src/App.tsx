@@ -23,7 +23,14 @@ export function App() {
 					</p>
 					<div className='mt-3 flex flex-wrap gap-2 text-xs'>
 						{[
-							'defaultView: table',
+							'CSV export → page or all',
+							'row selection + bulk actions',
+							'export selected',
+							'sticky header',
+							'density toggle (comfortable / compact)',
+							'drag headers to reorder',
+							'drag column edges to resize',
+							'lazy <ListImage> thumbnails',
 							'column manager → drag rows to reorder + check to hide',
 							'header slots',
 							'default filter (En stock)',

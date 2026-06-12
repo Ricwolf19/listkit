@@ -1,5 +1,7 @@
-import { defineListConfig } from '@pibytelabs/listkit'
+import { defineListConfig, ListImage } from '@pibytelabs/listkit'
+import { Star, Trash2 } from 'lucide-react'
 
+import { PRODUCTS } from './data'
 import { ProductCard } from './ProductCard'
 import { brandTheme } from './theme'
 import {
@@ -180,10 +182,53 @@ export const productsConfig = defineListConfig<Product>({
 		onDelete: item => alert(`Eliminar ${item.name}`),
 	},
 
+	// 2.11: CSV export. Current page is auto for in-memory; "export all" is wired
+	// here via fetchAll so it also works against the async adapter (a real app
+	// would point this at a bulk endpoint applying the current query server-side).
+	export: {
+		fileName: 'productos',
+		fetchAll: async () => PRODUCTS,
+	},
+
+	// 2.11: key-based row selection + bulk actions (survives pagination, clears
+	// on dataset change). Pairs with "export selected" since export is enabled.
+	selection: {
+		actions: [
+			{
+				label: 'Destacar',
+				icon: <Star size={16} />,
+				onClick: rows => alert(`Destacar ${rows.length} producto(s)`),
+			},
+			{
+				label: 'Eliminar',
+				icon: <Trash2 size={16} />,
+				variant: 'danger',
+				onClick: rows => alert(`Eliminar ${rows.length} producto(s)`),
+			},
+		],
+		onSelectionChange: rows => console.log('Seleccionados:', rows.length),
+	},
+
 	table: {
 		// 2.8: column manager (hide/show + reorder, persisted to localStorage).
 		columnControl: true,
+		// 2.11: drag headers to reorder, drag edges to resize, density toggle,
+		// sticky header — all persisted to localStorage.
+		reorderable: true,
+		resizable: true,
+		density: true,
+		stickyHeader: true,
+		maxBodyHeight: '520px',
 		columns: [
+			{
+				key: 'image',
+				header: '',
+				width: '64px',
+				exportable: false,
+				render: item => (
+					<ListImage src={item.image} alt={item.name} width={40} height={40} />
+				),
+			},
 			{ key: 'name', header: 'Nombre', sortable: true },
 			{ key: 'sku', header: 'SKU' },
 			{ key: 'category', header: 'Categoría', sortable: true },
@@ -194,6 +239,8 @@ export const productsConfig = defineListConfig<Product>({
 				align: 'right',
 				sortable: true,
 				render: item => currency(item.price),
+				// render returns a string here, but show the explicit export value.
+				exportValue: item => item.price,
 			},
 		],
 	},

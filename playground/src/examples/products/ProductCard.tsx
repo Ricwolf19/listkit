@@ -1,19 +1,34 @@
-import type { CardContext } from '@pibytelabs/listkit'
+import { type CardContext, Checkbox, ListImage } from '@pibytelabs/listkit'
 import { Pencil, Trash2 } from 'lucide-react'
 
 import { currency, type Product } from './types'
 
 /**
  * Card renderer for a Product. Receives the item plus the CardContext, which
- * carries the `actions` declared in the config — no prop drilling needed.
+ * carries the `actions`, the active theme, and (when enabled) `selection`
+ * helpers — no prop drilling needed.
  */
 export function ProductCard(item: Product, ctx: CardContext<Product>) {
+	const selected = ctx.selection?.isSelected(item) ?? false
 	return (
 		<>
-			<div className='mb-3 flex items-start justify-between'>
-				<div className='min-w-0'>
-					<h3 className='truncate font-semibold text-gray-900'>{item.name}</h3>
-					<p className='text-xs text-gray-500'>{item.sku}</p>
+			<div className='mb-3 flex items-start justify-between gap-2'>
+				<div className='flex min-w-0 items-start gap-3'>
+					{ctx.selection && (
+						<Checkbox
+							checked={selected}
+							onChange={() => ctx.selection!.toggle(item)}
+							colorTheme={ctx.colorTheme}
+							aria-label={`Seleccionar ${item.name}`}
+						/>
+					)}
+					<ListImage src={item.image} alt={item.name} width={44} height={44} />
+					<div className='min-w-0'>
+						<h3 className='truncate font-semibold text-gray-900'>
+							{item.name}
+						</h3>
+						<p className='text-xs text-gray-500'>{item.sku}</p>
+					</div>
 				</div>
 				<div className='flex gap-1'>
 					<button
