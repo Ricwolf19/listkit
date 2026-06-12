@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import type { ColorTheme } from '../theme/colorTheme'
 import type { FilterSection } from './filters'
 import type { ListLabels } from './labels'
-import type { ViewType } from './list'
+import type { Density, ViewType } from './list'
 
 /**
  * A single table column.
@@ -41,6 +41,14 @@ export type ColumnDef<T> = {
 	 * @defaultValue the column `key`
 	 */
 	sortField?: string
+	/**
+	 * Plain value used for CSV export. Provide it when `render` returns JSX that
+	 * can't be serialized; when omitted, export reads `item[key]` (dot-paths
+	 * supported). Return `null`/`undefined` for an empty cell.
+	 */
+	exportValue?: (item: T) => string | number | boolean | Date | null | undefined
+	/** Exclude this column from CSV export (e.g. an actions column). @defaultValue true */
+	exportable?: boolean
 }
 
 /**
@@ -63,6 +71,33 @@ export type TableConfig<T> = {
 	 * by default).
 	 */
 	columnControl?: boolean
+	/**
+	 * Let users drag column headers directly to reorder them. Persisted alongside
+	 * the column manager's choices. @defaultValue false
+	 */
+	reorderable?: boolean
+	/**
+	 * Let users drag a column's right edge to resize it. Widths persist per
+	 * column. @defaultValue false
+	 */
+	resizable?: boolean
+	/**
+	 * Show a density toggle (comfortable ↔ compact rows) in the toolbar. The
+	 * choice persists. @defaultValue false
+	 */
+	density?: boolean
+	/**
+	 * Initial row density before the user picks one.
+	 * @defaultValue `'compact'` when `compact` is set, otherwise `'comfortable'`
+	 */
+	defaultDensity?: Density
+	/**
+	 * Pin the header row while the body scrolls. Pair with `maxBodyHeight` for an
+	 * internal scroll area; without it the header sticks to the page scroll.
+	 */
+	stickyHeader?: boolean
+	/** Max height of the scrollable table body (any CSS length, e.g. `'70vh'`). */
+	maxBodyHeight?: string
 }
 
 /**
@@ -91,6 +126,74 @@ export type CardContext<T> = {
 	actions: ListActions<T>
 	/** The resolved color theme for this list. */
 	colorTheme: ColorTheme
+	/**
+	 * Row-selection helpers, present only when `selection` is enabled. Use them to
+	 * add a checkbox or selected styling to a custom card. Requires a stable
+	 * {@link ListConfig.getItemKey}.
+	 */
+	selection?: {
+		/** Whether this row is currently selected. */
+		isSelected: (item: T) => boolean
+		/** Toggle this row's selection. */
+		toggle: (item: T) => void
+	}
+}
+
+/**
+ * CSV export options. Set on {@link ListConfig.export} (or pass `true` for
+ * defaults). Export respects the visible columns and their current order.
+ *
+ * @typeParam T - The row type.
+ */
+export type ExportConfig<T> = {
+	/** Base file name (without extension). @defaultValue the list `id` */
+	fileName?: string
+	/**
+	 * Offer an "export all" choice in addition to "current page". Auto-enabled for
+	 * in-memory `data`; for an async `adapter` it requires {@link fetchAll}.
+	 * Set `false` to force current-page-only. @defaultValue true
+	 */
+	allowExportAll?: boolean
+	/**
+	 * Server-side "export all" hook. listkit never loops your adapter page by
+	 * page — wire this to a bulk/stream endpoint that returns every matching row
+	 * (apply the current query on your server for an optimized export).
+	 */
+	fetchAll?: () => Promise<T[]>
+}
+
+/**
+ * A bulk action shown in the selection bar, invoked with the selected rows.
+ *
+ * @typeParam T - The row type.
+ */
+export type BulkAction<T> = {
+	/** Visible label. */
+	label: string
+	/** Optional leading icon. */
+	icon?: ReactNode
+	/** Invoked with every selected row (across pages). */
+	onClick: (selected: T[]) => void | Promise<void>
+	/** Visual style. @defaultValue 'outline' */
+	variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'secondary' | 'info'
+}
+
+/**
+ * Row-selection options. Set on {@link ListConfig.selection} (or pass `true`
+ * for plain checkboxes). Selection is key-based, survives pagination, and clears
+ * when the dataset changes (search/filter/sort/refresh).
+ *
+ * @typeParam T - The row type.
+ */
+export type SelectionConfig<T> = {
+	/** Bulk actions rendered in the selection bar. */
+	actions?: BulkAction<T>[]
+	/** Called whenever the selected rows change. */
+	onSelectionChange?: (selected: T[]) => void
+	/** Clear the selection when search/filters/sort/refresh change. @defaultValue true */
+	clearOnDataChange?: boolean
+	/** Show "export selected" in the selection bar when `export` is enabled. @defaultValue true */
+	showExport?: boolean
 }
 
 /**
@@ -199,4 +302,16 @@ export type ListConfig<T> = {
 	table?: TableConfig<T>
 	/** Imperative row actions delivered to renderers via {@link CardContext}. */
 	actions?: ListActions<T>
+	/**
+	 * Enable CSV export of the table. `true` exports the current page respecting
+	 * the visible columns and their order; pass an {@link ExportConfig} to set the
+	 * file name or wire server-side "export all". Requires {@link table}.
+	 */
+	export?: ExportConfig<T> | boolean
+	/**
+	 * Enable row selection with bulk actions. `true` shows checkboxes in the
+	 * table; pass a {@link SelectionConfig} for bulk actions and a change callback.
+	 * Pair with a stable {@link getItemKey}.
+	 */
+	selection?: SelectionConfig<T> | boolean
 }

@@ -1,11 +1,18 @@
+import type { Density } from './list'
+
 /**
- * Persisted per-list column preferences: the visible/hidden set and the order.
+ * Persisted per-list table preferences: the visible/hidden set, the order, any
+ * user-resized column widths, and the chosen row density.
  */
 export type ColumnPrefs = {
 	/** Column keys in display order. */
 	order: string[]
 	/** Column keys the user has hidden. */
 	hidden: string[]
+	/** Custom column widths in pixels, keyed by column `key` (set by resizing). */
+	widths?: Record<string, number>
+	/** Row density chosen via the density toggle. */
+	density?: Density
 }
 
 /**
@@ -41,7 +48,18 @@ export const localStorageColumns: ColumnStorage = {
 			if (!raw) return null
 			const parsed = JSON.parse(raw) as ColumnPrefs
 			if (Array.isArray(parsed?.order) && Array.isArray(parsed?.hidden)) {
-				return parsed
+				return {
+					order: parsed.order,
+					hidden: parsed.hidden,
+					widths:
+						parsed.widths && typeof parsed.widths === 'object'
+							? parsed.widths
+							: undefined,
+					density:
+						parsed.density === 'compact' || parsed.density === 'comfortable'
+							? parsed.density
+							: undefined,
+				}
 			}
 			return null
 		} catch {

@@ -14,10 +14,17 @@ export {
 export { Card } from './components/Card'
 export { Cards } from './components/Cards'
 export { Checkbox, type CheckboxProps } from './components/Checkbox'
+export {
+	DensityToggle,
+	type DensityToggleProps,
+} from './components/DensityToggle'
 export { EmptyState } from './components/EmptyState'
+export { ExportButton, type ExportButtonProps } from './components/ExportButton'
+export { ListImage, type ListImageProps } from './components/ListImage'
 export { ListSkeleton } from './components/ListSkeleton'
 export { Pagination, type PaginationVariant } from './components/Pagination'
 export { SearchInput } from './components/SearchInput'
+export { SelectionBar, type SelectionBarProps } from './components/SelectionBar'
 export { SkeletonCards } from './components/SkeletonCards'
 export { SkeletonTable } from './components/SkeletonTable'
 export { Table } from './components/Table'
@@ -41,6 +48,11 @@ export { useFilters } from './hooks/useFilters'
 export { invalidateListCache, useListData } from './hooks/useListData'
 export { type ListParams, useListParams } from './hooks/useListParams'
 export { useListState } from './hooks/useListState'
+export {
+	type RowSelection,
+	type SelectionEntry,
+	useRowSelection,
+} from './hooks/useRowSelection'
 export { useViewType } from './hooks/useViewType'
 
 // Column preferences (custom persistence)
@@ -72,13 +84,19 @@ export {
 	type ThemeClasses,
 } from './theme/colorTheme'
 
+// CSV export helpers
+export { downloadCsv, exportRowsToCsv, rowsToCsv } from './utils/exportCsv'
+
 // Types
 export type {
+	BulkAction,
 	CardContext,
 	ColumnDef,
+	ExportConfig,
 	ListActions,
 	ListConfig,
 	SearchConfig,
+	SelectionConfig,
 	TableConfig,
 	ToolbarAction,
 } from './types/config'
@@ -97,5 +115,10 @@ export {
 	type ListLabels,
 	resolveLabels,
 } from './types/labels'
-export type { DisplayMode, PaginationState, ViewType } from './types/list'
+export type {
+	Density,
+	DisplayMode,
+	PaginationState,
+	ViewType,
+} from './types/list'
 export type { RouterAdapter } from './types/router'

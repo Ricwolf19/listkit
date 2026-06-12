@@ -1,6 +1,9 @@
 /** The active rendering mode of a list. */
 export type ViewType = 'table' | 'cards'
 
+/** Table row density: roomy (`'comfortable'`) or tight (`'compact'`). */
+export type Density = 'comfortable' | 'compact'
+
 /**
  * Visibility policy for a view across breakpoints: always show, always hide, or
  * let listkit pick based on the viewport.

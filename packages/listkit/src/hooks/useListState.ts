@@ -191,5 +191,7 @@ export function useListState<T>({
 		tableMode,
 		sort,
 		handleSortChange,
+		/** The query that produced the current page; reuse it for "export all". */
+		query,
 	}
 }

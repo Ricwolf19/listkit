@@ -45,6 +45,28 @@ export type ListLabels = {
 	columns: string
 	/** Reset-columns action in the column manager. */
 	resetColumns: string
+	/** Export button (aria-label/title). */
+	exportData: string
+	/** "Export current page" choice. */
+	exportCurrentPage: string
+	/** "Export all" choice. */
+	exportAll: string
+	/** "Export selected" action in the selection bar. */
+	exportSelected: string
+	/** Shown on the export button while a (server) export is in flight. */
+	exporting: string
+	/** Select-all-on-page checkbox (aria-label). */
+	selectAll: string
+	/** Per-row selection checkbox (aria-label). */
+	selectRow: string
+	/** Clear-selection action in the selection bar. */
+	clearSelection: string
+	/** Density toggle (aria-label/title). */
+	density: string
+	/** Comfortable density choice. */
+	densityComfortable: string
+	/** Compact density choice. */
+	densityCompact: string
 	/** Empty-state title when there are no rows. */
 	empty: string
 	/** Error message when the adapter fails. */
@@ -90,6 +112,17 @@ export const DEFAULT_LABELS: ListLabels = {
 	hideOptions: 'Hide options',
 	columns: 'Columns',
 	resetColumns: 'Reset',
+	exportData: 'Export',
+	exportCurrentPage: 'Export current page',
+	exportAll: 'Export all',
+	exportSelected: 'Export selected',
+	exporting: 'Exporting…',
+	selectAll: 'Select all',
+	selectRow: 'Select row',
+	clearSelection: 'Clear selection',
+	density: 'Density',
+	densityComfortable: 'Comfortable',
+	densityCompact: 'Compact',
 	empty: 'No results',
 	error: 'Failed to load data.',
 	loading: 'Loading…',
@@ -126,6 +159,17 @@ export const ES_LABELS: ListLabels = {
 	hideOptions: 'Ocultar opciones',
 	columns: 'Columnas',
 	resetColumns: 'Restablecer',
+	exportData: 'Exportar',
+	exportCurrentPage: 'Exportar página actual',
+	exportAll: 'Exportar todo',
+	exportSelected: 'Exportar selección',
+	exporting: 'Exportando…',
+	selectAll: 'Seleccionar todo',
+	selectRow: 'Seleccionar fila',
+	clearSelection: 'Limpiar selección',
+	density: 'Densidad',
+	densityComfortable: 'Cómoda',
+	densityCompact: 'Compacta',
 	empty: 'Sin resultados',
 	error: 'No se pudieron cargar los datos.',
 	loading: 'Cargando…',
