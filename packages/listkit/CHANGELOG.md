@@ -1,5 +1,17 @@
 # @pibytelabs/listkit
 
+## [2.11.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.10.0...listkit-2.11.0) (2026-06-13)
+
+
+### Features
+
+* **core:** add foundational utilities, types, and labels for v2.11 ([627926a](https://github.com/Ricwolf19/listkit/commit/627926a43950a2cd1eb71c02585b92d73d513a81))
+* **listview:** integrate selection, export, and controls into ListView ([b1c7e3f](https://github.com/Ricwolf19/listkit/commit/b1c7e3f5f2c888208bfb7fe15411b564634c8576))
+* **pagination:** add shift+arrow keyboard shortcuts for first and last page ([d5374b6](https://github.com/Ricwolf19/listkit/commit/d5374b630c27ce1f93264eaf6f2a36f0133003f5))
+* **selection:** improve selection bar UI and provide keys/clear helpers to bulk actions ([11cfd10](https://github.com/Ricwolf19/listkit/commit/11cfd1050b2bdecad0b55e418b9303fb47213d7c))
+* **table:** enhance UX with density, resize, reorder, and sticky header ([b1e253e](https://github.com/Ricwolf19/listkit/commit/b1e253e4561359cbb90fc21354ab4f33c6ef5e09))
+* **toolbar:** fold density, columns, and export controls into a single options menu ([107bd89](https://github.com/Ricwolf19/listkit/commit/107bd8924d28149d1365dc3b885f39f56694b3a4))
+
 ## [2.10.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.9.0...listkit-2.10.0) (2026-06-11)
 
 
