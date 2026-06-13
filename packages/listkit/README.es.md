@@ -64,7 +64,7 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
 - **Theming** — 8 paletas integradas o tu propio tema personalizado; por lista o global.
 - **Tarjetas personalizadas** — usa el chrome de tarjeta integrado, o `bareCard` para insertar un componente de tarjeta completamente personalizado.
 - **Refrescar en mutación** — `useListRefresh()` refetchea la lista después de un delete/edit, sin recargar la página.
-- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `Shift + F` abre filtros, `Shift + V` cambia la vista, `+` abre filtros, `-` quita el último filtro.
+- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `Shift + F` abre filtros, `Shift + V` cambia la vista, `+` abre filtros, `-` quita el último filtro, `←`/`→` página anterior/siguiente, `Shift + ←`/`Shift + →` primera/última página.
 - **Slots de encabezado** — coloca métricas/badges sobre el título con `headerContent={{ left, center, right }}`.
 - **Gestor de columnas** — `table.columnControl` permite ocultar/mostrar y reordenar columnas; persiste en localStorage (o tu propio `ColumnStorage`).
 - **Exportar a CSV** — agrega un botón de exportación en el toolbar con `export`: página actual por defecto; "exportar todo" se autodetecta para `data` en memoria, o se conecta con `fetchAll` para una fuente en el servidor (sin recorrer el adaptador página por página). Respeta las columnas visibles y su orden, con `exportValue`/`exportable` por columna.
@@ -353,7 +353,7 @@ defineListConfig<Product>({
 ```tsx
 export: {
   fileName: 'productos',          // por defecto el id de la lista
-  fetchAll: () => listAll(query), // endpoint masivo del servidor
+  fetchAll: query => listAll(query), // endpoint masivo (recibe la query actual)
 }
 ```
 
@@ -383,7 +383,11 @@ defineListConfig<Product>({
 				label: 'Eliminar',
 				icon: <Trash2 size={16} />,
 				variant: 'danger',
-				onClick: rows => deleteMany(rows),
+				// Cada acción recibe las filas seleccionadas + helpers: { selectedKeys, clear }.
+				onClick: async (rows, { selectedKeys, clear }) => {
+					await deleteMany(selectedKeys) // ids, de getItemKey
+					clear() // limpia la selección tras una acción masiva exitosa
+				},
 			},
 		],
 		onSelectionChange: rows => setSelected(rows),
@@ -391,7 +395,15 @@ defineListConfig<Product>({
 })
 ```
 
-- La tabla gana una columna de checkbox con un encabezado **seleccionar-toda-la-página** (indeterminado cuando solo algunas están seleccionadas).
+**Qué te da la selección.** La selección se indexa por `getItemKey`, así que cada entrada tiene un **id** (la clave) y el **objeto** completo de la fila:
+
+- El `onClick(selected, { selectedKeys, clear })` de una acción masiva recibe `selected` (las filas `T[]` — incluso de otras páginas) y `selectedKeys` (sus ids de `getItemKey`). Usa los ids para un `DELETE … WHERE id IN (…)` y `clear()` para reiniciar después.
+- `onSelectionChange(selected)` emite el mismo `T[]` cuando cambia el conjunto — úsalo para tu propia barra o contador.
+- Para control total, usa el hook exportado `useRowSelection` directamente (`selectedKeys`, `selectedItems`, `isSelected`, `toggle`, `toggleMany`, `clear`).
+
+Otras notas:
+
+- La tabla gana una columna de checkbox **separada** con un encabezado **seleccionar-toda-la-página** (indeterminado cuando solo algunas están seleccionadas).
 - Las filas se rastrean por clave, así que seleccionar entre páginas conserva los objetos completos para tu handler masivo — sin necesidad de React Query.
 - `clearOnDataChange: false` conserva la selección al cambiar filtros/orden (por defecto se limpia).
 - Cuando `export` está habilitado, la barra de selección también muestra **Exportar selección** (desactívalo con `showExport: false`).
@@ -423,20 +435,22 @@ Todo opcional vía `table.*`, y todo persistido en localStorage junto al gestor 
 
 ```tsx
 table: {
-  columnControl: true,    // ocultar/mostrar + reordenar desde el menú de columnas
-  reorderable: true,      // arrastra los encabezados para reordenar
-  resizable: true,        // arrastra el borde de una columna para redimensionar
-  density: true,          // toggle cómoda/compacta en el toolbar
+  columnControl: true,  // ocultar/mostrar + reordenar desde el menú de opciones
+  reorderable: true,    // arrastra los encabezados para reordenar
+  resizable: true,      // arrastra el borde de una columna para redimensionar
+  density: true,        // toggle cómoda/compacta
   defaultDensity: 'comfortable',
-  stickyHeader: true,     // el encabezado permanece mientras el cuerpo hace scroll
-  maxBodyHeight: '480px', // altura del área de scroll del encabezado fijo (por defecto '70vh')
+  stickyHeader: true,     // el encabezado permanece visible mientras la tabla hace scroll
+  maxBodyHeight: '70vh',  // altura del área de scroll del encabezado fijo (por defecto '70vh')
   columns,
 }
 ```
 
-- `stickyHeader` fija el encabezado dentro de un área de scroll dimensionada por `maxBodyHeight` (por defecto `'70vh'`); solo en vista de tabla.
+- `stickyHeader` le da a la tabla un área de scroll acotada (limitada por `maxBodyHeight`, por defecto `'70vh'`) para que el encabezado quede fijo arriba y la barra de paginación abajo — ambos visibles mientras haces scroll. El scroll horizontal queda contenido en la misma caja, así una tabla ancha nunca se desborda fuera de la página en pantallas pequeñas. Solo en vista de tabla.
 - `density` + `defaultDensity` exponen el toggle cómoda ↔ compacta (sobrescribe el `compact` estático).
 - `reorderable` / `resizable` agregan reordenar arrastrando encabezados y redimensionar por el borde; los anchos redimensionados persisten por columna.
+
+> **El toolbar se mantiene limpio.** Densidad, columnas y exportar no agregan un botón cada uno — `<ListView>` los pliega en un único menú de **opciones** (⚙), dejando inline solo lo esencial (toggle de vista, conteo de resultados). Es responsivo (disponible también en móvil) y en vista de tarjetas muestra solo exportar. Los componentes `DensityToggle`, `ColumnManager`, `ExportButton` y `TableOptionsMenu` se exportan por si construyes tu propio toolbar.
 
 ### Tarjetas personalizadas con acciones y tema
 

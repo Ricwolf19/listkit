@@ -64,7 +64,7 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
 - **Custom cards** — use the built-in card chrome, or `bareCard` to drop in a fully custom card component.
 - **Refresh on mutation** — `useListRefresh()` refetches the list after a delete/edit, no full page reload.
-- **Keyboard shortcuts** — `⌘ K` focus search, `Shift + F` open filters, `Shift + V` toggle view, `+` open filters, `-` remove the last filter.
+- **Keyboard shortcuts** — `⌘ K` focus search, `Shift + F` open filters, `Shift + V` toggle view, `+` open filters, `-` remove the last filter, `←`/`→` previous/next page, `Shift + ←`/`Shift + →` first/last page.
 - **Header slots** — drop quick metrics/badges above the title with `headerContent={{ left, center, right }}`.
 - **Column manager** — `table.columnControl` lets users hide/show and reorder columns; persisted to localStorage (or your own `ColumnStorage`).
 - **CSV export** — add a toolbar export button with `export`: current page by default; "export all" is auto-detected for in-memory `data`, or wired via `fetchAll` for a server source (no browser page-loop). Respects the visible columns and their order, with per-column `exportValue`/`exportable`.
@@ -353,7 +353,7 @@ defineListConfig<Product>({
 ```tsx
 export: {
   fileName: 'products',           // defaults to the list id
-  fetchAll: () => listAll(query), // server-side bulk endpoint
+  fetchAll: query => listAll(query), // server bulk endpoint (gets the live query)
 }
 ```
 
@@ -383,7 +383,11 @@ defineListConfig<Product>({
 				label: 'Delete',
 				icon: <Trash2 size={16} />,
 				variant: 'danger',
-				onClick: rows => deleteMany(rows),
+				// Each action gets the selected rows + helpers: { selectedKeys, clear }.
+				onClick: async (rows, { selectedKeys, clear }) => {
+					await deleteMany(selectedKeys) // ids, from getItemKey
+					clear() // drop the selection after a successful bulk action
+				},
 			},
 		],
 		onSelectionChange: rows => setSelected(rows),
@@ -391,7 +395,15 @@ defineListConfig<Product>({
 })
 ```
 
-- The table gains a checkbox column with a header **select-all-this-page** (indeterminate when only some are selected).
+**What the selection gives you.** Selection is keyed by `getItemKey`, so each entry has an **id** (the key) and the **full row** object:
+
+- A bulk action's `onClick(selected, { selectedKeys, clear })` receives `selected` (the `T[]` rows — even ones from other pages) and `selectedKeys` (their ids from `getItemKey`). Use the ids for a `DELETE … WHERE id IN (…)` and `clear()` to reset afterwards.
+- `onSelectionChange(selected)` fires the same `T[]` whenever the set changes — drive your own bar or counter from it.
+- For full control, call the exported `useRowSelection` hook directly (`selectedKeys`, `selectedItems`, `isSelected`, `toggle`, `toggleMany`, `clear`).
+
+Other notes:
+
+- The table gains a **separated** checkbox column with a header **select-all-this-page** (indeterminate when only some are selected).
 - Rows are tracked by key, so selecting across pages keeps the full row objects for your bulk handler — no React Query required.
 - `clearOnDataChange: false` keeps the selection across filter/sort changes (the default clears it).
 - When `export` is enabled, the selection bar also shows **Export selected** (disable with `showExport: false`).
@@ -423,20 +435,22 @@ All opt-in via `table.*`, and all persisted to localStorage alongside the column
 
 ```tsx
 table: {
-  columnControl: true,    // hide/show + reorder via the columns menu
-  reorderable: true,      // drag the header cells to reorder
-  resizable: true,        // drag a column's edge to resize
-  density: true,          // comfortable/compact toggle in the toolbar
+  columnControl: true,  // hide/show + reorder via the options menu
+  reorderable: true,    // drag the header cells to reorder
+  resizable: true,      // drag a column's edge to resize
+  density: true,        // comfortable/compact toggle
   defaultDensity: 'comfortable',
-  stickyHeader: true,     // header stays put while the body scrolls
-  maxBodyHeight: '480px', // scroll-area height for the sticky header (default '70vh')
+  stickyHeader: true,     // header stays visible while the table scrolls
+  maxBodyHeight: '70vh',  // scroll-area height for the sticky header (default '70vh')
   columns,
 }
 ```
 
-- `stickyHeader` pins the header inside a scroll area sized by `maxBodyHeight` (default `'70vh'`); table view only.
+- `stickyHeader` gives the table a bounded scroll area (capped by `maxBodyHeight`, default `'70vh'`) so the header stays pinned to its top and the pagination bar below — both visible while you scroll. Horizontal scroll is contained in the same box, so a wide table never spills off-page on small screens. Table view only.
 - `density` + `defaultDensity` expose the comfortable ↔ compact toggle (overrides the static `compact`).
 - `reorderable` / `resizable` add header drag-to-reorder and edge-resize; resized widths persist per column.
+
+> **Toolbar stays tidy.** Density, columns, and export don't each add a button — `<ListView>` folds them into a single **options** menu (⚙), leaving only the essentials (view toggle, result count) inline. It's responsive (available on mobile too), and in cards view it shows export only. The standalone `DensityToggle`, `ColumnManager`, `ExportButton`, and `TableOptionsMenu` are exported if you build your own toolbar.
 
 ### Custom cards with actions and theme
 
