@@ -39,14 +39,12 @@ import type {
 import { resolveLabels } from '../types/labels'
 import { exportRowsToCsv } from '../utils/exportCsv'
 import { Cards } from './Cards'
-import { ColumnManager } from './ColumnManager'
-import { DensityToggle } from './DensityToggle'
-import { ExportButton } from './ExportButton'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
 import { FilterSidebar } from './filters/FilterSidebar'
 import { Pagination, type PaginationVariant } from './Pagination'
 import { SelectionBar } from './SelectionBar'
 import { Table } from './Table'
+import { TableOptionsMenu } from './TableOptionsMenu'
 import { Toolbar } from './Toolbar'
 
 /**
@@ -375,7 +373,7 @@ export function ListView<T>({
 		setExporting(true)
 		try {
 			const all = exportConfig?.fetchAll
-				? await exportConfig.fetchAll()
+				? await exportConfig.fetchAll(query)
 				: (
 						await resolvedAdapter.fetch({
 							...query,
@@ -404,33 +402,43 @@ export function ListView<T>({
 		? density === 'compact'
 		: !!config.table?.compact
 
-	const tableControls =
-		viewType === 'table' &&
-		(densityEnabled || columnControlEnabled || exportEnabled) ? (
-			<>
-				{densityEnabled && (
-					<DensityToggle density={density} onChange={setDensity} />
-				)}
-				{columnControlEnabled && (
-					<ColumnManager
-						items={columnItems}
-						onToggle={toggleColumn}
-						onMove={moveColumn}
-						onReorder={reorderColumns}
-						onReset={resetColumns}
-						colorTheme={colorTheme}
-					/>
-				)}
-				{exportEnabled && (
-					<ExportButton
-						onExportPage={handleExportPage}
-						onExportAll={exportAllAvailable ? handleExportAll : undefined}
-						exporting={exporting}
-						colorTheme={colorTheme}
-					/>
-				)}
-			</>
-		) : undefined
+	// All table controls (density, export, columns) fold into one options menu so
+	// the toolbar stays compact no matter how many features are enabled. Only the
+	// essentials (view toggle, result count) stay inline. In cards view the menu
+	// is export-only — density/columns are table-specific.
+	const inTableView = viewType === 'table'
+	const showOptionsMenu =
+		exportEnabled || (inTableView && (densityEnabled || columnControlEnabled))
+	const tableControls = showOptionsMenu ? (
+		<TableOptionsMenu
+			colorTheme={colorTheme}
+			density={
+				inTableView && densityEnabled
+					? { value: density, onChange: setDensity }
+					: undefined
+			}
+			exportControl={
+				exportEnabled
+					? {
+							onExportPage: handleExportPage,
+							onExportAll: exportAllAvailable ? handleExportAll : undefined,
+							exporting,
+						}
+					: undefined
+			}
+			columns={
+				inTableView && columnControlEnabled
+					? {
+							items: columnItems,
+							onToggle: toggleColumn,
+							onMove: moveColumn,
+							onReorder: reorderColumns,
+							onReset: resetColumns,
+						}
+					: undefined
+			}
+		/>
+	) : undefined
 
 	useListShortcuts({
 		onFocusSearch: () => {
@@ -519,6 +527,7 @@ export function ListView<T>({
 						<SelectionBar<T>
 							count={selection.selectedCount}
 							selected={selection.selectedItems}
+							selectedKeys={[...selection.selectedKeys]}
 							actions={selectionConfig?.actions}
 							onClear={selection.clear}
 							onExportSelected={

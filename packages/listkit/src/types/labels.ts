@@ -67,6 +67,8 @@ export type ListLabels = {
 	densityComfortable: string
 	/** Compact density choice. */
 	densityCompact: string
+	/** Table-options menu button (aria-label/title) and heading. */
+	options: string
 	/** Empty-state title when there are no rows. */
 	empty: string
 	/** Error message when the adapter fails. */
@@ -123,6 +125,7 @@ export const DEFAULT_LABELS: ListLabels = {
 	density: 'Density',
 	densityComfortable: 'Comfortable',
 	densityCompact: 'Compact',
+	options: 'Options',
 	empty: 'No results',
 	error: 'Failed to load data.',
 	loading: 'Loading…',
@@ -170,6 +173,7 @@ export const ES_LABELS: ListLabels = {
 	density: 'Densidad',
 	densityComfortable: 'Cómoda',
 	densityCompact: 'Compacta',
+	options: 'Opciones',
 	empty: 'Sin resultados',
 	error: 'No se pudieron cargar los datos.',
 	loading: 'Cargando…',

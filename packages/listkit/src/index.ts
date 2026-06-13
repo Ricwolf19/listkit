@@ -28,12 +28,17 @@ export { SelectionBar, type SelectionBarProps } from './components/SelectionBar'
 export { SkeletonCards } from './components/SkeletonCards'
 export { SkeletonTable } from './components/SkeletonTable'
 export { Table } from './components/Table'
+export {
+	TableOptionsMenu,
+	type TableOptionsMenuProps,
+} from './components/TableOptionsMenu'
 export { Toolbar, type ToolbarProps } from './components/Toolbar'
 export { ViewToggle } from './components/ViewToggle'
 
 // Filters (v2.0)
 export {
 	ColumnManager,
+	ColumnManagerPanel,
 	type ColumnManagerProps,
 } from './components/ColumnManager'
 export { ActiveFilterChips } from './components/filters/ActiveFilterChips'
@@ -96,6 +101,7 @@ export type {
 	ListActions,
 	ListConfig,
 	SearchConfig,
+	SelectionActionHelpers,
 	SelectionConfig,
 	TableConfig,
 	ToolbarAction,
