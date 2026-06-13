@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { ColorTheme } from '../theme/colorTheme'
+import type { ListQuery } from './data'
 import type { FilterSection } from './filters'
 import type { ListLabels } from './labels'
 import type { Density, ViewType } from './list'
@@ -92,11 +93,12 @@ export type TableConfig<T> = {
 	 */
 	defaultDensity?: Density
 	/**
-	 * Pin the header row while the body scrolls. Pair with `maxBodyHeight` for an
-	 * internal scroll area; without it the header sticks to the page scroll.
+	 * Keep the header row visible while the table scrolls. The table gets a bounded
+	 * scroll area (capped by `maxBodyHeight`) so the header stays pinned to its top
+	 * and a wide table never spills off-page. Table view only.
 	 */
 	stickyHeader?: boolean
-	/** Max height of the scrollable table body (any CSS length, e.g. `'70vh'`). */
+	/** Max height of the scroll area when `stickyHeader`. @defaultValue '70vh' */
 	maxBodyHeight?: string
 }
 
@@ -156,14 +158,25 @@ export type ExportConfig<T> = {
 	allowExportAll?: boolean
 	/**
 	 * Server-side "export all" hook. listkit never loops your adapter page by
-	 * page — wire this to a bulk/stream endpoint that returns every matching row
-	 * (apply the current query on your server for an optimized export).
+	 * page — wire this to a bulk/stream endpoint that returns every matching row.
+	 * Receives the **current** {@link ListQuery} (search + filters + sort, with
+	 * `page`/`pageSize` set to the full range) so your server can apply the same
+	 * conditions and return every matching row for an optimized export.
 	 */
-	fetchAll?: () => Promise<T[]>
+	fetchAll?: (query: ListQuery) => Promise<T[]>
+}
+
+/** Helpers handed to a {@link BulkAction} alongside the selected rows. */
+export type SelectionActionHelpers = {
+	/** Keys (from {@link ListConfig.getItemKey}) of the selected rows. */
+	selectedKeys: (string | number)[]
+	/** Clear the selection — call it after a successful bulk delete/update. */
+	clear: () => void
 }
 
 /**
- * A bulk action shown in the selection bar, invoked with the selected rows.
+ * A bulk action shown in the selection bar, invoked with the selected rows and
+ * a {@link SelectionActionHelpers} object (their keys + a `clear`).
  *
  * @typeParam T - The row type.
  */
@@ -172,8 +185,11 @@ export type BulkAction<T> = {
 	label: string
 	/** Optional leading icon. */
 	icon?: ReactNode
-	/** Invoked with every selected row (across pages). */
-	onClick: (selected: T[]) => void | Promise<void>
+	/** Invoked with every selected row (across pages) and selection helpers. */
+	onClick: (
+		selected: T[],
+		helpers: SelectionActionHelpers
+	) => void | Promise<void>
 	/** Visual style. @defaultValue 'outline' */
 	variant?: 'default' | 'outline' | 'ghost' | 'danger' | 'secondary' | 'info'
 }
