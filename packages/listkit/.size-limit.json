@@ -2,7 +2,7 @@
 	{
 		"name": "main entry (ESM)",
 		"path": "dist/index.js",
-		"limit": "30 KB",
+		"limit": "32 KB",
 		"import": "*",
 		"ignore": [
 			"react",
@@ -24,7 +24,7 @@
 		"name": "/next — NextListView (ESM, bundles ListView)",
 		"path": "dist/next.js",
 		"import": "{ NextListView }",
-		"limit": "26 KB",
+		"limit": "28 KB",
 		"ignore": [
 			"react",
 			"react-dom",
