@@ -80,12 +80,14 @@ export function Pagination({
 			if (!ref.current || isLoading) return
 			const tag = document.activeElement?.tagName
 			if (tag === 'INPUT' || tag === 'TEXTAREA') return
+			if (event.metaKey || event.ctrlKey || event.altKey) return
+			// Shift + arrow jumps to the first/last page; plain arrow steps by one.
 			if (event.key === 'ArrowLeft' && currentPage > 1) {
 				event.preventDefault()
-				onPageChange(currentPage - 1)
+				onPageChange(event.shiftKey ? 1 : currentPage - 1)
 			} else if (event.key === 'ArrowRight' && currentPage < totalPages) {
 				event.preventDefault()
-				onPageChange(currentPage + 1)
+				onPageChange(event.shiftKey ? totalPages : currentPage + 1)
 			}
 		}
 		document.addEventListener('keydown', handleKeyDown)
@@ -177,7 +179,7 @@ export function Pagination({
 					onClick={() => goTo(1)}
 					disabled={currentPage === 1 || isLoading || isDisabled}
 					className={cn('hidden sm:flex', arrowBtn, theme.softHoverBg)}
-					title={labels.firstPage}
+					title={`${labels.firstPage} · ⇧←`}
 					aria-label={labels.firstPage}
 				>
 					<ChevronsLeft className='h-4 w-4' />
@@ -188,7 +190,7 @@ export function Pagination({
 					onClick={() => goTo(currentPage - 1)}
 					disabled={currentPage === 1 || isLoading || isDisabled}
 					className={cn(arrowBtn, theme.softHoverBg)}
-					title={labels.previousPage}
+					title={`${labels.previousPage} · ←`}
 					aria-label={labels.previousPage}
 				>
 					<ChevronLeft className='h-4 w-4' />
@@ -240,7 +242,7 @@ export function Pagination({
 					onClick={() => goTo(currentPage + 1)}
 					disabled={currentPage === totalPages || isLoading || isDisabled}
 					className={cn(arrowBtn, theme.softHoverBg)}
-					title={labels.nextPage}
+					title={`${labels.nextPage} · →`}
 					aria-label={labels.nextPage}
 				>
 					<ChevronRight className='h-4 w-4' />
@@ -251,7 +253,7 @@ export function Pagination({
 					onClick={() => goTo(totalPages)}
 					disabled={currentPage === totalPages || isLoading || isDisabled}
 					className={cn('hidden sm:flex', arrowBtn, theme.softHoverBg)}
-					title={labels.lastPage}
+					title={`${labels.lastPage} · ⇧→`}
 					aria-label={labels.lastPage}
 				>
 					<ChevronsRight className='h-4 w-4' />
