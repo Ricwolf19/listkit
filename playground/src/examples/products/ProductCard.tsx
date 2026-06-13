@@ -12,8 +12,8 @@ export function ProductCard(item: Product, ctx: CardContext<Product>) {
 	const selected = ctx.selection?.isSelected(item) ?? false
 	return (
 		<>
-			<div className='mb-3 flex items-start justify-between gap-2'>
-				<div className='flex min-w-0 items-start gap-3'>
+			<div className='mb-3 flex items-center justify-between gap-2'>
+				<div className='flex min-w-0 items-center gap-3'>
 					{ctx.selection && (
 						<Checkbox
 							checked={selected}

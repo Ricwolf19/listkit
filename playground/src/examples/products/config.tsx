@@ -18,7 +18,7 @@ export const productsConfig = defineListConfig<Product>({
 	id: 'products',
 	title: 'Productos',
 	subtitle: 'Catálogo completo con filtros avanzados, cache y paginación',
-	pageSize: 12,
+	pageSize: 24,
 	colorTheme: brandTheme,
 	// 2.7+: explicit desktop default view ('cards' or 'table').
 	defaultView: 'table',
@@ -197,13 +197,17 @@ export const productsConfig = defineListConfig<Product>({
 			{
 				label: 'Destacar',
 				icon: <Star size={16} />,
+				// Bulk actions receive the selected rows + helpers (keys + clear).
 				onClick: rows => alert(`Destacar ${rows.length} producto(s)`),
 			},
 			{
 				label: 'Eliminar',
 				icon: <Trash2 size={16} />,
 				variant: 'danger',
-				onClick: rows => alert(`Eliminar ${rows.length} producto(s)`),
+				onClick: (rows, { clear }) => {
+					alert(`Eliminar ${rows.length} producto(s)`)
+					clear() // drop the selection after the bulk action
+				},
 			},
 		],
 		onSelectionChange: rows => console.log('Seleccionados:', rows.length),
@@ -212,13 +216,13 @@ export const productsConfig = defineListConfig<Product>({
 	table: {
 		// 2.8: column manager (hide/show + reorder, persisted to localStorage).
 		columnControl: true,
-		// 2.11: drag headers to reorder, drag edges to resize, density toggle,
-		// sticky header — all persisted to localStorage.
+		// 2.11: drag headers to reorder, drag edges to resize, density toggle —
+		// all persisted to localStorage and folded into one toolbar options menu.
 		reorderable: true,
 		resizable: true,
 		density: true,
-		stickyHeader: true,
-		maxBodyHeight: '520px',
+		// Header sticks to the top of the viewport as the page scrolls.
+		stickyHeader: false,
 		columns: [
 			{
 				key: 'image',
