@@ -34,7 +34,7 @@ type TableProps<T> = {
 	 * changes and the (sticky/fixed) pagination bar never shifts.
 	 */
 	skeletonRows?: number
-	/** Pin the header row while the body scrolls. */
+	/** Keep the header visible while scrolling the table's bounded scroll area. */
 	stickyHeader?: boolean
 	/** Max height of the scroll area when `stickyHeader`. @defaultValue '70vh' */
 	maxBodyHeight?: string
@@ -137,7 +137,10 @@ export function Table<T>({
 
 	const visibleColumns = columns.filter(col => !col.hidden)
 	const colSpan = visibleColumns.length + (selectable ? 1 : 0) || 1
-	const thSticky = stickyHeader ? 'sticky top-0 z-10' : ''
+	// The header sticks to the top of the table's bounded scroll area (a wrapper
+	// with overflow + max-height). Horizontal scroll stays contained in the same
+	// box, so a wide table never spills past the page on small screens.
+	const thSticky = stickyHeader ? 'sticky top-0 z-20' : ''
 
 	// Live, rAF-throttled column resize; persists through onResizeColumn.
 	const startResize = (e: React.PointerEvent, key: string) => {
@@ -178,18 +181,20 @@ export function Table<T>({
 							<th
 								scope='col'
 								className={cn(
-									'w-10 bg-gray-100 px-3',
+									'w-12 border-r border-gray-200 bg-gray-100 px-3',
 									compact ? 'py-2.5' : 'py-3.5',
 									thSticky
 								)}
 							>
-								<Checkbox
-									checked={pageAllSelected}
-									indeterminate={pageSomeSelected && !pageAllSelected}
-									onChange={c => onTogglePage?.(c)}
-									colorTheme={colorTheme}
-									aria-label={labels.selectAll}
-								/>
+								<div className='flex items-center justify-center'>
+									<Checkbox
+										checked={pageAllSelected}
+										indeterminate={pageSomeSelected && !pageAllSelected}
+										onChange={c => onTogglePage?.(c)}
+										colorTheme={colorTheme}
+										aria-label={labels.selectAll}
+									/>
+								</div>
 							</th>
 						)}
 						{visibleColumns.map(col => {
@@ -314,13 +319,20 @@ export function Table<T>({
 								)}
 							>
 								{selectable && (
-									<td className={cn('w-10 px-3', compact ? 'py-2' : 'py-4')}>
-										<Checkbox
-											checked={selected}
-											onChange={() => onToggleRow?.(item, rowKey, i)}
-											colorTheme={colorTheme}
-											aria-label={labels.selectRow}
-										/>
+									<td
+										className={cn(
+											'w-12 border-r border-gray-100 px-3',
+											compact ? 'py-2' : 'py-4'
+										)}
+									>
+										<div className='flex items-center justify-center'>
+											<Checkbox
+												checked={selected}
+												onChange={() => onToggleRow?.(item, rowKey, i)}
+												colorTheme={colorTheme}
+												aria-label={labels.selectRow}
+											/>
+										</div>
 									</td>
 								)}
 								{visibleColumns.map(col => (
@@ -361,6 +373,8 @@ export function Table<T>({
 			aria-hidden={visibility.ariaHidden}
 		>
 			{stickyHeader ? (
+				// Bounded scroll area: the header sticks to its top, and horizontal
+				// scroll is contained here so a wide table never spills off-page.
 				<div
 					className='overflow-auto rounded-xl border border-gray-200 bg-white shadow-sm'
 					style={{ maxHeight: maxBodyHeight ?? '70vh' }}
