@@ -10,6 +10,7 @@ export default defineConfig({
 		query: 'src/query.ts',
 		sql: 'src/sql.ts',
 		mongo: 'src/mongo.ts',
+		mongoose: 'src/mongoose.ts',
 		'react-query': 'src/react-query.ts',
 	},
 	format: ['esm', 'cjs'],
@@ -32,5 +33,6 @@ export default defineConfig({
 		'react-datepicker',
 		'zod',
 		'@tanstack/react-query',
+		'mongoose',
 	],
 })

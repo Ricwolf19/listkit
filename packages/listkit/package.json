@@ -125,6 +125,16 @@
 				"default": "./dist/mongo.cjs"
 			}
 		},
+		"./mongoose": {
+			"import": {
+				"types": "./dist/mongoose.d.ts",
+				"default": "./dist/mongoose.js"
+			},
+			"require": {
+				"types": "./dist/mongoose.d.cts",
+				"default": "./dist/mongoose.cjs"
+			}
+		},
 		"./react-query": {
 			"import": {
 				"types": "./dist/react-query.d.ts",
@@ -153,6 +163,7 @@
 	"peerDependencies": {
 		"@tanstack/react-query": "^5.0.0",
 		"lucide-react": ">=0.400.0",
+		"mongoose": ">=7.0.0",
 		"next": "^14.0.0 || ^15.0.0 || ^16.0.0",
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0",
@@ -166,6 +177,9 @@
 		},
 		"lucide-react": {
 			"optional": false
+		},
+		"mongoose": {
+			"optional": true
 		},
 		"next": {
 			"optional": true
@@ -190,6 +204,7 @@
 		"@types/react": "^19.0.2",
 		"@types/react-dom": "^19.0.2",
 		"lucide-react": "^1.14.0",
+		"mongoose": "^9.7.1",
 		"next": "^16.0.0",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
