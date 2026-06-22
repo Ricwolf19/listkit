@@ -1,5 +1,16 @@
 # @pibytelabs/listkit
 
+## [2.12.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.11.0...listkit-2.12.0) (2026-06-22)
+
+
+### Features
+
+* **mongo:** derive field maps from the filter config (corpfiscal reference) ([51c0489](https://github.com/Ricwolf19/listkit/commit/51c04897efdccaba7ece8ac64a3d954b339ac426))
+* **mongoose:** add paginated query executor as an optional type-only peer-dep entry ([32de4f9](https://github.com/Ricwolf19/listkit/commit/32de4f91e995ebdbfe443e1b701fd80717292e37))
+* **query:** add parseListkitQuery to parse a backend request bag into a ListQuery ([36423d7](https://github.com/Ricwolf19/listkit/commit/36423d7e08649e6d6c294a799ece565073bdd857))
+* **sql:** add WHERE/search builders and a Postgres list executor via pool injection ([4979398](https://github.com/Ricwolf19/listkit/commit/4979398a9ef50ebb10bc3bec62c6faa7e5eaf5fb))
+* **table:** per-column truncation, sizing, resize/auto-fit and provider density default ([524b920](https://github.com/Ricwolf19/listkit/commit/524b92024903e3f46e798144d993b207eda2b2d1))
+
 ## [2.11.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.10.0...listkit-2.11.0) (2026-06-13)
 
 
