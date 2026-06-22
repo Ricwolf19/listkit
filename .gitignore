@@ -37,12 +37,6 @@ Thumbs.db
 .env.local
 .env.*.local
 
-# Internal agent context (not for public)
-AGENT.md
-AGENTS.md
-CLAUDE.md
-.claude/
-
 # Vite cache
 .vite/
 
