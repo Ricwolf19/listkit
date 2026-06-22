@@ -1,5 +1,5 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
-import { type ReactNode, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
 
 import { useLabels } from '../context/ListKitContext'
 import { type ColorTheme } from '../theme/colorTheme'
@@ -34,6 +34,11 @@ type TableProps<T> = {
 	 * changes and the (sticky/fixed) pagination bar never shifts.
 	 */
 	skeletonRows?: number
+	/**
+	 * Table sizing algorithm. When omitted, defaults to `'fixed'` if any column
+	 * sets `truncate`, otherwise `'auto'`. @see TableConfig.layout
+	 */
+	layout?: 'auto' | 'fixed'
 	/** Keep the header visible while scrolling the table's bounded scroll area. */
 	stickyHeader?: boolean
 	/** Max height of the scroll area when `stickyHeader`. @defaultValue '70vh' */
@@ -79,6 +84,43 @@ const alignClass = (align?: 'left' | 'center' | 'right') =>
 			: 'text-left'
 
 /**
+ * Width for a column's `<col>`. In `table-fixed` these `<colgroup>` widths are
+ * the authoritative column sizes — far more reliable than per-cell `width`,
+ * which the browser may redistribute or ignore. A grow column is left width-less
+ * so it absorbs the leftover space.
+ */
+function colWidthStyle<T>(col: ColumnDef<T>): CSSProperties | undefined {
+	const width = col.grow ? undefined : col.width
+	return width ? { width } : undefined
+}
+
+/** Per-cell min/max bounds (the authoritative width lives on the `<col>`). */
+function cellStyle<T>(col: ColumnDef<T>): CSSProperties | undefined {
+	if (col.minWidth == null && col.maxWidth == null) return undefined
+	const style: CSSProperties = {}
+	if (col.minWidth != null) style.minWidth = col.minWidth
+	if (col.maxWidth != null) style.maxWidth = col.maxWidth
+	return style
+}
+
+/** Class + style that clip a cell to one line (`truncate`) or N lines (line-clamp). */
+function truncateStyle(truncate: boolean | number): {
+	className: string
+	style?: CSSProperties
+} {
+	const lines = typeof truncate === 'number' ? Math.max(1, truncate) : 1
+	if (lines === 1) return { className: 'block truncate' }
+	return {
+		className: 'overflow-hidden',
+		style: {
+			display: '-webkit-box',
+			WebkitLineClamp: lines,
+			WebkitBoxOrient: 'vertical',
+		},
+	}
+}
+
+/**
  * Data table with sortable headers, optional selection, sticky header,
  * drag-to-reorder and resizable columns, plus loading and empty states.
  *
@@ -99,6 +141,7 @@ export function Table<T>({
 	sort,
 	onSort,
 	skeletonRows = 6,
+	layout,
 	stickyHeader = false,
 	maxBodyHeight,
 	reorderable = false,
@@ -137,6 +180,11 @@ export function Table<T>({
 
 	const visibleColumns = columns.filter(col => !col.hidden)
 	const colSpan = visibleColumns.length + (selectable ? 1 : 0) || 1
+	// `truncate`/`grow` only behave when widths are authoritative, so a column
+	// opting into either switches the table to fixed layout unless told otherwise.
+	const tableLayout =
+		layout ??
+		(visibleColumns.some(c => c.truncate || c.grow) ? 'fixed' : 'auto')
 	// The header sticks to the top of the table's bounded scroll area (a wrapper
 	// with overflow + max-height). Horizontal scroll stays contained in the same
 	// box, so a wide table never spills past the page on small screens.
@@ -172,8 +220,54 @@ export function Table<T>({
 		document.addEventListener('pointerup', onUp)
 	}
 
+	// Double-click the resize handle to size a column to its widest visible cell
+	// (the content's natural width; `truncate`/clip wrappers still report it via
+	// scrollWidth). onResizeColumn clamps it to the column's min/max.
+	const autofit = (e: React.MouseEvent, key: string) => {
+		e.preventDefault()
+		e.stopPropagation()
+		const table = (e.currentTarget as HTMLElement).closest('table')
+		if (!table) return
+		const cells = table.querySelectorAll<HTMLElement>(
+			`[data-col="${CSS.escape(key)}"]`
+		)
+		let max = 0
+		cells.forEach(cell => {
+			const inner = cell.firstElementChild
+			if (inner) {
+				const cs = getComputedStyle(cell)
+				const pad =
+					parseFloat(cs.paddingLeft || '0') + parseFloat(cs.paddingRight || '0')
+				max = Math.max(max, inner.scrollWidth + pad)
+			} else {
+				max = Math.max(max, cell.scrollWidth)
+			}
+		})
+		if (max > 0) onResizeColumn?.(key, Math.ceil(max) + 1)
+	}
+
 	const tableEl = (
-		<table className='min-w-full divide-y divide-gray-200'>
+		<table
+			// `table-layout: fixed` only honors the <col> widths when the table has an
+			// explicit width — with `width: auto` (min-w-full) it collapses columns to
+			// near-equal widths and ignores them. So fixed → `w-full` (width: 100%);
+			// auto keeps `min-w-full` so content can still widen the table for scroll.
+			className={cn(
+				'divide-y divide-gray-200',
+				tableLayout === 'fixed' ? 'w-full' : 'min-w-full'
+			)}
+			// Inline (not a Tailwind class) so it is deterministic regardless of the
+			// consumer's content scan; `'fixed'` makes column widths authoritative.
+			style={{ tableLayout }}
+		>
+			{/* Column widths live here: in `table-fixed` the <col> widths are honored
+			    deterministically (per-cell widths get redistributed/ignored). */}
+			<colgroup>
+				{selectable && <col style={{ width: '3rem' }} />}
+				{visibleColumns.map(col => (
+					<col key={col.key} style={colWidthStyle(col)} />
+				))}
+			</colgroup>
 			{showHeader && (
 				<thead className='border-b border-gray-200'>
 					<tr>
@@ -213,6 +307,7 @@ export function Table<T>({
 								<th
 									key={col.key}
 									scope='col'
+									data-col={col.key}
 									draggable={reorderable || undefined}
 									onDragStart={
 										reorderable
@@ -253,7 +348,7 @@ export function Table<T>({
 										dragKey === col.key && 'opacity-40',
 										showTooltip && 'group'
 									)}
-									style={col.width ? { width: col.width } : undefined}
+									style={cellStyle(col)}
 								>
 									{isSortable ? (
 										<button
@@ -290,8 +385,10 @@ export function Table<T>({
 											aria-orientation='vertical'
 											draggable={false}
 											onPointerDown={e => startResize(e, col.key)}
+											onDoubleClick={e => autofit(e, col.key)}
 											onDragStart={e => e.stopPropagation()}
 											onClick={e => e.stopPropagation()}
+											title={labels.autofitColumn}
 											className='absolute top-0 right-0 z-10 flex h-full w-2 cursor-col-resize touch-none items-center justify-center'
 										>
 											<span className='h-1/2 w-px bg-gray-300 transition-colors group-hover:bg-gray-400' />
@@ -335,24 +432,54 @@ export function Table<T>({
 										</div>
 									</td>
 								)}
-								{visibleColumns.map(col => (
-									<td
-										key={`${rowKey}-${col.key}`}
-										className={cn(
-											compact ? 'px-4 py-2' : 'px-6 py-4',
-											'text-sm text-gray-700',
-											alignClass(col.align)
-										)}
-										style={col.width ? { width: col.width } : undefined}
-									>
-										{col.render
-											? col.render(item, i)
-											: valueToString(
-													(item as Record<string, unknown>)[col.key],
-													labels
-												)}
-									</td>
-								))}
+								{visibleColumns.map(col => {
+									const content = col.render
+										? col.render(item, i)
+										: valueToString(
+												(item as Record<string, unknown>)[col.key],
+												labels
+											)
+									// A grow column shows its value in full (never clipped).
+									const clip = col.truncate && !col.grow
+									const title = col.tooltip
+										? col.tooltip(item)
+										: clip && typeof content === 'string'
+											? content
+											: undefined
+									let cell: ReactNode = content
+									if (clip) {
+										const t = truncateStyle(col.truncate!)
+										cell = (
+											<div
+												className={cn('min-w-0', t.className)}
+												style={t.style}
+											>
+												{content}
+											</div>
+										)
+									} else if (col.wrap || col.grow) {
+										cell = (
+											<div className='break-words whitespace-normal'>
+												{content}
+											</div>
+										)
+									}
+									return (
+										<td
+											key={`${rowKey}-${col.key}`}
+											data-col={col.key}
+											title={title}
+											className={cn(
+												compact ? 'px-4 py-2' : 'px-6 py-4',
+												'text-sm text-gray-700',
+												alignClass(col.align)
+											)}
+											style={cellStyle(col)}
+										>
+											{cell}
+										</td>
+									)
+								})}
 							</tr>
 						)
 					})
@@ -382,12 +509,11 @@ export function Table<T>({
 					{tableEl}
 				</div>
 			) : (
-				<div className='overflow-x-auto'>
-					<div className='inline-block min-w-full align-middle'>
-						<div className='overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm'>
-							{tableEl}
-						</div>
-					</div>
+				// A block scroll container (not an inline-block shrink-to-fit wrapper):
+				// inline-block sizes to content, which defeats `table-fixed` widths and
+				// breaks truncation/resize for long, unbreakable cell text.
+				<div className='overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-sm'>
+					{tableEl}
 				</div>
 			)}
 		</div>

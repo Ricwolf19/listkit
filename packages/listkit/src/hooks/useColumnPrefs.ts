@@ -170,11 +170,15 @@ export function useColumnPrefs<T>(
 	const reorderByKey = (fromKey: string, toKey: string) =>
 		reorder(prefs.order.indexOf(fromKey), prefs.order.indexOf(toKey))
 
-	// Persist a user-resized column width in pixels (clamped to a sane minimum).
+	// Persist a user-resized column width in pixels, clamped to the column's
+	// min/max (with a sane floor so a column can't be dragged to nothing).
 	const resize = (key: string, width: number) => {
+		const col = columns.find(c => c.key === key)
+		const min = Math.max(48, col?.minWidth ?? 0)
+		const max = col?.maxWidth ?? Number.POSITIVE_INFINITY
 		const widths = {
 			...(prefs.widths ?? {}),
-			[key]: Math.max(48, Math.round(width)),
+			[key]: Math.min(max, Math.max(min, Math.round(width))),
 		}
 		persist({ ...prefs, widths })
 	}

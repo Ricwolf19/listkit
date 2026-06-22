@@ -11,6 +11,7 @@ import { memoryAdapter } from '../adapters/memory'
 import {
 	LabelsProvider,
 	ListRefreshProvider,
+	useListKitDensity,
 	useListKitLabels,
 	useListKitTheme,
 } from '../context/ListKitContext'
@@ -150,6 +151,7 @@ export function ListView<T>({
 
 	// Resolve UI strings once (provider labels < config.labels < English defaults)
 	// and provide them to every descendant via LabelsProvider.
+	const providerDensity = useListKitDensity()
 	const providerLabels = useListKitLabels()
 	const labels = useMemo(
 		() => resolveLabels(providerLabels, config.labels),
@@ -258,6 +260,7 @@ export function ListView<T>({
 		storage: columnStorage,
 		defaultDensity:
 			config.table?.defaultDensity ??
+			providerDensity ??
 			(config.table?.compact ? 'compact' : 'comfortable'),
 	})
 
@@ -574,6 +577,7 @@ export function ListView<T>({
 									sort={sort}
 									onSort={handleSortChange}
 									skeletonRows={skeletonCount}
+									layout={config.table.layout}
 									stickyHeader={config.table.stickyHeader}
 									maxBodyHeight={config.table.maxBodyHeight}
 									reorderable={reorderEnabled}

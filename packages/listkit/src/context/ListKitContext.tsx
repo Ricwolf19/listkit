@@ -2,12 +2,14 @@ import { createContext, type ReactNode, useContext, useMemo } from 'react'
 
 import type { ColorTheme } from '../theme/colorTheme'
 import { DEFAULT_LABELS, type ListLabels } from '../types/labels'
+import type { Density } from '../types/list'
 import type { RouterAdapter } from '../types/router'
 
 type ListKitContextValue = {
 	router?: RouterAdapter
 	theme?: ColorTheme
 	labels?: Partial<ListLabels>
+	defaultDensity?: Density
 }
 
 const ListKitContext = createContext<ListKitContextValue>({})
@@ -20,6 +22,13 @@ export type ListKitProviderProps = {
 	theme?: ColorTheme
 	/** App-wide UI strings (the app's language); a config `labels` still wins. */
 	labels?: Partial<ListLabels>
+	/**
+	 * Default initial row density for every table under this provider (e.g.
+	 * `'compact'` to make dense tables the app-wide default). A config
+	 * `table.defaultDensity` still wins, and the user's persisted choice wins over
+	 * both.
+	 */
+	defaultDensity?: Density
 	/** Subtree that gets access to the router/theme/labels. */
 	children: ReactNode
 }
@@ -46,6 +55,7 @@ export function ListKitProvider({
 	router,
 	theme,
 	labels,
+	defaultDensity,
 	children,
 }: ListKitProviderProps) {
 	const parent = useContext(ListKitContext)
@@ -55,8 +65,18 @@ export function ListKitProvider({
 			theme: theme ?? parent.theme,
 			labels:
 				labels || parent.labels ? { ...parent.labels, ...labels } : undefined,
+			defaultDensity: defaultDensity ?? parent.defaultDensity,
 		}),
-		[router, theme, labels, parent.router, parent.theme, parent.labels]
+		[
+			router,
+			theme,
+			labels,
+			defaultDensity,
+			parent.router,
+			parent.theme,
+			parent.labels,
+			parent.defaultDensity,
+		]
 	)
 	return (
 		<ListKitContext.Provider value={value}>{children}</ListKitContext.Provider>
@@ -76,6 +96,11 @@ export function useListKitTheme(): ColorTheme | undefined {
 /** Provider-level label overrides from the nearest {@link ListKitProvider}, if any. */
 export function useListKitLabels(): Partial<ListLabels> | undefined {
 	return useContext(ListKitContext).labels
+}
+
+/** The default row density from the nearest {@link ListKitProvider}, if any. */
+export function useListKitDensity(): Density | undefined {
+	return useContext(ListKitContext).defaultDensity
 }
 
 // Resolved (fully-defaulted) labels for the current list. `<ListView>` merges

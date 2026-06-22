@@ -6,6 +6,7 @@ export {
 	ListKitProvider,
 	type ListKitProviderProps,
 	useLabels,
+	useListKitDensity,
 	useListKitLabels,
 	useListRefresh,
 } from './context/ListKitContext'

@@ -33,6 +33,35 @@ export type ColumnDef<T> = {
 	align?: 'left' | 'center' | 'right'
 	/** Fixed column width (any CSS length, e.g. `'4rem'`). */
 	width?: string
+	/** Minimum cell width in px (also clamps the floor when `resizable`). */
+	minWidth?: number
+	/** Maximum cell width in px (also clamps the ceiling when `resizable`). */
+	maxWidth?: number
+	/**
+	 * Clip overflowing cell content with an ellipsis instead of letting it widen
+	 * the column. `true` clips to one line; a number clips to that many lines
+	 * (line-clamp). Auto-switches the table to `layout: 'fixed'` so the clip
+	 * tracks the real column width — widen the column (or resize it) and more text
+	 * shows. For a custom `render` with stacked lines, keep `truncate` on your
+	 * inner elements and set {@link TableConfig.layout} to `'fixed'` instead.
+	 * @defaultValue false
+	 */
+	truncate?: boolean | number
+	/** Allow this cell's content to wrap onto multiple lines. @defaultValue false */
+	wrap?: boolean
+	/**
+	 * Make this the priority column in a `'fixed'` layout: it absorbs the leftover
+	 * width (instead of sharing it equally) and is never truncated, so the most
+	 * important value always shows in full while neighbours clip. Implies a fixed
+	 * layout. @defaultValue false
+	 */
+	grow?: boolean
+	/**
+	 * Full-text tooltip shown on hover, surfaced as the cell's `title`. Use it to
+	 * reveal the complete value of a truncated cell whose `render` returns JSX
+	 * (plain-text cells already get a `title` automatically when truncated).
+	 */
+	tooltip?: (item: T) => string
 	/** Hide the column without removing it from the config. */
 	hidden?: boolean
 	/** Makes the header clickable to sort by this column (cycles asc → desc → off). */
@@ -60,6 +89,15 @@ export type ColumnDef<T> = {
 export type TableConfig<T> = {
 	/** Ordered column definitions. */
 	columns: ColumnDef<T>[]
+	/**
+	 * Table sizing algorithm. `'auto'` sizes columns to their content (a column's
+	 * `width` is only a hint and long cells can widen it). `'fixed'` makes `width`
+	 * authoritative — columns without a `width` share the remaining space equally,
+	 * and {@link ColumnDef.truncate} clips reliably. Defaults to `'fixed'` when any
+	 * column sets `truncate`, otherwise `'auto'`. Set `'fixed'` explicitly for the
+	 * cleanest column resizing.
+	 */
+	layout?: 'auto' | 'fixed'
 	/** Tighter row padding for dense tables. */
 	compact?: boolean
 	/** Render the header row. @defaultValue true */

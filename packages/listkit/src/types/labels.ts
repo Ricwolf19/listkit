@@ -45,6 +45,8 @@ export type ListLabels = {
 	columns: string
 	/** Reset-columns action in the column manager. */
 	resetColumns: string
+	/** Resize handle tooltip hinting double-click to fit the column to its content. */
+	autofitColumn: string
 	/** Export button (aria-label/title). */
 	exportData: string
 	/** "Export current page" choice. */
@@ -113,6 +115,7 @@ export const DEFAULT_LABELS: ListLabels = {
 	showOptions: 'Show options',
 	hideOptions: 'Hide options',
 	columns: 'Columns',
+	autofitColumn: 'Double-click to fit to content',
 	resetColumns: 'Reset',
 	exportData: 'Export',
 	exportCurrentPage: 'Export current page',
@@ -161,6 +164,7 @@ export const ES_LABELS: ListLabels = {
 	showOptions: 'Mostrar opciones',
 	hideOptions: 'Ocultar opciones',
 	columns: 'Columnas',
+	autofitColumn: 'Doble clic para ajustar al contenido',
 	resetColumns: 'Restablecer',
 	exportData: 'Exportar',
 	exportCurrentPage: 'Exportar página actual',
