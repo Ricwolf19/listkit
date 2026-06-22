@@ -35,6 +35,7 @@ import {
 	type TextValue,
 } from './query'
 import type { ListQuery, SortState } from './types/data'
+import type { FilterDefinition, FilterSection } from './types/filters'
 
 /** A single-key Mongo condition, e.g. `{ 'csf.status': { $in: [...] } }`. */
 type MongoCondition = Record<string, unknown>
@@ -167,6 +168,109 @@ export type MongoFieldSpec =
  * field. Filters whose `id` is absent from the map are ignored.
  */
 export type MongoFieldMap = Record<string, MongoFieldSpec>
+
+/**
+ * A {@link MongoFieldMap} split into the main collection and named references —
+ * the output of {@link filterConfigToMongoFieldMaps} for lists whose filters
+ * span a populated/joined collection.
+ */
+export type MongoFieldMaps = {
+	/** Filters targeting the main collection. */
+	main: MongoFieldMap
+	/** Filters targeting a reference, keyed by the reference name. */
+	refs: Record<string, MongoFieldMap>
+}
+
+/**
+ * Whether a `select` filter models existence (its options are exactly the
+ * {@link EXISTENCE_WITH}/{@link EXISTENCE_WITHOUT} sentinels), so it maps to an
+ * {@link existenceMatch} spec instead of plain equality.
+ */
+const isExistenceFilter = (f: FilterDefinition): boolean =>
+	f.type === 'select' &&
+	f.options.length > 0 &&
+	f.options.every(
+		o => o.value === EXISTENCE_WITH || o.value === EXISTENCE_WITHOUT
+	)
+
+const specFor = (path: string, f: FilterDefinition): MongoFieldSpec =>
+	isExistenceFilter(f) ? { path, build: existenceMatch } : path
+
+/**
+ * Derive trusted Mongo field whitelists straight from a list config's `filters`,
+ * so the same declaration drives the sidebar UI and the backend query — no
+ * hand-kept second copy. Each filter `id` maps to its `field` (an existence
+ * `select` maps to an {@link existenceMatch} spec automatically).
+ *
+ * @remarks
+ * Pass `references` to split filters that target a populated/joined collection:
+ * for `{ csf: 'csf' }`, a filter whose `field` is `'csf.generalData.status'`
+ * lands in `refs.csf` under the stripped path `'generalData.status'`, while the
+ * rest stay in `main`. Feed `main` (and each `refs[*]`) to {@link buildMongoFilter}.
+ *
+ * @typeParam T - The row type.
+ * @param filters - The list config's filter sections.
+ * @param options - Options.
+ * @param options.references - Map of reference name → field-path prefix.
+ * @returns The `{ main, refs }` field maps.
+ *
+ * @example
+ * ```ts
+ * const maps = filterConfigToMongoFieldMaps(config.filters ?? [], {
+ *   references: { csf: 'csf' },
+ * })
+ * const filter = combineFilters(
+ *   buildMongoFilter(query, maps.main),
+ *   csfIds && { csf: { $in: csfIds } },
+ * )
+ * ```
+ */
+export const filterConfigToMongoFieldMaps = <T = unknown>(
+	filters: FilterSection<T>[],
+	options: { references?: Record<string, string> } = {}
+): MongoFieldMaps => {
+	const references = options.references ?? {}
+	const main: MongoFieldMap = {}
+	const refs: Record<string, MongoFieldMap> = {}
+
+	for (const section of filters) {
+		for (const f of section.filters) {
+			const field: string = f.field
+			const refKey = Object.keys(references).find(key => {
+				const prefix = references[key]
+				return !!prefix && field.startsWith(`${prefix}.`)
+			})
+			if (refKey) {
+				const prefix = references[refKey]!
+				const map = (refs[refKey] ??= {})
+				map[f.id] = specFor(field.slice(prefix.length + 1), f)
+			} else {
+				main[f.id] = specFor(field, f)
+			}
+		}
+	}
+
+	return { main, refs }
+}
+
+/**
+ * Flat {@link MongoFieldMap} derived from a list config's `filters` — the common
+ * case with no reference splitting. Shorthand for
+ * `filterConfigToMongoFieldMaps(filters).main`.
+ *
+ * @typeParam T - The row type.
+ * @param filters - The list config's filter sections.
+ * @returns A whitelist of filter `id` → trusted Mongo field.
+ *
+ * @example
+ * ```ts
+ * const fields = mongoFieldMapFromFilters(config.filters ?? [])
+ * const { filter, sort, skip, limit } = buildMongoQuery(query, { fields, sort: sortMap })
+ * ```
+ */
+export const mongoFieldMapFromFilters = <T = unknown>(
+	filters: FilterSection<T>[]
+): MongoFieldMap => filterConfigToMongoFieldMaps(filters).main
 
 const conditionFor = (
 	type: string,
