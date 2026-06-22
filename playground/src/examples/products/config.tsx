@@ -233,9 +233,14 @@ export const productsConfig = defineListConfig<Product>({
 					<ListImage src={item.image} alt={item.name} width={40} height={40} />
 				),
 			},
-			{ key: 'name', header: 'Nombre', sortable: true },
+			{ key: 'name', header: 'Nombre', sortable: true, truncate: true },
 			{ key: 'sku', header: 'SKU' },
 			{ key: 'category', header: 'Categoría', sortable: true },
+			// truncate clips to the column's visible width and is fully dynamic:
+			// resize the column (or double-click the edge to auto-fit) and the
+			// ellipsis follows. `width` is just the initial size; min/max are
+			// optional caps (omitted here so resize is unbounded).
+			{ key: 'supplier', header: 'Proveedor', truncate: true, width: '12rem' },
 			{ key: 'stock', header: 'Stock', align: 'right', sortable: true },
 			{
 				key: 'price',

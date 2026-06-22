@@ -23,7 +23,7 @@ export const SUPPLIERS = [
 	'Hacienda La Esperanza',
 	'Comercializadora del Norte',
 	'Importadora Global',
-	'Cooperativa del Sur',
+	'Cooperativa del Surasssssssssssssssssssssssssssssssssssssssssssssssssssssssss',
 ]
 export const ORIGINS = [
 	'México',
