@@ -152,7 +152,7 @@ listkit ships its compiled classes; register them once so Tailwind generates the
 
 ### 1. Wire the provider (once, at the app root)
 
-The provider supplies the router adapter (URL sync) and an optional default theme.
+The provider supplies the router adapter (URL sync) and optional app-wide defaults (theme, density, labels).
 
 ```tsx
 'use client'
@@ -160,12 +160,18 @@ import { ListKitProvider, useNextRouterAdapter } from '@pibytelabs/listkit'
 
 export function Providers({ children }) {
 	return (
-		<ListKitProvider router={useNextRouterAdapter()} theme='blue'>
+		<ListKitProvider
+			router={useNextRouterAdapter()}
+			theme='blue'
+			defaultDensity='compact'
+		>
 			{children}
 		</ListKitProvider>
 	)
 }
 ```
+
+`defaultDensity` sets the initial row density for every table under the provider (e.g. make compact the app-wide default). A config `table.defaultDensity` still wins, and the user's persisted toggle choice wins over both.
 
 No framework? Use `useBrowserRouterAdapter()` (History API). React Router? `useReactRouterAdapter()`. Omit `router` entirely and state stays in component-local React state (no URL sync).
 
@@ -450,6 +456,32 @@ table: {
 - `density` + `defaultDensity` expose the comfortable ↔ compact toggle (overrides the static `compact`).
 - `reorderable` / `resizable` add header drag-to-reorder and edge-resize; resized widths persist per column.
 
+#### Column sizing & truncation
+
+By default the table uses `layout: 'auto'` — columns size to their content, so a long cell widens its column and pushes the others. To keep columns stable and clip overflow instead, opt a column into `truncate`:
+
+```tsx
+table: {
+  columns: [
+    // One-line ellipsis. Auto-switches the table to layout: 'fixed' so the clip
+    // tracks the real column width — widen/resize the column and more text shows.
+    { key: 'name', header: 'Name', truncate: true, width: '14rem' },
+    // Clamp to N lines.
+    { key: 'notes', header: 'Notes', truncate: 2 },
+    // Opt back into wrapping for one column.
+    { key: 'address', header: 'Address', wrap: true },
+    // Bound the resize range.
+    { key: 'sku', header: 'SKU', minWidth: 96, maxWidth: 240 },
+  ],
+}
+```
+
+- `truncate: true` clips to one line with an ellipsis; `truncate: N` clamps to N lines. It's **dynamic** — the clip tracks the column's visible width, so widening or resizing the column reveals more text live (no per-column config needed). A `title` tooltip with the full text is added automatically for plain-text cells; for a JSX `render`, pass `tooltip: item => '…'` to surface the full value on hover.
+- `truncate` makes the table `layout: 'fixed'` so the clip is tied to the column's real width — **this is the fix when text stays cut off even after you widen or resize a column** (an `auto` layout lets the content win). For a **custom `render` with stacked lines** (e.g. a name over an id), keep `truncate` on your own inner elements and set `table.layout: 'fixed'` directly — don't wrap fixed widths like `max-w-[180px]` inside the cell, as those ignore resizing.
+- `grow: true` marks the **priority column**: it absorbs the leftover width and is never truncated, so the most important value always shows in full while its neighbours clip.
+- **Auto-fit:** with `resizable`, **double-click a column's resize handle** to size it to its widest visible cell (clamped to `maxWidth`). No need to guess a fixed width.
+- `width` is a hint in `auto` layout and authoritative in `fixed`; it's just the **initial** size and never blocks resizing. `minWidth`/`maxWidth` (px) are **optional** caps for the cell and the resize handle (default floor 48px, no ceiling) — note `maxWidth` also caps how far the handle drags, so omit it for unbounded resize.
+
 > **Toolbar stays tidy.** Density, columns, and export don't each add a button — `<ListView>` folds them into a single **options** menu (⚙), leaving only the essentials (view toggle, result count) inline. It's responsive (available on mobile too), and in cards view it shows export only. The standalone `DensityToggle`, `ColumnManager`, `ExportButton`, and `TableOptionsMenu` are exported if you build your own toolbar.
 
 ### Custom cards with actions and theme
@@ -573,6 +605,43 @@ const adapter = serverActionAdapter<Product>(async query => {
 <ListView config={productsConfig} adapter={adapter} />
 ```
 
+### PostgreSQL backend (`@pibytelabs/listkit/sql`)
+
+For a Postgres backend, `@pibytelabs/listkit/sql` turns a `ListQuery` into safe SQL fragments — `$n` placeholders, `lower() LIKE`, `NULLS LAST` — with **no driver dependency**. Compose them yourself, or hand a pool to `executeSqlList` for the whole page query (filters + search + scope + sort + pagination) in one call:
+
+```ts
+import { parseListkitQuery } from '@pibytelabs/listkit/query'
+import { executeSqlList } from '@pibytelabs/listkit/sql'
+
+app.get('/api/discounts', async (req, res) => {
+	const { data, total } = await executeSqlList<Discount>({
+		pool, // node-postgres / @vercel/postgres / @neondatabase/serverless — any { query() }
+		table: 'discount d',
+		query: parseListkitQuery(req.query),
+		fields: {
+			kind: 'd.kind', // select  → equality
+			value: 'd.value', // number-range → >= / <=
+			created: 'd.created_at', // date-range
+			// many-to-many via a `match` builder + the `p(value)` placeholder factory:
+			colors: {
+				match: (v, p) =>
+					Array.isArray(v) && v.length
+						? `EXISTS (SELECT 1 FROM product_color j WHERE j.sku = d.sku AND j.id = ANY(${p(v.map(Number))}::int[]))`
+						: null,
+			},
+		},
+		searchColumns: ['d.label', 'd.code'],
+		sort: { label: 'd.label', created: 'd.created_at' },
+		fallbackSort: 'd.created_at DESC',
+		tiebreak: ', d.id DESC',
+		scope: { 'd.tenant_id': tenantId }, // auth scope merged into every query
+	})
+	res.json({ data, total }) // the { data, total } shape fetchAdapter expects
+})
+```
+
+Columns come only from the whitelists you control (no SQL injection), and matching mirrors the in-memory adapter. For full control, drop to `buildSqlFilter(query, fields, params)` + `buildSearch(term, columns, params)` (both append to your `params` so `$n` numbering stays correct) and `buildOrderBy` — exactly the manual pattern, minus the boilerplate. `sqlFieldMapFromFilters(config.filters)` derives a starting field map from your list config.
+
 ### MongoDB backend (`@pibytelabs/listkit/mongo`)
 
 The front-end is the same in any React app (`fetchAdapter` → your REST endpoint). On the server, translate the incoming `ListQuery` into plain Mongo objects with `@pibytelabs/listkit/mongo` — it has **no `mongoose`/driver dependency** and never runs a query, so it works with Mongoose or the native driver. Field names come only from whitelists you control (no NoSQL injection), and text values are regex-escaped.
@@ -608,6 +677,66 @@ return { data, total } // the { data, total } shape fetchAdapter expects
 ```
 
 A field map entry is a trusted path string, `{ path, build }` to customize the expression for **one** field, or `{ match }` to build a **complete** condition merged as-is — the latter is how a single filter spans several fields (computed buckets, cross-field rules). Compose extra conditions (auth scope, tenant id, a reference `$in` from a nested-collection lookup) with `combineFilters`, and reach for the lower-level `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` helpers when you need finer control.
+
+**Skip the second copy.** Instead of hand-writing the `fields` whitelist, derive it from the same `filters` your list config already declares with `mongoFieldMapFromFilters` — so the sidebar UI and the backend query stay in sync from one source. Existence `select`s (options `with`/`without`) map to an `existenceMatch` spec automatically. For filters that target a populated/joined collection, use `filterConfigToMongoFieldMaps(filters, { references })` to split them into `{ main, refs }`:
+
+```ts
+import {
+	buildMongoQuery,
+	filterConfigToMongoFieldMaps,
+	mongoFieldMapFromFilters,
+} from '@pibytelabs/listkit/mongo'
+
+// Simple case — one collection:
+const fields = mongoFieldMapFromFilters(companiesConfig.filters ?? [])
+const { filter, sort, skip, limit } = buildMongoQuery(query, {
+	fields,
+	sort: sortMap,
+})
+
+// With a populated reference (e.g. `csf.*` lives on a joined collection):
+const { main, refs } = filterConfigToMongoFieldMaps(
+	companiesConfig.filters ?? [],
+	{
+		references: { csf: 'csf' },
+	}
+)
+// → main = company-level filters; refs.csf = filters on the csf collection
+```
+
+#### Mongoose executor (`@pibytelabs/listkit/mongoose`)
+
+For a Mongoose backend, `@pibytelabs/listkit/mongoose` runs the whole page query for you — search, advanced filters, populated references, sort, pagination, and an export-all path — so a controller is a few lines. `mongoose` is an **optional, type-only** peer dependency (imported with `import type`, so this entry ships **no `mongoose` runtime** and adds zero bundle weight beyond the builders); install it in the backend to use this entry.
+
+```ts
+import { parseListkitQuery } from '@pibytelabs/listkit/query'
+import { filterConfigToMongoFieldMaps } from '@pibytelabs/listkit/mongo'
+import { executePaginatedListkitQuery } from '@pibytelabs/listkit/mongoose'
+
+const maps = filterConfigToMongoFieldMaps(companiesConfig.filters ?? [], {
+	references: { csf: 'csf' },
+})
+
+app.get('/api/companies', async (req, res) => {
+	const { data, total } = await executePaginatedListkitQuery<Company>({
+		model: CompanyModel,
+		query: parseListkitQuery(req.query),
+		fields: maps.main,
+		references: [{ path: 'csf', model: CsfModel, fields: maps.refs.csf ?? {} }],
+		searchFields: ['legalName', 'taxId'],
+		searchReferences: [
+			{ path: 'csf', model: CsfModel, fields: ['generalData.postalCode'] },
+		],
+		sortFields: { name: 'legalName', created: 'createdAt' },
+		fallbackSort: { legalName: 1 },
+		populate: ['csf'],
+		baseFilter: { appsAllowed: req.app }, // auth scope, tenant id, …
+	})
+	res.json({ data, total }) // the { data, total } shape fetchAdapter expects
+})
+```
+
+Each active reference filter becomes a `$in` of the matching reference ids; the search term matches `searchFields` on the main collection and (by id) `searchReferences`. A `pageSize` greater than `maxPageSize` (default 100) is treated as **export all** — served from the first row, capped at `maxExport` (default 50 000) — so it pairs with a list's export `fetchAll`. When you don't need references/populate, the lower-level `buildMongoQuery` + your own `Model.find` is still the simplest path.
 
 ### Server-side rendering (`initialData`)
 
@@ -1028,18 +1157,19 @@ for the full key list.
 
 ## Subpath Exports
 
-| Import path                        | Contents                                                                                                                                                                |
-| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types |
-| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                  |
-| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                 |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                            |
-| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                       |
-| `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — read `ListQuery` filters                               |
-| `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — Postgres-flavoured query fragments                                                                                                    |
-| `@pibytelabs/listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex` — MongoDB query objects                                       |
-| `@pibytelabs/listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                              |
-| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                         |
+| Import path                        | Contents                                                                                                                                                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types                                   |
+| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                    |
+| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                   |
+| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                              |
+| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                                                         |
+| `@pibytelabs/listkit/query`        | `parseListkitQuery`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parse a request bag into a `ListQuery` and read its filters         |
+| `@pibytelabs/listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `textCondition`, `sqlFieldMapFromFilters` — Postgres query fragments + executor (pool injection, no driver dep)                        |
+| `@pibytelabs/listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — MongoDB query objects (no driver) |
+| `@pibytelabs/listkit/mongoose`     | `executePaginatedListkitQuery` — runs the page query on Mongoose (optional, type-only `mongoose` peer dep)                                                                                                |
+| `@pibytelabs/listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                                                                |
+| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                                                           |
 
 ---
 

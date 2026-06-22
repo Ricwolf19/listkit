@@ -152,7 +152,7 @@ Los estilos de `react-datepicker` se inyectan automáticamente en runtime (segur
 
 ### 1. Conectar el provider (una vez, en la raíz de la app)
 
-El provider suministra el adaptador de router (sincronización con URL) y un tema opcional por defecto.
+El provider suministra el adaptador de router (sincronización con URL) y valores por defecto opcionales para toda la app (tema, densidad, labels).
 
 ```tsx
 'use client'
@@ -160,12 +160,18 @@ import { ListKitProvider, useNextRouterAdapter } from '@pibytelabs/listkit'
 
 export function Providers({ children }) {
 	return (
-		<ListKitProvider router={useNextRouterAdapter()} theme='blue'>
+		<ListKitProvider
+			router={useNextRouterAdapter()}
+			theme='blue'
+			defaultDensity='compact'
+		>
 			{children}
 		</ListKitProvider>
 	)
 }
 ```
+
+`defaultDensity` fija la densidad de fila inicial para todas las tablas bajo el provider (p. ej. hacer compacta la opción por defecto de la app). Un `table.defaultDensity` del config aún gana, y la elección persistida del usuario gana sobre ambos.
 
 ¿Sin framework? Usa `useBrowserRouterAdapter()` (History API). ¿React Router? `useReactRouterAdapter()`. Omite `router` por completo y el estado permanece en estado local de React (sin sincronización con URL).
 
@@ -450,6 +456,32 @@ table: {
 - `density` + `defaultDensity` exponen el toggle cómoda ↔ compacta (sobrescribe el `compact` estático).
 - `reorderable` / `resizable` agregan reordenar arrastrando encabezados y redimensionar por el borde; los anchos redimensionados persisten por columna.
 
+#### Tamaño de columnas y truncado
+
+Por defecto la tabla usa `layout: 'auto'` — las columnas se ajustan a su contenido, así una celda larga ensancha su columna y empuja a las demás. Para mantener las columnas estables y recortar el desborde, activa `truncate` por columna:
+
+```tsx
+table: {
+  columns: [
+    // Elipsis de una línea. Cambia la tabla a layout: 'fixed' para que el recorte
+    // siga el ancho real de la columna — ensánchala/redimensiónala y se ve más texto.
+    { key: 'name', header: 'Nombre', truncate: true, width: '14rem' },
+    // Recorta a N líneas.
+    { key: 'notes', header: 'Notas', truncate: 2 },
+    // Vuelve a permitir el salto de línea en una columna.
+    { key: 'address', header: 'Dirección', wrap: true },
+    // Acota el rango del redimensionado.
+    { key: 'sku', header: 'SKU', minWidth: 96, maxWidth: 240 },
+  ],
+}
+```
+
+- `truncate: true` recorta a una línea con elipsis; `truncate: N` recorta a N líneas. Es **dinámico** — el recorte sigue el ancho visible de la columna, así que ensancharla o redimensionarla revela más texto en vivo (sin config extra por columna). Para celdas de texto plano se agrega automáticamente un tooltip `title` con el texto completo; para un `render` con JSX, pasa `tooltip: item => '…'` para mostrar el valor completo al hover.
+- `truncate` pone la tabla en `layout: 'fixed'` para que el recorte quede atado al ancho real de la columna — **esta es la solución cuando el texto sigue cortado aunque ensanches o redimensiones la columna** (en layout `auto` gana el contenido). Para un **`render` personalizado con líneas apiladas** (p. ej. un nombre sobre un id), mantén `truncate` en tus propios elementos internos y pon `table.layout: 'fixed'` directamente — no envuelvas anchos fijos como `max-w-[180px]` dentro de la celda, porque ignoran el redimensionado.
+- `grow: true` marca la **columna prioritaria**: absorbe el espacio sobrante y nunca se trunca, así el valor más importante siempre se ve completo mientras las vecinas recortan.
+- **Auto-ajuste:** con `resizable`, **doble clic en el handle de redimensionado** de una columna la ajusta a su celda visible más ancha (acotado por `maxWidth`). No necesitas adivinar un ancho fijo.
+- `width` es una pista en layout `auto` y autoritativo en `fixed`; es solo el tamaño **inicial** y nunca bloquea el redimensionado. `minWidth`/`maxWidth` (px) son topes **opcionales** para la celda y el handle (piso por defecto 48px, sin techo) — ojo: `maxWidth` también limita hasta dónde arrastra el handle, así que omítelo para resize sin tope.
+
 > **El toolbar se mantiene limpio.** Densidad, columnas y exportar no agregan un botón cada uno — `<ListView>` los pliega en un único menú de **opciones** (⚙), dejando inline solo lo esencial (toggle de vista, conteo de resultados). Es responsivo (disponible también en móvil) y en vista de tarjetas muestra solo exportar. Los componentes `DensityToggle`, `ColumnManager`, `ExportButton` y `TableOptionsMenu` se exportan por si construyes tu propio toolbar.
 
 ### Tarjetas personalizadas con acciones y tema
@@ -559,6 +591,43 @@ const adapter = serverActionAdapter<Product>(async query => {
 <ListView config={productsConfig} adapter={adapter} />
 ```
 
+### Backend PostgreSQL (`@pibytelabs/listkit/sql`)
+
+Para un backend Postgres, `@pibytelabs/listkit/sql` convierte un `ListQuery` en fragmentos SQL seguros — placeholders `$n`, `lower() LIKE`, `NULLS LAST` — **sin dependencia de driver**. Compónlos tú mismo, o pásale un pool a `executeSqlList` para toda la query de página (filtros + búsqueda + scope + orden + paginación) en una llamada:
+
+```ts
+import { parseListkitQuery } from '@pibytelabs/listkit/query'
+import { executeSqlList } from '@pibytelabs/listkit/sql'
+
+app.get('/api/discounts', async (req, res) => {
+	const { data, total } = await executeSqlList<Discount>({
+		pool, // node-postgres / @vercel/postgres / @neondatabase/serverless — cualquier { query() }
+		table: 'discount d',
+		query: parseListkitQuery(req.query),
+		fields: {
+			kind: 'd.kind', // select  → igualdad
+			value: 'd.value', // number-range → >= / <=
+			created: 'd.created_at', // date-range
+			// many-to-many con un builder `match` + la fábrica de placeholders `p(value)`:
+			colors: {
+				match: (v, p) =>
+					Array.isArray(v) && v.length
+						? `EXISTS (SELECT 1 FROM product_color j WHERE j.sku = d.sku AND j.id = ANY(${p(v.map(Number))}::int[]))`
+						: null,
+			},
+		},
+		searchColumns: ['d.label', 'd.code'],
+		sort: { label: 'd.label', created: 'd.created_at' },
+		fallbackSort: 'd.created_at DESC',
+		tiebreak: ', d.id DESC',
+		scope: { 'd.tenant_id': tenantId }, // alcance de auth fusionado en cada query
+	})
+	res.json({ data, total }) // la forma { data, total } que espera fetchAdapter
+})
+```
+
+Las columnas vienen solo de los whitelists que controlas (sin inyección SQL) y el matching refleja el adapter en memoria. Para control total, baja a `buildSqlFilter(query, fields, params)` + `buildSearch(term, columns, params)` (ambos hacen append a tu `params` para que el numerado `$n` quede correcto) y `buildOrderBy` — el patrón manual exacto, sin el boilerplate. `sqlFieldMapFromFilters(config.filters)` deriva un field map inicial desde tu config.
+
 ### Backend MongoDB (`@pibytelabs/listkit/mongo`)
 
 El front-end es el mismo en cualquier app de React (`fetchAdapter` → tu endpoint REST). En el servidor, traduce el `ListQuery` entrante a objetos planos de Mongo con `@pibytelabs/listkit/mongo` — **sin dependencia de `mongoose`/driver** y nunca ejecuta una query, así que funciona con Mongoose o el driver nativo. Los nombres de campo provienen solo de listas blancas que tú controlas (sin inyección NoSQL) y los valores de texto se escapan para regex.
@@ -594,6 +663,66 @@ return { data, total } // la forma { data, total } que espera fetchAdapter
 ```
 
 Una entrada del field map es una ruta string de confianza, `{ path, build }` para personalizar la expresión de **un** campo, o `{ match }` para construir una condición **completa** fusionada tal cual — esto último es cómo un solo filtro abarca varios campos (buckets calculados, reglas entre campos). Combina condiciones extra (alcance de auth, id de tenant, un `$in` por referencia de una colección anidada) con `combineFilters`, y usa los helpers de más bajo nivel `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` cuando necesites control fino.
+
+**Evita la segunda copia.** En lugar de escribir el whitelist `fields` a mano, derívalo de los mismos `filters` que tu config ya declara con `mongoFieldMapFromFilters` — así la UI del sidebar y la query del backend quedan sincronizadas desde una sola fuente. Los `select` de existencia (opciones `with`/`without`) se mapean a un spec `existenceMatch` automáticamente. Para filtros que apuntan a una colección poblada/unida, usa `filterConfigToMongoFieldMaps(filters, { references })` para separarlos en `{ main, refs }`:
+
+```ts
+import {
+	buildMongoQuery,
+	filterConfigToMongoFieldMaps,
+	mongoFieldMapFromFilters,
+} from '@pibytelabs/listkit/mongo'
+
+// Caso simple — una colección:
+const fields = mongoFieldMapFromFilters(companiesConfig.filters ?? [])
+const { filter, sort, skip, limit } = buildMongoQuery(query, {
+	fields,
+	sort: sortMap,
+})
+
+// Con una referencia poblada (p. ej. `csf.*` vive en una colección unida):
+const { main, refs } = filterConfigToMongoFieldMaps(
+	companiesConfig.filters ?? [],
+	{
+		references: { csf: 'csf' },
+	}
+)
+// → main = filtros a nivel empresa; refs.csf = filtros de la colección csf
+```
+
+#### Ejecutor de Mongoose (`@pibytelabs/listkit/mongoose`)
+
+Para un backend con Mongoose, `@pibytelabs/listkit/mongoose` corre toda la query de la página por ti — búsqueda, filtros avanzados, referencias pobladas, orden, paginación y un camino de exportar-todo — así un controller son pocas líneas. `mongoose` es un peer dependency **opcional y type-only** (se importa con `import type`, así que este entry **no incluye runtime de `mongoose`** y no agrega peso al bundle más allá de los constructores); instálalo en el backend para usar este entry.
+
+```ts
+import { parseListkitQuery } from '@pibytelabs/listkit/query'
+import { filterConfigToMongoFieldMaps } from '@pibytelabs/listkit/mongo'
+import { executePaginatedListkitQuery } from '@pibytelabs/listkit/mongoose'
+
+const maps = filterConfigToMongoFieldMaps(companiesConfig.filters ?? [], {
+	references: { csf: 'csf' },
+})
+
+app.get('/api/companies', async (req, res) => {
+	const { data, total } = await executePaginatedListkitQuery<Company>({
+		model: CompanyModel,
+		query: parseListkitQuery(req.query),
+		fields: maps.main,
+		references: [{ path: 'csf', model: CsfModel, fields: maps.refs.csf ?? {} }],
+		searchFields: ['legalName', 'taxId'],
+		searchReferences: [
+			{ path: 'csf', model: CsfModel, fields: ['generalData.postalCode'] },
+		],
+		sortFields: { name: 'legalName', created: 'createdAt' },
+		fallbackSort: { legalName: 1 },
+		populate: ['csf'],
+		baseFilter: { appsAllowed: req.app }, // alcance de auth, tenant id, …
+	})
+	res.json({ data, total }) // la forma { data, total } que espera fetchAdapter
+})
+```
+
+Cada filtro de referencia activo se vuelve un `$in` de los ids de referencia que coinciden; el término de búsqueda matchea `searchFields` en la colección principal y (por id) `searchReferences`. Un `pageSize` mayor que `maxPageSize` (por defecto 100) se trata como **exportar todo** — desde la primera fila, con tope `maxExport` (por defecto 50 000) — así combina con el `fetchAll` de exportación de una lista. Cuando no necesitas referencias/populate, el más bajo nivel `buildMongoQuery` + tu propio `Model.find` sigue siendo lo más simple.
 
 ### Renderizado en servidor (`initialData`)
 
@@ -965,18 +1094,19 @@ defineListConfig({ colorTheme: brand, /* … */ })
 
 ## Subpath Exports
 
-| Ruta de importación                | Contenido                                                                                                                                    |
-| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, adapters, hooks, primitives, types                 |
-| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                       |
-| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                      |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                 |
-| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — seguro para RSC (sin React/DOM)                                                    |
-| `@pibytelabs/listkit/query`        | `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — leer filtros de `ListQuery` |
-| `@pibytelabs/listkit/sql`          | `buildOrderBy`, `textCondition` — fragmentos de query con sabor a Postgres                                                                   |
-| `@pibytelabs/listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex` — objetos de query de MongoDB      |
-| `@pibytelabs/listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — respalda listas con TanStack Query                                               |
-| `@pibytelabs/listkit/tailwind.css` | Registro de fuente Tailwind v4                                                                                                               |
+| Ruta de importación                | Contenido                                                                                                                                                                                                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, adapters, hooks, primitives, types                                                                                     |
+| `@pibytelabs/listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                           |
+| `@pibytelabs/listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                          |
+| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                                     |
+| `@pibytelabs/listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — seguro para RSC (sin React/DOM)                                                                                                                        |
+| `@pibytelabs/listkit/query`        | `parseListkitQuery`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parsear un request a `ListQuery` y leer sus filtros                        |
+| `@pibytelabs/listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `textCondition`, `sqlFieldMapFromFilters` — fragmentos Postgres + ejecutor (inyección de pool, sin driver)                                    |
+| `@pibytelabs/listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — objetos de query de MongoDB (sin driver) |
+| `@pibytelabs/listkit/mongoose`     | `executePaginatedListkitQuery` — corre la query de página en Mongoose (peer dep `mongoose` opcional, type-only)                                                                                                  |
+| `@pibytelabs/listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — respalda listas con TanStack Query                                                                                                                   |
+| `@pibytelabs/listkit/tailwind.css` | Registro de fuente Tailwind v4                                                                                                                                                                                   |
 
 ---
 
