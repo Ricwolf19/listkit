@@ -152,6 +152,8 @@
 		"build": "tsup",
 		"dev": "tsup --watch",
 		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest",
 		"clean": "rm -rf dist",
 		"size": "size-limit",
 		"size:why": "size-limit --why",
@@ -211,6 +213,7 @@
 		"react-router-dom": "^7.0.0",
 		"tsup": "^8.3.5",
 		"typescript": "^5.7.2",
+		"vitest": "^4.1.9",
 		"zod": "^4.0.0"
 	}
 }
