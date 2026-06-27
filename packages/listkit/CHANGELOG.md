@@ -1,5 +1,12 @@
 # @pibytelabs/listkit
 
+## [2.13.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.12.0...listkit-2.13.0) (2026-06-27)
+
+
+### Features
+
+* **mongoose:** add aggregation listkit executor ([9d8fa8f](https://github.com/Ricwolf19/listkit/commit/9d8fa8f02e1355ebc19c7f8afad91d36862566b3))
+
 ## [2.12.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.11.0...listkit-2.12.0) (2026-06-22)
 
 
