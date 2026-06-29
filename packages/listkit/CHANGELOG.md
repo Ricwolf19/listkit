@@ -1,5 +1,12 @@
 # @pibytelabs/listkit
 
+## [2.14.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.13.0...listkit-2.14.0) (2026-06-29)
+
+
+### Features
+
+* add defaultHidden possibility in liskit config ([a5489d5](https://github.com/Ricwolf19/listkit/commit/a5489d5d933ebb6dfe649e33cfc121cc1e71095a))
+
 ## [2.13.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.12.0...listkit-2.13.0) (2026-06-27)
 
 
