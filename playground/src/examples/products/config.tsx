@@ -240,7 +240,17 @@ export const productsConfig = defineListConfig<Product>({
 			// resize the column (or double-click the edge to auto-fit) and the
 			// ellipsis follows. `width` is just the initial size; min/max are
 			// optional caps (omitted here so resize is unbounded).
-			{ key: 'supplier', header: 'Proveedor', truncate: true, width: '12rem' },
+			// `defaultHidden` (2.14+): hidden on first load but still listed in
+			// the column manager so the user can opt it back in (persisted per
+			// list). Unlike `hidden`, which hard-hides a column and keeps it out
+			// of the manager entirely.
+			{
+				key: 'supplier',
+				header: 'Proveedor',
+				truncate: true,
+				width: '12rem',
+				defaultHidden: true,
+			},
 			{ key: 'stock', header: 'Stock', align: 'right', sortable: true },
 			{
 				key: 'price',
@@ -250,6 +260,40 @@ export const productsConfig = defineListConfig<Product>({
 				render: item => currency(item.price),
 				// render returns a string here, but show the explicit export value.
 				exportValue: item => item.price,
+			},
+			// More default-hidden columns to exercise the toggle: open the options
+			// menu → "Columnas" and switch these on.
+			{
+				key: 'origin',
+				header: 'Origen',
+				sortable: true,
+				defaultHidden: true,
+			},
+			{
+				key: 'roastLevel',
+				header: 'Tueste',
+				defaultHidden: true,
+			},
+			{
+				key: 'rating',
+				header: 'Calificación',
+				align: 'right',
+				sortable: true,
+				defaultHidden: true,
+				render: item => `${item.rating}★`,
+			},
+			{
+				key: 'weightGrams',
+				header: 'Peso (g)',
+				align: 'right',
+				sortable: true,
+				defaultHidden: true,
+			},
+			{
+				key: 'createdAt',
+				header: 'Alta',
+				sortable: true,
+				defaultHidden: true,
 			},
 		],
 	},

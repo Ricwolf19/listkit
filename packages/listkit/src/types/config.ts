@@ -62,8 +62,19 @@ export type ColumnDef<T> = {
 	 * (plain-text cells already get a `title` automatically when truncated).
 	 */
 	tooltip?: (item: T) => string
-	/** Hide the column without removing it from the config. */
+	/**
+	 * Hard-hide the column: never rendered and never offered in the column
+	 * manager. Use for columns kept only for CSV export or programmatic access.
+	 */
 	hidden?: boolean
+	/**
+	 * Hide the column **by default** while still listing it in the column manager
+	 * so the user can opt it back in. Unlike {@link hidden}, this is the
+	 * "available but off" state — the initial column prefs seed it as hidden, and
+	 * toggling it on in the manager reveals it (persisted per list). Ignored when
+	 * the table has no column control (then it behaves like a plain hidden column).
+	 */
+	defaultHidden?: boolean
 	/** Makes the header clickable to sort by this column (cycles asc → desc → off). */
 	sortable?: boolean
 	/**

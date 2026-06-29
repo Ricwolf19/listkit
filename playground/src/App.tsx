@@ -24,6 +24,7 @@ export function App() {
 					<div className='mt-3 flex flex-wrap gap-2 text-xs'>
 						{[
 							'options menu → density · columns · export',
+							'columns → reveal default-hidden (Proveedor, Origen, …)',
 							'CSV export → page or all',
 							'row selection + bulk actions',
 							'export selected',
