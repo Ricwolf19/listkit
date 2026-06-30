@@ -1,5 +1,12 @@
 # @pibytelabs/listkit
 
+## [2.14.1](https://github.com/Ricwolf19/listkit/compare/listkit-2.14.0...listkit-2.14.1) (2026-06-30)
+
+
+### Performance Improvements
+
+* possibility to render custom empty state + in-memory bug for using ([4c63967](https://github.com/Ricwolf19/listkit/commit/4c639673acbd1f8c628d62049caa9cb1fcbf7b90))
+
 ## [2.14.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.13.0...listkit-2.14.0) (2026-06-29)
 
 
