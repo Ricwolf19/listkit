@@ -286,7 +286,12 @@ export function ListView<T>({
 		pageSize: config.pageSize,
 		refreshToken,
 		useListData,
-		staleTime,
+		// In-memory `data` (no explicit adapter): default to no caching so the
+		// list always reflects the current `data` — otherwise a client-side
+		// mutation that changes `data` (e.g. removing a favorite) keeps showing
+		// the cached page until staleTime elapses. A server adapter keeps the
+		// caching default; an explicit `staleTime` always wins.
+		staleTime: adapter == null && staleTime === undefined ? 0 : staleTime,
 		initialData,
 		initialQuery,
 		listId: config.id,
@@ -571,6 +576,7 @@ export function ListView<T>({
 									compact={tableCompact}
 									showHeader={config.table.showHeader}
 									emptyMessage={config.emptyMessage}
+									emptyState={config.renderEmpty?.()}
 									displayMode={config.card ? tableMode : 'show'}
 									loading={isLoading}
 									colorTheme={colorTheme}
@@ -602,6 +608,7 @@ export function ListView<T>({
 									keyExtractor={getItemKey}
 									isLoading={isLoading}
 									emptyMessage={config.emptyMessage}
+									emptyState={config.renderEmpty?.()}
 									displayMode={config.table ? cardsMode : 'show'}
 									gridCols={config.gridCols}
 									bare={config.bareCard}

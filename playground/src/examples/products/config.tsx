@@ -24,6 +24,27 @@ export const productsConfig = defineListConfig<Product>({
 	defaultView: 'table',
 	searchPlaceholder: 'Buscar por nombre, SKU o categoría…',
 	emptyMessage: 'No se encontraron productos',
+	// `renderEmpty` (2.15+): custom interactive empty state instead of the plain
+	// message — filter down to zero results to see it.
+	renderEmpty: () => (
+		<div className='flex flex-col items-center gap-3 py-14 text-center'>
+			<div className='flex h-16 w-16 items-center justify-center rounded-full bg-gray-100'>
+				<Star className='h-7 w-7 text-gray-400' />
+			</div>
+			<p className='text-lg font-semibold text-gray-900'>
+				Sin resultados con estos filtros
+			</p>
+			<p className='max-w-xs text-sm text-gray-500'>
+				Prueba quitar un filtro o busca otra cosa para ver el catálogo completo.
+			</p>
+			<a
+				href='https://example.com/collections'
+				className='mt-1 inline-flex items-center justify-center rounded-full bg-gray-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-gray-700'
+			>
+				Ver colección
+			</a>
+		</div>
+	),
 	search: { fields: ['name', 'sku', 'category'] },
 	sort: data => [...data].sort((a, b) => a.name.localeCompare(b.name)),
 	getItemKey: item => item.id,

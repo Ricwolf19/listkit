@@ -335,6 +335,12 @@ export type ListConfig<T> = {
 	searchPlaceholder?: string
 	/** Message shown when there are no rows. */
 	emptyMessage?: string
+	/**
+	 * Custom empty state, rendered in place of the default message when the list
+	 * has no rows — use it for an interactive banner (icon, copy, CTA button,
+	 * e.g. "Browse the collection"). Takes precedence over `emptyMessage`.
+	 */
+	renderEmpty?: () => ReactNode
 	/** Tailwind grid-column classes for the cards view (e.g. `'sm:grid-cols-2 lg:grid-cols-3'`). */
 	gridCols?: string
 	/**

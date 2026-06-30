@@ -13,6 +13,8 @@ type CardsProps<T> = {
 	keyExtractor: (item: T, index: number) => string | number
 	isLoading?: boolean
 	emptyMessage?: string
+	/** Custom empty content; replaces the default `<EmptyState>` when set. */
+	emptyState?: ReactNode
 	displayMode?: DisplayMode
 	gridCols?: string
 	className?: string
@@ -38,6 +40,7 @@ export function Cards<T>({
 	keyExtractor,
 	isLoading = false,
 	emptyMessage = 'No hay elementos para mostrar',
+	emptyState,
 	displayMode = 'auto',
 	gridCols = 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 	className,
@@ -66,7 +69,7 @@ export function Cards<T>({
 				className={cn('space-y-4 pt-1', visibility.className)}
 				aria-hidden={visibility.ariaHidden}
 			>
-				<EmptyState message={emptyMessage} />
+				{emptyState ?? <EmptyState message={emptyMessage} />}
 			</div>
 		)
 	}

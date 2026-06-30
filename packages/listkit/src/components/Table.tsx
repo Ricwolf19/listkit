@@ -19,6 +19,8 @@ type TableProps<T> = {
 	rowClassName?: (item: T, index: number) => string
 	loading?: boolean
 	emptyMessage?: string
+	/** Custom empty content; replaces the default `<EmptyState>` when set. */
+	emptyState?: ReactNode
 	displayMode?: DisplayMode
 	compact?: boolean
 	showHeader?: boolean
@@ -133,6 +135,7 @@ export function Table<T>({
 	rowClassName,
 	loading = false,
 	emptyMessage,
+	emptyState,
 	displayMode = 'auto',
 	compact = false,
 	showHeader = true,
@@ -486,7 +489,7 @@ export function Table<T>({
 				) : (
 					<tr>
 						<td colSpan={colSpan} className='p-0'>
-							<EmptyState message={emptyMessage} />
+							{emptyState ?? <EmptyState message={emptyMessage} />}
 						</td>
 					</tr>
 				)}
