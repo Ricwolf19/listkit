@@ -23,7 +23,12 @@ import {
 	readActiveFilters,
 } from '../filters/serialize'
 import { useColumnPrefs } from '../hooks/useColumnPrefs'
-import { invalidateListCache } from '../hooks/useListData'
+import {
+	invalidateListCache,
+	listMountRegistry,
+	noteListMount,
+	resolveListId,
+} from '../hooks/useListData'
 import { useListParams } from '../hooks/useListParams'
 import { useListShortcuts } from '../hooks/useListShortcuts'
 import { useListState } from '../hooks/useListState'
@@ -56,6 +61,27 @@ import { Toolbar } from './Toolbar'
 export type ListViewProps<T> = {
 	/** The list configuration (built with {@link defineListConfig}). */
 	config: ListConfig<T>
+	/**
+	 * Extra cache namespace for reusing one `config` across several scopes.
+	 *
+	 * The response cache keys on `config.id` + the query, so a scope the adapter
+	 * closes over but that never reaches the query (a `studentId`, a `customerId`)
+	 * is invisible to it — two mounts of the same `config` would serve each
+	 * other's rows. Pass the scope here and listkit folds it into the cache id
+	 * (`` `${config.id}::${cacheScope}` ``) so each view gets its own bucket,
+	 * **without** cloning the config or mutating its `id`.
+	 *
+	 * Only needed when the same `config` is mounted in more than one scope. A
+	 * config whose `id` already carries the scope (e.g. `` `orders-${year}` ``)
+	 * or that renders once globally doesn't need it.
+	 *
+	 * @example
+	 * ```tsx
+	 * // Same planeacionesConfig, one instance per student — no cache bleed.
+	 * <ListView config={planeacionesConfig} adapter={adapter} cacheScope={studentId} />
+	 * ```
+	 */
+	cacheScope?: string
 	/** In-memory rows. Wrapped in a {@link memoryAdapter} using `config.search`/`sort`. */
 	data?: T[]
 	/** Async data source. Takes precedence over `data` when provided. */
@@ -127,6 +153,7 @@ export type ListViewProps<T> = {
  */
 export function ListView<T>({
 	config,
+	cacheScope,
 	data,
 	adapter,
 	isLoading: externalLoading = false,
@@ -214,13 +241,35 @@ export function ListView<T>({
 		setFiltersOpen(true)
 	}
 
+	// Cache namespace: `config.id`, plus `cacheScope` when one config is mounted
+	// in several scopes (the scope the adapter closes over is invisible to the
+	// id+query cache key, so it must be folded in here). See the `cacheScope`
+	// prop docs and `resolveListId`.
+	const resolvedListId = resolveListId(config.id, cacheScope)
+
+	// Dev-only: warn when the same resolved id is mounted on more than one route
+	// — the fingerprint of a cache-scope collision (adapter-captured scope the
+	// cache key can't see). The body no-ops in production and on the server.
+	useEffect(() => {
+		if (process.env.NODE_ENV === 'production') return
+		if (typeof window === 'undefined') return
+		const warning = noteListMount(
+			listMountRegistry,
+			resolvedListId,
+			window.location.pathname
+		)
+		if (warning) console.warn(warning)
+	}, [resolvedListId])
+
 	// refresh(): invalidate this list's cache, then bump the token to refetch.
-	// Exposed via ListRefreshProvider for descendants (useListRefresh).
+	// Exposed via ListRefreshProvider for descendants (useListRefresh). Scoped to
+	// `resolvedListId` so a scoped view refreshes only its own bucket; an external
+	// `invalidateListCache(config.id)` after a mutation still clears every scope.
 	const [refreshToken, setRefreshToken] = useState(0)
 	const refresh = useCallback(() => {
-		invalidateListCache(config.id)
+		invalidateListCache(resolvedListId)
 		setRefreshToken(t => t + 1)
-	}, [config.id])
+	}, [resolvedListId])
 
 	const removeFilter = (id: string) => {
 		params.setMany({ [filterParamKey(id)]: null, page: null })
@@ -294,7 +343,7 @@ export function ListView<T>({
 		staleTime: adapter == null && staleTime === undefined ? 0 : staleTime,
 		initialData,
 		initialQuery,
-		listId: config.id,
+		listId: resolvedListId,
 		defaultView: config.defaultView,
 	})
 

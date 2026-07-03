@@ -316,6 +316,13 @@ export type ListConfig<T> = {
 	/**
 	 * Stable, unique list id. Namespaces the response cache and the URL params,
 	 * so two lists on the same page never collide.
+	 *
+	 * The id identifies the **dataset**, not the view: the cache keys on
+	 * `id` + the query, so any scope that changes the rows but isn't in the query
+	 * (a `studentId`/`customerId` the adapter closes over) is invisible to it.
+	 * When one config is mounted in several such scopes, pass `cacheScope` to
+	 * `<ListView>` rather than baking the scope into the `id` — see the README
+	 * section **The list id identifies the dataset, not the view**.
 	 */
 	id: string
 	/** Heading rendered above the list. */

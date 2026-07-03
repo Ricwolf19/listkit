@@ -882,6 +882,31 @@ You can tune or disable it per list:
 <ListView config={config} adapter={adapter} staleTime={0} />
 ```
 
+#### The list id identifies the dataset, not the view
+
+The cache keys every response on **`config.id` + the query** (`page`, `pageSize`, `search`, `filters`, `sort`). So the `id` must uniquely identify **which dataset** the list shows. Any scope that changes the rows but **isn't part of the query** — a `studentId` or `customerId` the adapter closes over, a parent record the list hangs off — is invisible to the cache.
+
+When one `config` is mounted in several such scopes, they collide: visit the list under scope A, then scope B with the same query within `staleTime`, and listkit serves A's cached rows to B **without hitting the server**. It's intermittent by nature — it only bites when a matching entry is still warm.
+
+Pass the scope as **`cacheScope`** and listkit folds it into the cache id (`` `${config.id}::${cacheScope}` ``) so each view gets its own bucket — no config cloning, no `id` mutation:
+
+```tsx
+// One planeacionesConfig, one instance per student — no cross-student bleed.
+<ListView
+	config={planeacionesConfig}
+	adapter={adapter}
+	cacheScope={studentId}
+/>
+```
+
+Rules of thumb:
+
+- **Rendered once, globally** (e.g. an admin `/users` page) → nothing to do; the `id` alone is unique.
+- **The scope already lives in the `id`** (e.g. `` id: `orders-${year}` ``) → nothing to do; it's already in the key.
+- **One `config` reused across scopes** (a per-parent tab, a detail-page sub-list) → set `cacheScope` to the scope value.
+
+`invalidateListCache(config.id)` still clears **every** scope of that id (it matches on the `id::` prefix), so a mutation that affects all scopes refreshes them all; `useListRefresh()` inside a scoped view refreshes only that view. In development, listkit `console.warn`s when it sees the same resolved id mounted on more than one route — the signature of a missing `cacheScope`.
+
 ### Using with TanStack Query
 
 If your app already uses TanStack Query and you want its cross-component cache, background refetch, retries, and devtools, back your lists with React Query instead of the built-in cache. Import the ready-made hook from `@pibytelabs/listkit/react-query` — no need to hand-roll one:

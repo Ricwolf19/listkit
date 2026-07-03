@@ -27,6 +27,13 @@ type CacheEntry<T> = {
 const CACHE_LIMIT = 100
 const cache = new Map<string, CacheEntry<unknown>>()
 
+/**
+ * Dev-only registry of `listId → routes it has mounted on`, used by
+ * {@link noteListMount} to detect cache-scope collisions. Module-level so it
+ * spans every {@link ListView} mount in the app; never read in production.
+ */
+export const listMountRegistry = new Map<string, Set<string>>()
+
 function readCache<T>(key: string): CacheEntry<T> | undefined {
 	return cache.get(key) as CacheEntry<T> | undefined
 }
@@ -71,6 +78,63 @@ export function invalidateListCache(listId?: string): void {
 	for (const key of Array.from(cache.keys())) {
 		if (key.startsWith(prefix)) cache.delete(key)
 	}
+}
+
+/**
+ * Resolve the cache namespace for a list: `config.id`, optionally suffixed with
+ * a `cacheScope` when one config is mounted in several scopes.
+ *
+ * @param id - The list `config.id` (identifies the *dataset*).
+ * @param cacheScope - Extra scope that identifies the *view* (e.g. a parent id).
+ * @returns `id` when no scope, else `` `${id}::${cacheScope}` ``.
+ *
+ * @remarks
+ * The response cache keys on `` `${listId}::${JSON.stringify(query)}` ``, so any
+ * scope the adapter closes over but that never reaches `query` (a `studentId`, a
+ * `customerId`) is invisible to the cache — two views sharing an `id` would then
+ * serve each other's rows. Folding that scope in here keeps the buckets apart.
+ * The `::` separator matches {@link invalidateListCache}'s prefix boundary, so
+ * `invalidateListCache(id)` still clears every scope of that id after a mutation,
+ * while a scoped id clears only its own bucket.
+ */
+export function resolveListId(id: string, cacheScope?: string): string {
+	return cacheScope != null && cacheScope !== '' ? `${id}::${cacheScope}` : id
+}
+
+/**
+ * Dev-only collision detector. Records that `listId` has been mounted on `route`
+ * and returns a warning when the same id now spans more than one route — the
+ * fingerprint of a cache-scope collision (adapter-captured scope that the id +
+ * query key can't see). Pure over its `registry` arg so it unit-tests without a
+ * DOM; {@link ListView} calls it from a dev-guarded effect with a module-level
+ * registry and `window.location.pathname`.
+ *
+ * @returns A warning string the first time an id crosses into a second route,
+ *   otherwise `null`.
+ */
+export function noteListMount(
+	registry: Map<string, Set<string>>,
+	listId: string,
+	route: string
+): string | null {
+	let routes = registry.get(listId)
+	if (!routes) {
+		routes = new Set()
+		registry.set(listId, routes)
+	}
+	const isNewRoute = !routes.has(route)
+	routes.add(route)
+	if (isNewRoute && routes.size > 1) {
+		return (
+			`[listkit] list id "${listId}" is mounted on multiple routes ` +
+			`(${Array.from(routes).join(', ')}). The response cache is keyed by ` +
+			`id + query, so any scope captured only inside the adapter (e.g. a ` +
+			`parent/student id) leaks rows between these views. Give each view a ` +
+			`distinct \`cacheScope\` (or fold the scope into \`config.id\`). ` +
+			`The id identifies the dataset, not the view.`
+		)
+	}
+	return null
 }
 
 /**

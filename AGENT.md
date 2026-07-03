@@ -139,6 +139,7 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
 6. **In-memory and server behavior match.** A filter/sort/search must behave the same whether served by `memoryAdapter` or a server adapter — the Mongo/SQL helpers deliberately mirror the in-memory matching semantics. Keep them in sync.
 7. **Tailwind v4 is a peer dep.** The package ships classes + `tailwind.css`, not a precompiled stylesheet; consumers register the source. Don't introduce a build step that assumes otherwise.
 8. **User view preferences persist.** Column order/width/visibility and density are stored via the column-prefs layer (localStorage by default, pluggable). Don't bypass it when adding table features.
+9. **The list id identifies the dataset, not the view.** The response cache keys on `resolveListId(config.id, cacheScope)` + the query. `config.id` must name _which dataset_ is shown; any scope that changes the rows but isn't in the query (a `studentId` the adapter closes over) belongs in `cacheScope`, which folds into the id as `` `${id}::${scope}` ``. The `::` separator is the invalidation boundary — keep it in sync with `invalidateListCache`'s prefix match. Never key the cache on anything the adapter captures but the query can't see.
 
 ---
 

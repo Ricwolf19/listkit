@@ -868,6 +868,31 @@ Puedes ajustar o desactivar la caché por lista:
 <ListView config={config} adapter={adapter} staleTime={0} />
 ```
 
+#### El id de la lista identifica al dataset, no a la vista
+
+La caché indexa cada respuesta por **`config.id` + la query** (`page`, `pageSize`, `search`, `filters`, `sort`). Por eso el `id` debe identificar de forma única **qué dataset** muestra la lista. Cualquier scope que cambie las filas pero **no forme parte de la query** — un `studentId` o `customerId` que el adapter captura en su closure, un registro padre del que cuelga la lista — es invisible para la caché.
+
+Cuando un mismo `config` se monta en varios de esos scopes, colisionan: entras a la lista bajo el scope A, luego al scope B con la misma query dentro de `staleTime`, y listkit sirve las filas cacheadas de A a B **sin llamar al server**. Es intermitente por naturaleza — solo pasa si hay una entrada aún fresca que coincide.
+
+Pasa el scope como **`cacheScope`** y listkit lo integra al id de caché (`` `${config.id}::${cacheScope}` ``) para que cada vista tenga su propio bucket — sin clonar el config ni mutar su `id`:
+
+```tsx
+// Un solo planeacionesConfig, una instancia por estudiante — sin fuga entre estudiantes.
+<ListView
+	config={planeacionesConfig}
+	adapter={adapter}
+	cacheScope={studentId}
+/>
+```
+
+Reglas prácticas:
+
+- **Se renderiza una vez, global** (ej. una página admin `/users`) → nada que hacer; el `id` por sí solo es único.
+- **El scope ya vive en el `id`** (ej. `` id: `orders-${year}` ``) → nada que hacer; ya está en la llave.
+- **Un `config` reusado entre scopes** (un tab por-padre, una sub-lista en una página de detalle) → asigna `cacheScope` al valor del scope.
+
+`invalidateListCache(config.id)` sigue limpiando **todos** los scopes de ese id (hace match por el prefijo `id::`), así que una mutación que afecta a todos los scopes los refresca a todos; `useListRefresh()` dentro de una vista scopeada refresca solo esa vista. En desarrollo, listkit emite un `console.warn` cuando detecta el mismo id resuelto montado en más de una ruta — la firma de un `cacheScope` faltante.
+
 ### Uso con TanStack Query
 
 Si tu app ya usa TanStack Query y quieres su caché entre componentes, refetch en segundo plano, reintentos y devtools, respalda tus listas con React Query en lugar de la caché integrada. Importa el hook ya hecho desde `@pibytelabs/listkit/react-query` — no hace falta escribir uno a mano:

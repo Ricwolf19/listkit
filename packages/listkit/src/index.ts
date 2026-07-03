@@ -51,7 +51,11 @@ export { FilterSidebar } from './components/filters/FilterSidebar'
 export { useBrowserRouterAdapter } from './hooks/useBrowserRouterAdapter'
 export { type ColumnPrefItem, useColumnPrefs } from './hooks/useColumnPrefs'
 export { useFilters } from './hooks/useFilters'
-export { invalidateListCache, useListData } from './hooks/useListData'
+export {
+	invalidateListCache,
+	resolveListId,
+	useListData,
+} from './hooks/useListData'
 export { type ListParams, useListParams } from './hooks/useListParams'
 export { useListState } from './hooks/useListState'
 export {
