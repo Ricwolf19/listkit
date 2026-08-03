@@ -6,5 +6,11 @@
 // fallback without importing the client barrel.
 export { ListSkeleton } from './components/ListSkeleton'
 export { defineListConfig } from './config/defineListConfig'
+export {
+	type CardSource,
+	type ResolvedListConfig,
+	type ResolvedTableConfig,
+	resolveListConfig,
+} from './config/resolveListConfig'
 export { buildListQuery, type SearchParamsLike } from './utils/buildListQuery'
 export { type InitialList, loadInitialList } from './utils/loadInitialList'

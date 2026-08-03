@@ -8,6 +8,7 @@ import {
 } from 'react'
 
 import { memoryAdapter } from '../adapters/memory'
+import { resolveListConfig } from '../config/resolveListConfig'
 import {
 	LabelsProvider,
 	ListRefreshProvider,
@@ -18,8 +19,10 @@ import {
 import {
 	activeFiltersToParams,
 	buildDefaultActiveFilters,
+	encodeFilterValue,
 	filterParamKey,
 	flattenFilters,
+	pinnedFilterDefs,
 	readActiveFilters,
 } from '../filters/serialize'
 import { useColumnPrefs } from '../hooks/useColumnPrefs'
@@ -44,9 +47,11 @@ import type {
 } from '../types/data'
 import { resolveLabels } from '../types/labels'
 import { exportRowsToCsv } from '../utils/exportCsv'
+import { AutoCard } from './AutoCard'
 import { Cards } from './Cards'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
 import { FilterSidebar } from './filters/FilterSidebar'
+import { PinnedFilterChips } from './filters/PinnedFilterChips'
 import { Pagination, type PaginationVariant } from './Pagination'
 import { SelectionBar } from './SelectionBar'
 import { Table } from './Table'
@@ -173,6 +178,10 @@ export function ListView<T>({
 	initialQuery,
 	columnStorage,
 }: ListViewProps<T>) {
+	// One normalization pass: every feature flag, the page size, the default view
+	// and which cards renderer applies are decided here instead of at each use.
+	const resolved = useMemo(() => resolveListConfig(config), [config])
+
 	const providerTheme = useListKitTheme()
 	const colorTheme = config.colorTheme ?? providerTheme ?? DEFAULT_COLOR_THEME
 
@@ -275,23 +284,34 @@ export function ListView<T>({
 		params.setMany({ [filterParamKey(id)]: null, page: null })
 	}
 
+	// Pinned filters are ordinary filters with a shortcut: the chip writes the
+	// same URL param the sidebar does, so the query, the cache key and the chip
+	// row all update through the paths they already use.
+	const pinnedDefs = useMemo(() => pinnedFilterDefs(flatDefs), [flatDefs])
+	const applyFilter = (id: string, value: unknown) => {
+		params.setMany({
+			[filterParamKey(id)]: encodeFilterValue(value),
+			page: null,
+		})
+	}
+
 	const clearAllFilters = () => {
 		const updates: Record<string, string | null> = { page: null }
 		for (const def of flatDefs) updates[filterParamKey(def.id)] = null
 		params.setMany(updates)
 	}
 
-	// Table column hide/show + reorder + resize + density (all persisted) when any
-	// of the corresponding `table.*` options are set.
-	const columnControlEnabled = !!config.table?.columnControl
-	const reorderEnabled = !!config.table?.reorderable
-	const resizeEnabled = !!config.table?.resizable
-	const densityEnabled = !!config.table?.density
+	// Table column hide/show + reorder + resize + density (all persisted). On by
+	// default for any table; `table.<flag>: false` opts out individually.
+	const columnControlEnabled = !!resolved.table?.columnControl
+	const reorderEnabled = !!resolved.table?.reorderable
+	const resizeEnabled = !!resolved.table?.resizable
+	const densityEnabled = !!resolved.table?.density
 	const tablePrefsEnabled =
 		columnControlEnabled || reorderEnabled || resizeEnabled || densityEnabled
 	const tableColumns = useMemo(
-		() => config.table?.columns ?? [],
-		[config.table]
+		() => resolved.table?.columns ?? [],
+		[resolved.table]
 	)
 	const {
 		resolvedColumns,
@@ -332,7 +352,7 @@ export function ListView<T>({
 		adapter: resolvedAdapter,
 		params,
 		filters: activeFilters,
-		pageSize: config.pageSize,
+		pageSize: resolved.pageSize,
 		refreshToken,
 		useListData,
 		// In-memory `data` (no explicit adapter): default to no caching so the
@@ -344,7 +364,8 @@ export function ListView<T>({
 		initialData,
 		initialQuery,
 		listId: resolvedListId,
-		defaultView: config.defaultView,
+		defaultView: resolved.defaultView,
+		defaultSort: resolved.defaultSort,
 	})
 
 	const isLoading = externalLoading || dataLoading
@@ -354,7 +375,7 @@ export function ListView<T>({
 	// mid-list, the partial remainder on the last page. Keeping the list's height
 	// stable across page changes stops the fixed/sticky pagination bar from
 	// jumping. Falls back to a full page when the total isn't known yet (first load).
-	const perPage = pagination.itemsPerPage || config.pageSize || 8
+	const perPage = pagination.itemsPerPage || resolved.pageSize
 	const skeletonCount =
 		pagination.totalItems > 0
 			? Math.max(
@@ -408,10 +429,25 @@ export function ListView<T>({
 			: undefined,
 	}
 
+	// A table without a custom card still gets one, derived from the same columns
+	// the table renders (and the same user column choices) — so every list has a
+	// cards view to switch to, on a phone or on demand.
+	const renderCard =
+		resolved.cardSource === 'custom'
+			? (item: T) => resolved.card!(item, cardCtx)
+			: (item: T, index: number) => (
+					<AutoCard<T>
+						item={item}
+						index={index}
+						columns={resolvedColumns}
+						ctx={cardCtx}
+					/>
+				)
+
 	// CSV export. The current page always works; "export all" is auto-detected for
 	// in-memory data, or wired via `export.fetchAll` for a server source (listkit
 	// never loops the adapter page by page).
-	const exportEnabled = !!config.export && !!config.table
+	const exportEnabled = !!config.export && !!resolved.table
 	const exportConfig =
 		typeof config.export === 'object' ? config.export : undefined
 	const exportFileName = exportConfig?.fileName ?? config.id
@@ -457,15 +493,20 @@ export function ListView<T>({
 
 	const tableCompact = densityEnabled
 		? density === 'compact'
-		: !!config.table?.compact
+		: !!resolved.table?.compact
 
 	// All table controls (density, export, columns) fold into one options menu so
 	// the toolbar stays compact no matter how many features are enabled. Only the
-	// essentials (view toggle, result count) stay inline. In cards view the menu
-	// is export-only — density/columns are table-specific.
+	// essentials (view toggle, result count) stay inline. Density is table-only;
+	// columns also apply to an auto card, which renders the same columns.
 	const inTableView = viewType === 'table'
+	const columnsAffectView = inTableView || resolved.cardSource === 'auto'
+	const optionsMenuAllowed = resolved.table?.optionsMenu !== false
 	const showOptionsMenu =
-		exportEnabled || (inTableView && (densityEnabled || columnControlEnabled))
+		optionsMenuAllowed &&
+		(exportEnabled ||
+			(inTableView && densityEnabled) ||
+			(columnsAffectView && columnControlEnabled))
 	const tableControls = showOptionsMenu ? (
 		<TableOptionsMenu
 			colorTheme={colorTheme}
@@ -484,7 +525,7 @@ export function ListView<T>({
 					: undefined
 			}
 			columns={
-				inTableView && columnControlEnabled
+				columnsAffectView && columnControlEnabled
 					? {
 							items: columnItems,
 							onToggle: toggleColumn,
@@ -504,7 +545,7 @@ export function ListView<T>({
 		onOpenFilters: hasFilters ? () => openFilters(false) : undefined,
 		onOpenFilterSearch: hasFilters ? () => openFilters(true) : undefined,
 		onToggleView:
-			config.table && config.card
+			resolved.table && resolved.hasCards
 				? () => handleViewChange(viewType === 'table' ? 'cards' : 'table')
 				: undefined,
 		onRemoveLastFilter:
@@ -558,7 +599,7 @@ export function ListView<T>({
 						colorTheme={colorTheme}
 						actions={toolbarActions}
 						showSearch={showSearch}
-						showViewToggle={!!config.table && !!config.card}
+						showViewToggle={!!resolved.table && resolved.hasCards}
 						controls={tableControls}
 						customContent={toolbarContent}
 						onOpenFilters={hasFilters ? () => setFiltersOpen(true) : undefined}
@@ -569,11 +610,22 @@ export function ListView<T>({
 						viewShortcutHint='Shift + V'
 					/>
 
-					{activeFilters.length > 0 && (
-						<div className='mt-2 mb-3 flex items-center'>
+					{(pinnedDefs.length > 0 || activeFilters.length > 0) && (
+						<div className='mt-2 mb-3 flex flex-wrap items-center gap-2'>
+							<PinnedFilterChips
+								defs={pinnedDefs}
+								activeFilters={activeFilters}
+								onApply={applyFilter}
+								onRemove={removeFilter}
+								colorTheme={colorTheme}
+							/>
 							<ActiveFilterChips
 								sections={filterSections}
-								activeFilters={activeFilters}
+								// Pinned filters already render their own chip; listing them
+								// twice would offer two different ways to clear one filter.
+								activeFilters={activeFilters.filter(
+									a => !pinnedDefs.some(def => def.id === a.id)
+								)}
 								onRemove={removeFilter}
 								colorTheme={colorTheme}
 							/>
@@ -616,25 +668,25 @@ export function ListView<T>({
 								animation: lk-fade-in 0.25s ease-out;
 							}
 						`}</style>
-							{config.table && (
+							{resolved.table && (
 								<Table<T>
 									data={rows}
 									columns={resolvedColumns}
 									keyExtractor={getItemKey}
-									rowClassName={config.table.rowClassName}
+									rowClassName={resolved.table.rowClassName}
 									compact={tableCompact}
-									showHeader={config.table.showHeader}
+									showHeader={resolved.table.showHeader}
 									emptyMessage={config.emptyMessage}
 									emptyState={config.renderEmpty?.()}
-									displayMode={config.card ? tableMode : 'show'}
+									displayMode={resolved.hasCards ? tableMode : 'show'}
 									loading={isLoading}
 									colorTheme={colorTheme}
 									sort={sort}
 									onSort={handleSortChange}
 									skeletonRows={skeletonCount}
-									layout={config.table.layout}
-									stickyHeader={config.table.stickyHeader}
-									maxBodyHeight={config.table.maxBodyHeight}
+									layout={resolved.table.layout}
+									stickyHeader={resolved.table.stickyHeader}
+									maxBodyHeight={resolved.table.maxBodyHeight}
 									reorderable={reorderEnabled}
 									onReorderColumn={reorderColumnByKey}
 									resizable={resizeEnabled}
@@ -650,17 +702,17 @@ export function ListView<T>({
 								/>
 							)}
 
-							{config.card && (
+							{resolved.hasCards && (
 								<Cards<T>
 									data={rows}
-									renderCard={item => config.card!(item, cardCtx)}
+									renderCard={renderCard}
 									keyExtractor={getItemKey}
 									isLoading={isLoading}
 									emptyMessage={config.emptyMessage}
 									emptyState={config.renderEmpty?.()}
-									displayMode={config.table ? cardsMode : 'show'}
+									displayMode={resolved.table ? cardsMode : 'show'}
 									gridCols={config.gridCols}
-									bare={config.bareCard}
+									bare={resolved.cardSource === 'custom' && config.bareCard}
 									skeletonCount={skeletonCount}
 								/>
 							)}

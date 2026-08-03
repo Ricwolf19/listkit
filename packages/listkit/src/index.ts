@@ -3,6 +3,12 @@ export const VERSION = '1.0.0'
 export { ListView, type ListViewProps } from './components/ListView'
 export { defineListConfig } from './config/defineListConfig'
 export {
+	type CardSource,
+	type ResolvedListConfig,
+	type ResolvedTableConfig,
+	resolveListConfig,
+} from './config/resolveListConfig'
+export {
 	ListKitProvider,
 	type ListKitProviderProps,
 	useLabels,
@@ -12,6 +18,7 @@ export {
 } from './context/ListKitContext'
 
 // Sub-components for advanced composition
+export { AutoCard, type AutoCardProps } from './components/AutoCard'
 export { Card } from './components/Card'
 export { Cards } from './components/Cards'
 export { Checkbox, type CheckboxProps } from './components/Checkbox'
@@ -21,6 +28,10 @@ export {
 } from './components/DensityToggle'
 export { EmptyState } from './components/EmptyState'
 export { ExportButton, type ExportButtonProps } from './components/ExportButton'
+export {
+	PinnedFilterChips,
+	type PinnedFilterChipsProps,
+} from './components/filters/PinnedFilterChips'
 export { ListImage, type ListImageProps } from './components/ListImage'
 export { ListSkeleton } from './components/ListSkeleton'
 export { Pagination, type PaginationVariant } from './components/Pagination'
@@ -53,6 +64,7 @@ export { type ColumnPrefItem, useColumnPrefs } from './hooks/useColumnPrefs'
 export { useFilters } from './hooks/useFilters'
 export {
 	invalidateListCache,
+	listCacheKey,
 	resolveListId,
 	useListData,
 } from './hooks/useListData'
@@ -73,7 +85,11 @@ export {
 } from './types/columns'
 
 // Data layer (built-in adapters; more live in @pibytelabs/listkit/adapters)
-export { fetchAdapter } from './adapters/fetch'
+export {
+	encodeListQuery,
+	fetchAdapter,
+	fromLegacyEnvelope,
+} from './adapters/fetch'
 export { memoryAdapter } from './adapters/memory'
 export { serverActionAdapter } from './adapters/serverAction'
 export type {
