@@ -46,7 +46,11 @@ describe('buildAggregatePipelines', () => {
 			fields: {},
 			sortFields: { name: 'name' },
 		})
-		expect(allowed.dataPipeline).toContainEqual({ $sort: { name: -1 } })
+		// Sorting is preceded by a computed flag so missing values trail in both
+		// directions, the way the in-memory engine orders them.
+		expect(allowed.dataPipeline).toContainEqual({
+			$sort: { __lk_null: 1, name: -1 },
+		})
 
 		const notAllowed = buildAggregatePipelines({
 			query: q({ sort: { field: 'evil', dir: 'asc' } }),

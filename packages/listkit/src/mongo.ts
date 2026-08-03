@@ -13,10 +13,11 @@
  *
  * Matching semantics mirror the in-memory adapter so a list behaves the same
  * whether it is served from memory or from Mongo:
- * - `text` `partial` → case-insensitive `$regex`; `exact` → anchored
- *   case-insensitive `$regex`.
- * - `select` / `boolean` → equality (controlled option values).
- * - `multi-select` → `$in`.
+ * - `text` `partial` → case- and accent-insensitive `$regex`; `exact` → the same,
+ *   anchored.
+ * - `select` / `multi-select` → anchored accent-insensitive equality (`fold: false`
+ *   on the field spec restores exact equality for indexed enum fields).
+ * - `boolean` → `true` matches `true`; `false` also matches a missing field.
  * - `number-range` / `date-range` → `$gte` / `$lte` (a date-only `to` covers the
  *   whole day).
  *
@@ -36,12 +37,20 @@ import {
 } from './query'
 import type { ListQuery, SortState } from './types/data'
 import type { FilterDefinition, FilterSection } from './types/filters'
+import { warnDev } from './utils/devWarn'
 
 /** A single-key Mongo condition, e.g. `{ 'csf.status': { $in: [...] } }`. */
 type MongoCondition = Record<string, unknown>
 
 /** End-of-day offset in ms, matching the in-memory adapter's date-range rule. */
 const END_OF_DAY_MS = 86_399_999
+
+/**
+ * How a date field is stored: a BSON `Date` (the default) or a unix-ms `Number`.
+ * A range compared against the wrong representation matches nothing — Mongo does
+ * not coerce across BSON types.
+ */
+export type DateCodec = 'date' | 'unix-ms'
 
 /**
  * Conventional values for an existence filter (a `select` whose options model
@@ -61,18 +70,73 @@ export const EXISTENCE_WITHOUT = 'without'
 export const escapeRegex = (value: string): string =>
 	value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 
+/** Base letter → the accented forms a stored value might use. */
+const ACCENT_CLASSES: Record<string, string> = {
+	a: 'aáàäâã',
+	e: 'eéèëê',
+	i: 'iíìïî',
+	o: 'oóòöôõ',
+	u: 'uúùüû',
+	n: 'nñ',
+	c: 'cç',
+}
+
 /**
- * Build the Mongo expression for a `text` filter value.
+ * A regex source matching `value` regardless of accents: `'Jose'` and `'José'`
+ * both compile to `Jos[eéèëê]`, so neither spelling has to be typed exactly.
+ *
+ * This is the `$regex` counterpart of the in-memory `foldText`, so a filter
+ * matches the same rows whether the list is served from memory or from Mongo.
+ * Input is folded first (an accented search term matches unaccented data too)
+ * and every other character is escaped, so user input cannot inject a pattern.
+ *
+ * @remarks
+ * Assumes stored strings are in NFC (the normal case). Case-insensitivity comes
+ * from `$options: 'i'`, so the classes only list lowercase forms.
+ *
+ * @param value - Raw user input.
+ * @returns A regex source string.
+ */
+export const foldToRegex = (value: string): string => {
+	const folded = value.normalize('NFD').replace(/[̀-ͯ]/g, '')
+	let out = ''
+	for (const char of folded) {
+		const klass = ACCENT_CLASSES[char.toLowerCase()]
+		out += klass ? `[${klass}]` : escapeRegex(char)
+	}
+	return out
+}
+
+/**
+ * Build the Mongo expression for a `text` filter value. Matching is case- and
+ * accent-insensitive, mirroring the in-memory engine.
  *
  * @param text - The value from {@link getText}, or `null`.
  * @returns A `$regex` expression, or `null` when the value is empty.
  */
 export const textMatch = (text: TextValue | null): MongoCondition | null => {
 	if (!text) return null
-	const escaped = escapeRegex(text.value)
-	const pattern = text.match === 'exact' ? `^${escaped}$` : escaped
-	return { $regex: pattern, $options: 'i' }
+	const pattern = foldToRegex(text.value)
+	return {
+		$regex: text.match === 'exact' ? `^${pattern}$` : pattern,
+		$options: 'i',
+	}
 }
+
+/**
+ * Anchored, case- and accent-insensitive equality — what `select` and
+ * `multi-select` use so `'cancun'` matches a stored `'Cancún'`, as the in-memory
+ * engine does.
+ *
+ * @remarks
+ * A regex cannot use an equality index. For large collections with controlled
+ * option values (enums, slugs), set `fold: false` on the field spec to restore
+ * plain equality, or index the field with a strength-1 collation.
+ */
+export const foldedEquals = (value: string): MongoCondition => ({
+	$regex: `^${foldToRegex(value)}$`,
+	$options: 'i',
+})
 
 /**
  * Build the Mongo expression for a `number-range` filter value.
@@ -98,19 +162,24 @@ export const numberRangeMatch = (
  * @returns A `$gte`/`$lte` expression, or `null` when both bounds are unset/invalid.
  */
 export const dateRangeMatch = (
-	range: DateRangeValue
+	range: DateRangeValue,
+	options: { as?: DateCodec } = {}
 ): MongoCondition | null => {
+	const encode = (date: Date): Date | number =>
+		options.as === 'unix-ms' ? date.getTime() : date
+
 	const cond: MongoCondition = {}
 	if (range.from) {
 		const from = new Date(range.from)
-		if (!Number.isNaN(from.getTime())) cond.$gte = from
+		if (!Number.isNaN(from.getTime())) cond.$gte = encode(from)
 	}
 	if (range.to) {
 		const to = new Date(range.to)
 		if (!Number.isNaN(to.getTime())) {
 			// A bare `YYYY-MM-DD` is inclusive of the whole day.
-			cond.$lte =
+			cond.$lte = encode(
 				range.to.length <= 10 ? new Date(to.getTime() + END_OF_DAY_MS) : to
+			)
 		}
 	}
 	return Object.keys(cond).length ? cond : null
@@ -148,6 +217,19 @@ export type MongoFieldSpec =
 	| {
 			/** Trusted Mongo field path. */
 			path: string
+			/**
+			 * How dates are stored on this field. Set `'unix-ms'` for fields holding
+			 * `Date.now()` numbers — a range built as BSON `Date`s silently matches
+			 * nothing against them. @defaultValue 'date'
+			 */
+			as?: DateCodec
+			/**
+			 * Compare `select` / `multi-select` values accent- and case-insensitively
+			 * (the in-memory behavior). Set `false` for controlled values on an
+			 * indexed field, where exact equality is both correct and far faster.
+			 * @defaultValue true
+			 */
+			fold?: boolean
 			/**
 			 * Override the generated condition. Receives the raw applied value and
 			 * the trusted path; return a single-key condition, or `null` to skip.
@@ -272,33 +354,54 @@ export const mongoFieldMapFromFilters = <T = unknown>(
 	filters: FilterSection<T>[]
 ): MongoFieldMap => filterConfigToMongoFieldMaps(filters).main
 
+/** Per-field options a spec may carry; both have safe defaults. */
+type FieldOptions = { as?: DateCodec; fold?: boolean }
+
 const conditionFor = (
 	type: string,
-	value: unknown,
 	byId: Map<string, unknown>,
-	id: string
+	id: string,
+	options: FieldOptions = {}
 ): unknown | null => {
+	const fold = options.fold !== false
+
 	switch (type) {
 		case 'text':
 			return textMatch(getText(byId, id))
 		case 'select': {
 			const v = getString(byId, id)
-			return v == null ? null : v
+			if (v == null) return null
+			return fold ? foldedEquals(v) : v
 		}
 		case 'multi-select': {
 			const v = getStringArray(byId, id)
-			return v == null ? null : { $in: v }
+			if (v == null) return null
+			return {
+				$in: fold
+					? v.map(entry => new RegExp(`^${foldToRegex(entry)}$`, 'i'))
+					: v,
+			}
 		}
 		case 'boolean': {
 			const v = getBoolean(byId, id)
-			return v == null ? null : v
+			if (v == null) return null
+			// The in-memory engine reads a missing field as `false`, so a `false`
+			// filter has to match documents that never got the field written.
+			return v ? true : { $ne: true }
 		}
 		case 'number-range':
 			return numberRangeMatch(getNumberRange(byId, id))
 		case 'date-range':
-			return dateRangeMatch(getDateRange(byId, id))
+			return dateRangeMatch(getDateRange(byId, id), { as: options.as })
 		default:
-			return value == null || value === '' ? null : value
+			// Unknown types contribute nothing: the `type` comes off the wire, and
+			// passing its value through would let a crafted request place an operator
+			// under a whitelisted path.
+			warnDev(
+				`mongo-filter-type:${type}`,
+				`[listkit] ignoring filter "${id}": unknown type "${type}".`
+			)
+			return null
 	}
 }
 
@@ -371,6 +474,9 @@ export const buildMongoFilter = (
 	const conditions: MongoCondition[] = []
 
 	for (const filter of query.filters ?? []) {
+		// Own-property only: a filter id like `constructor` would otherwise resolve
+		// off `Object.prototype` and build a condition on an undefined path.
+		if (!Object.prototype.hasOwnProperty.call(fields, filter.id)) continue
 		const spec = fields[filter.id]
 		if (!spec) continue
 
@@ -383,10 +489,12 @@ export const buildMongoFilter = (
 
 		const path = typeof spec === 'string' ? spec : spec.path
 		const override = typeof spec === 'string' ? undefined : spec.build
+		const options: FieldOptions =
+			typeof spec === 'string' ? {} : { as: spec.as, fold: spec.fold }
 
 		const expr = override
 			? override(byId.get(filter.id), path)
-			: conditionFor(filter.type, byId.get(filter.id), byId, filter.id)
+			: conditionFor(filter.type, byId, filter.id, options)
 
 		if (expr != null) conditions.push({ [path]: expr })
 	}
@@ -415,12 +523,82 @@ export const buildMongoFilter = (
 export const buildMongoSort = (
 	sort: SortState | undefined,
 	allowed: Record<string, string>,
-	fallback: Record<string, 1 | -1> = {}
+	fallback: Record<string, 1 | -1> = {},
+	tiebreak?: Record<string, 1 | -1>
 ): Record<string, 1 | -1> => {
 	if (sort && Object.prototype.hasOwnProperty.call(allowed, sort.field)) {
-		return { [allowed[sort.field]!]: sort.dir === 'desc' ? -1 : 1 }
+		return {
+			[allowed[sort.field]!]: sort.dir === 'desc' ? -1 : 1,
+			// Without a unique tiebreak, documents that compare equal can come back
+			// in a different order per page and rows appear twice (or never).
+			...tiebreak,
+		}
 	}
 	return fallback
+}
+
+/**
+ * Aggregate stages that sort like the in-memory engine, which always puts
+ * missing values last regardless of direction — a plain `$sort` puts them first
+ * when ascending, so an ascending list would open on its empty rows.
+ *
+ * @param sort - `query.sort`, or undefined.
+ * @param allowed - Whitelist: sort field → trusted Mongo path.
+ * @param options - Options.
+ * @param options.fallback - Sort applied when none is active.
+ * @param options.tiebreak - Appended so ties paginate deterministically.
+ * @param options.nullsLast - Force missing values last. @defaultValue true
+ * @returns `$addFields` + `$sort` + `$unset` stages, ready to splice into a pipeline.
+ */
+export const buildMongoSortStages = (
+	sort: SortState | undefined,
+	allowed: Record<string, string>,
+	options: {
+		fallback?: Record<string, 1 | -1>
+		tiebreak?: Record<string, 1 | -1>
+		/** @defaultValue true */
+		nullsLast?: boolean
+	} = {}
+): Record<string, unknown>[] => {
+	const spec = buildMongoSort(sort, allowed, options.fallback, options.tiebreak)
+	const paths = Object.keys(spec)
+	if (paths.length === 0) return []
+
+	const primary = paths[0]!
+	if (options.nullsLast === false) return [{ $sort: spec }]
+
+	const flag = '__lk_null'
+	return [
+		{
+			$addFields: {
+				[flag]: { $eq: [{ $ifNull: [`$${primary}`, null] }, null] },
+			},
+		},
+		{ $sort: { [flag]: 1, ...spec } },
+		{ $unset: flag },
+	]
+}
+
+/**
+ * Free-text search as a case- and accent-insensitive `$or` over trusted fields.
+ *
+ * @remarks
+ * A non-anchored regex cannot use an index, so keep `fields` short and pair it
+ * with an indexed base filter (a tenant, an owner) on large collections; reach
+ * for Atlas Search / `$text` when that stops being enough.
+ *
+ * @param term - `query.search`.
+ * @param fields - Trusted field paths to search across.
+ * @returns An `$or` condition, or `null` when there is nothing to search.
+ */
+export const buildMongoSearch = (
+	term: string | undefined,
+	fields: string[]
+): MongoCondition | null => {
+	const trimmed = term?.trim()
+	if (!trimmed || fields.length === 0) return null
+	const expr = { $regex: foldToRegex(trimmed), $options: 'i' }
+	return { $or: fields.map(field => ({ [field]: expr })) }
 }
 
 /**
@@ -438,11 +616,153 @@ export const buildMongoSort = (
  */
 export const mongoPaginate = (
 	query: ListQuery,
-	maxPageSize = 100
-): { page: number; pageSize: number; skip: number; limit: number } => {
+	maxPageSize = 100,
+	maxExport?: number
+): {
+	page: number
+	pageSize: number
+	skip: number
+	limit: number
+	isExport: boolean
+} => {
 	const page = Math.max(1, query.page)
-	const pageSize = Math.min(Math.max(1, query.pageSize), maxPageSize)
-	return { page, pageSize, skip: (page - 1) * pageSize, limit: pageSize }
+	const requested = Math.max(1, query.pageSize)
+
+	// "Export all" asks for one oversized page. Honoring it (up to `maxExport`)
+	// instead of clamping is what lets an export return more than a page —
+	// without `maxExport` the request is clamped as usual.
+	if (maxExport != null && requested > maxPageSize) {
+		const limit = Math.min(requested, maxExport)
+		return { page: 1, pageSize: limit, skip: 0, limit, isExport: true }
+	}
+
+	const pageSize = Math.min(requested, maxPageSize)
+	return {
+		page,
+		pageSize,
+		skip: (page - 1) * pageSize,
+		limit: pageSize,
+		isExport: false,
+	}
+}
+
+/** Resolves the ids of a referenced collection matching `filter`, capped at `limit`. */
+export type FindReferenceIds = (
+	filter: MongoCondition,
+	limit: number
+) => Promise<unknown[]>
+
+/** A filterable reference: a field on the main document pointing at another collection. */
+export type ReferenceSpec = {
+	/** Field on the main document holding the reference id(s). */
+	path: string
+	/** Whitelist for the filters that target this reference. */
+	fields: MongoFieldMap
+	/** Runs the reference query. */
+	findIds: FindReferenceIds
+}
+
+/** A reference the free-text search should span. */
+export type ReferenceSearchSpec = {
+	/** Field on the main document holding the reference id(s). */
+	path: string
+	/** Trusted field paths to search on the reference. */
+	searchFields: string[]
+	/** Runs the reference query. */
+	findIds: FindReferenceIds
+}
+
+/** Ceiling on how many reference ids may be pulled into an `$in`. */
+const DEFAULT_MAX_REF_IDS = 10_000
+
+const referenceIdCondition = async (
+	path: string,
+	refFilter: MongoCondition,
+	findIds: FindReferenceIds,
+	maxIds: number
+): Promise<MongoCondition> => {
+	const ids = await findIds(refFilter, maxIds)
+	if (ids.length >= maxIds) {
+		warnDev(
+			`mongo-ref-cap:${path}`,
+			`[listkit] reference "${path}" hit the ${maxIds}-id cap; results may be ` +
+				`truncated. Narrow the filter or switch this list to an aggregate ` +
+				`pipeline with $lookup.`
+		)
+	}
+	// An empty `$in` matches nothing, which is right: the reference filter was
+	// applied and nothing satisfied it.
+	return { [path]: { $in: ids } }
+}
+
+/**
+ * Resolve filters that target a referenced collection into `$in` conditions on
+ * the main one.
+ *
+ * Kept out of {@link buildMongoFilter} so that stays pure and synchronous:
+ * resolving a reference needs a round trip, and the result composes with
+ * {@link combineFilters} like any other condition.
+ *
+ * @param query - The incoming list query.
+ * @param refs - The references to resolve.
+ * @param options - Options.
+ * @param options.maxIds - Cap on ids per reference. @defaultValue 10000
+ * @returns A condition, or `null` when no reference filter is active.
+ */
+export const resolveReferences = async (
+	query: ListQuery,
+	refs: ReferenceSpec[],
+	options: { maxIds?: number } = {}
+): Promise<MongoCondition | null> => {
+	const maxIds = options.maxIds ?? DEFAULT_MAX_REF_IDS
+	const conditions: MongoCondition[] = []
+
+	for (const ref of refs) {
+		const refFilter = buildMongoFilter(query, ref.fields)
+		if (Object.keys(refFilter).length === 0) continue
+		conditions.push(
+			await referenceIdCondition(ref.path, refFilter, ref.findIds, maxIds)
+		)
+	}
+
+	return conditions.length ? combineFilters(...conditions) : null
+}
+
+/**
+ * Free-text search spanning the main collection and any referenced ones (e.g.
+ * searching sales by their customer's name).
+ *
+ * @param term - `query.search`.
+ * @param fields - Trusted field paths on the main collection.
+ * @param refs - References to search as well.
+ * @param options - Options.
+ * @param options.maxIds - Cap on ids per reference. @defaultValue 10000
+ * @returns An `$or` spanning every source, or `null` when there is nothing to search.
+ */
+export const buildMongoSearchWithRefs = async (
+	term: string | undefined,
+	fields: string[],
+	refs: ReferenceSearchSpec[] = [],
+	options: { maxIds?: number } = {}
+): Promise<MongoCondition | null> => {
+	const trimmed = term?.trim()
+	if (!trimmed) return null
+
+	const maxIds = options.maxIds ?? DEFAULT_MAX_REF_IDS
+	const clauses: MongoCondition[] = []
+
+	const direct = buildMongoSearch(trimmed, fields)
+	if (direct) clauses.push(...(direct.$or as MongoCondition[]))
+
+	for (const ref of refs) {
+		const refSearch = buildMongoSearch(trimmed, ref.searchFields)
+		if (!refSearch) continue
+		clauses.push(
+			await referenceIdCondition(ref.path, refSearch, ref.findIds, maxIds)
+		)
+	}
+
+	return clauses.length ? { $or: clauses } : null
 }
 
 /**
@@ -452,9 +772,12 @@ export const mongoPaginate = (
  * @param query - The incoming list query.
  * @param config - Field whitelists and pagination bound.
  * @param config.fields - Whitelist for advanced filters. @see {@link MongoFieldMap}
+ * @param config.searchFields - Field paths the free-text search spans.
  * @param config.sort - Whitelist for sortable columns. @see {@link buildMongoSort}
  * @param config.fallbackSort - Sort applied when none is active.
+ * @param config.tiebreak - Appended so ties paginate deterministically.
  * @param config.maxPageSize - Upper bound for `pageSize`. @defaultValue 100
+ * @param config.maxExport - Row ceiling for an export-all request.
  * @returns `{ filter, sort, skip, limit }` — feed the first three to `find()`
  * and `filter` to `countDocuments()` for the total.
  *
@@ -476,24 +799,174 @@ export const buildMongoQuery = (
 	config: {
 		/** Whitelist for advanced filters. @see {@link MongoFieldMap} */
 		fields: MongoFieldMap
+		/** Trusted field paths the free-text search spans. @see {@link buildMongoSearch} */
+		searchFields?: string[]
 		/** Whitelist for sortable columns. @see {@link buildMongoSort} */
 		sort?: Record<string, string>
 		/** Sort applied when none is active. */
 		fallbackSort?: Record<string, 1 | -1>
+		/** Appended to a whitelisted sort so ties paginate deterministically. */
+		tiebreak?: Record<string, 1 | -1>
 		/** Upper bound for `pageSize`. @defaultValue 100 */
 		maxPageSize?: number
+		/** Row ceiling for an "export all" request (a `pageSize` beyond `maxPageSize`). */
+		maxExport?: number
 	}
 ): {
 	filter: MongoCondition
 	sort: Record<string, 1 | -1>
 	skip: number
 	limit: number
+	isExport: boolean
 } => {
-	const { skip, limit } = mongoPaginate(query, config.maxPageSize)
+	const { skip, limit, isExport } = mongoPaginate(
+		query,
+		config.maxPageSize,
+		config.maxExport
+	)
 	return {
-		filter: buildMongoFilter(query, config.fields),
-		sort: buildMongoSort(query.sort, config.sort ?? {}, config.fallbackSort),
+		filter: combineFilters(
+			buildMongoFilter(query, config.fields),
+			buildMongoSearch(query.search, config.searchFields ?? [])
+		),
+		sort: buildMongoSort(
+			query.sort,
+			config.sort ?? {},
+			config.fallbackSort,
+			config.tiebreak
+		),
 		skip,
 		limit,
+		isExport,
 	}
+}
+
+/**
+ * The slice of a MongoDB collection {@link executeMongoList} needs. Structural
+ * on purpose: the native driver's `Collection` satisfies it as-is, as does a
+ * Mongoose model's `.collection`, so this module never imports a driver.
+ *
+ * @typeParam T - The row type.
+ */
+export type MongoListCollection<T> = {
+	find(
+		filter: Record<string, unknown>,
+		options: {
+			sort?: Record<string, 1 | -1>
+			skip?: number
+			limit?: number
+			collation?: Record<string, unknown>
+		}
+	): { toArray(): Promise<T[]> }
+	countDocuments(filter: Record<string, unknown>): Promise<number>
+}
+
+/** Configuration for {@link executeMongoList}. */
+export type ExecuteMongoListConfig<T> = {
+	/** The collection to read. */
+	collection: MongoListCollection<T>
+	/** The incoming list query. */
+	query: ListQuery
+	/** Whitelist for advanced filters. */
+	fields: MongoFieldMap
+	/** Trusted field paths the free-text search spans. */
+	searchFields?: string[]
+	/** References the search should span. */
+	searchReferences?: ReferenceSearchSpec[]
+	/** References whose filters resolve to `$in` conditions. */
+	references?: ReferenceSpec[]
+	/** Whitelist for sortable columns. */
+	sort?: Record<string, string>
+	/** Sort applied when none is active. */
+	fallbackSort?: Record<string, 1 | -1>
+	/** Appended to a whitelisted sort so ties paginate deterministically. */
+	tiebreak?: Record<string, 1 | -1>
+	/** Always-applied condition (tenant, ownership, soft-delete). */
+	baseFilter?: Record<string, unknown>
+	/** Passed to `find`; use `{ locale, strength: 1 }` for indexed accent-insensitive sorting. */
+	collation?: Record<string, unknown>
+	/** Upper bound for `pageSize`. @defaultValue 100 */
+	maxPageSize?: number
+	/** Row ceiling for an "export all" request. @defaultValue 50000 */
+	maxExport?: number
+	/** Cap on ids pulled per reference. @defaultValue 10000 */
+	maxRefIds?: number
+}
+
+/**
+ * Runs a {@link ListQuery} against a collection and returns the `{ data, total }`
+ * a list adapter expects — filters, search, references, sort and pagination
+ * included.
+ *
+ * Driver-free: pass the native driver's collection or a Mongoose model's
+ * `.collection`.
+ *
+ * @typeParam T - The row type.
+ * @param config - Collection, query and whitelists.
+ *
+ * @example
+ * ```ts
+ * app.get('/api/companies', async (req, res) => {
+ *   const result = await executeMongoList({
+ *     collection: db.collection('companies'),
+ *     query: parseListkitQuery(req.query),
+ *     fields: { type: 'type', created: { path: 'createdAt', as: 'unix-ms' } },
+ *     searchFields: ['legalName', 'taxId'],
+ *     sort: { name: 'legalName' },
+ *     fallbackSort: { legalName: 1 },
+ *     tiebreak: { _id: 1 },
+ *     baseFilter: { organizationId: req.orgId },
+ *   })
+ *   res.json(result)
+ * })
+ * ```
+ */
+export const executeMongoList = async <T = unknown>(
+	config: ExecuteMongoListConfig<T>
+): Promise<{ data: T[]; total: number }> => {
+	const { query, collection } = config
+	const maxIds = config.maxRefIds ?? DEFAULT_MAX_REF_IDS
+
+	const [referenceFilter, searchFilter] = await Promise.all([
+		resolveReferences(query, config.references ?? [], { maxIds }),
+		buildMongoSearchWithRefs(
+			query.search,
+			config.searchFields ?? [],
+			config.searchReferences ?? [],
+			{ maxIds }
+		),
+	])
+
+	const filter = combineFilters(
+		buildMongoFilter(query, config.fields),
+		referenceFilter,
+		searchFilter,
+		config.baseFilter
+	)
+
+	const { skip, limit } = mongoPaginate(
+		query,
+		config.maxPageSize ?? 100,
+		config.maxExport ?? 50_000
+	)
+	const sort = buildMongoSort(
+		query.sort,
+		config.sort ?? {},
+		config.fallbackSort,
+		config.tiebreak
+	)
+
+	const [data, total] = await Promise.all([
+		collection
+			.find(filter, {
+				sort: Object.keys(sort).length ? sort : undefined,
+				skip,
+				limit,
+				collation: config.collation,
+			})
+			.toArray(),
+		collection.countDocuments(filter),
+	])
+
+	return { data, total }
 }

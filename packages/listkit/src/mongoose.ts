@@ -16,10 +16,16 @@ import type { Model, PipelineStage, PopulateOptions } from 'mongoose'
 
 import {
 	buildMongoFilter,
+	buildMongoSearch,
+	buildMongoSearchWithRefs,
 	buildMongoSort,
+	buildMongoSortStages,
 	combineFilters,
-	escapeRegex,
 	type MongoFieldMap,
+	mongoPaginate,
+	type ReferenceSearchSpec,
+	type ReferenceSpec,
+	resolveReferences,
 } from './mongo'
 import type { ListQuery } from './types/data'
 
@@ -75,12 +81,43 @@ export type ExecutePaginatedListkitQueryOptions = {
 	 * `maxPageSize`, which is served from the first row. @defaultValue 50000
 	 */
 	maxExport?: number
+	/** Cap on ids pulled per reference before the `$in`. @defaultValue 10000 */
+	maxRefIds?: number
+	/** Appended to a whitelisted sort so ties paginate deterministically. */
+	tiebreak?: Record<string, 1 | -1>
 }
 
-/** Case-insensitive regex condition for a search term (the term is escaped). */
-const rx = (term: string): MongoCondition => ({
-	$regex: escapeRegex(term),
-	$options: 'i',
+/**
+ * Mongoose-backed id lookup for a reference, capped.
+ *
+ * `.find().limit()` rather than `.distinct('_id')`: distinct ignores a limit, so
+ * a broad reference filter used to pull every id in the collection into one
+ * `$in`.
+ */
+const findRefIds =
+	(model: AnyModel) =>
+	async (filter: MongoCondition, limit: number): Promise<unknown[]> => {
+		const docs = await model
+			.find(filter)
+			.select('_id')
+			.limit(limit)
+			.lean<{ _id: unknown }[]>()
+			.exec()
+		return docs.map(doc => doc._id)
+	}
+
+/** Adapt a {@link ListReference} to the driver-free {@link ReferenceSpec}. */
+const toReferenceSpec = (ref: ListReference): ReferenceSpec => ({
+	path: ref.path,
+	fields: ref.fields,
+	findIds: findRefIds(ref.model),
+})
+
+/** Adapt a {@link ListSearchReference} to the driver-free {@link ReferenceSearchSpec}. */
+const toSearchSpec = (ref: ListSearchReference): ReferenceSearchSpec => ({
+	path: ref.path,
+	searchFields: ref.fields,
+	findIds: findRefIds(ref.model),
 })
 
 /**
@@ -130,45 +167,31 @@ export async function executePaginatedListkitQuery<T = unknown>(
 		baseFilter,
 		maxPageSize = 100,
 		maxExport = 50_000,
+		maxRefIds,
+		tiebreak,
 	} = options
 
-	const conditions: Array<MongoCondition | null | undefined> = [
+	const [referenceFilter, searchFilter] = await Promise.all([
+		resolveReferences(query, references.map(toReferenceSpec), {
+			maxIds: maxRefIds,
+		}),
+		buildMongoSearchWithRefs(
+			query.search,
+			searchFields,
+			searchReferences.map(toSearchSpec),
+			{ maxIds: maxRefIds }
+		),
+	])
+
+	const filter = combineFilters(
 		buildMongoFilter(query, fields),
-	]
+		referenceFilter,
+		searchFilter,
+		baseFilter
+	)
+	const sort = buildMongoSort(query.sort, sortFields, fallbackSort, tiebreak)
 
-	// Free-text search across main fields and (by matching id) reference fields.
-	const term = query.search?.trim()
-	if (term) {
-		const or: MongoCondition[] = searchFields.map(f => ({ [f]: rx(term) }))
-		for (const ref of searchReferences) {
-			if (ref.fields.length === 0) continue
-			const ids = await ref.model
-				.find({ $or: ref.fields.map(f => ({ [f]: rx(term) })) })
-				.distinct('_id')
-			if (ids.length > 0) or.push({ [ref.path]: { $in: ids } })
-		}
-		if (or.length > 0) conditions.push({ $or: or })
-	}
-
-	// Each active reference filter → matching ids → `$in` on the main collection.
-	for (const ref of references) {
-		const refMatch = buildMongoFilter(query, ref.fields)
-		if (Object.keys(refMatch).length === 0) continue
-		const ids = await ref.model.find(refMatch).distinct('_id')
-		conditions.push({ [ref.path]: { $in: ids } })
-	}
-
-	if (baseFilter) conditions.push(baseFilter)
-
-	const filter = combineFilters(...conditions)
-	const sort = buildMongoSort(query.sort, sortFields, fallbackSort)
-
-	// A pageSize over the page cap means "export all", served from the first row.
-	const isExport = query.pageSize > maxPageSize
-	const limit = isExport
-		? Math.min(query.pageSize, maxExport)
-		: Math.min(Math.max(1, query.pageSize), maxPageSize)
-	const skip = isExport ? 0 : (Math.max(1, query.page) - 1) * limit
+	const { skip, limit } = mongoPaginate(query, maxPageSize, maxExport)
 
 	let pageQuery = model.find(filter).sort(sort).skip(skip).limit(limit)
 	if (populate) pageQuery = pageQuery.populate(populate as any)
@@ -179,16 +202,6 @@ export async function executePaginatedListkitQuery<T = unknown>(
 	])
 
 	return { data: data as T[], total }
-}
-
-/** Free-text `$or` over the shaped row's `searchFields` (term regex-escaped). */
-const searchOr = (
-	term: string | undefined,
-	searchFields: string[]
-): MongoCondition | null => {
-	const t = term?.trim()
-	if (!t || searchFields.length === 0) return null
-	return { $or: searchFields.map(f => ({ [f]: rx(t) })) }
 }
 
 /** Options for {@link executeAggregateListkitQuery} / {@link buildAggregatePipelines}. */
@@ -227,6 +240,8 @@ export type ExecuteAggregateListkitQueryOptions = {
 	maxPageSize?: number
 	/** Upper bound for an export-all request (`pageSize` over `maxPageSize`). @defaultValue 50000 */
 	maxExport?: number
+	/** Appended to a whitelisted sort so ties paginate deterministically. */
+	tiebreak?: Record<string, 1 | -1>
 }
 
 /**
@@ -260,6 +275,7 @@ export function buildAggregatePipelines(
 		facets = {},
 		maxPageSize = 100,
 		maxExport = 50_000,
+		tiebreak,
 	} = options
 
 	const pre: PipelineStage[] = []
@@ -271,20 +287,20 @@ export function buildAggregatePipelines(
 	// Advanced filters + free-text search, both on the SHAPED row fields.
 	const filterMatch = combineFilters(
 		buildMongoFilter(query, fields),
-		searchOr(query.search, searchFields)
+		buildMongoSearch(query.search, searchFields)
 	)
 	const post: PipelineStage[] = []
 	if (Object.keys(filterMatch).length > 0) post.push({ $match: filterMatch })
 
-	const sort = buildMongoSort(query.sort, sortFields, fallbackSort)
-	const isExport = query.pageSize > maxPageSize
-	const limit = isExport
-		? Math.min(query.pageSize, maxExport)
-		: Math.min(Math.max(1, query.pageSize), maxPageSize)
-	const skip = isExport ? 0 : (Math.max(1, query.page) - 1) * limit
+	// The aggregate path can express nulls-last, so it matches the in-memory
+	// engine exactly (a plain $sort puts missing values first when ascending).
+	const sortStages = buildMongoSortStages(query.sort, sortFields, {
+		fallback: fallbackSort,
+		tiebreak,
+	}) as unknown as PipelineStage[]
+	const { skip, limit } = mongoPaginate(query, maxPageSize, maxExport)
 
-	const dataPipeline: PipelineStage[] = [...pre, ...post]
-	if (Object.keys(sort).length > 0) dataPipeline.push({ $sort: sort })
+	const dataPipeline: PipelineStage[] = [...pre, ...post, ...sortStages]
 	dataPipeline.push({ $skip: skip }, { $limit: limit })
 
 	const countPipeline: PipelineStage[] = [...pre, ...post, { $count: 'total' }]
@@ -315,7 +331,7 @@ export function buildAggregatePipelines(
  *   query: parseListkitQuery(req.query),
  *   baseFilter: { projectId },
  *   pipeline: [{ $unwind: '$items' }, { $addFields: { description: '$items.description' } }],
- *   fields: { description: { path: 'description', type: 'text' } },
+ *   fields: { description: 'description' },
  *   searchFields: ['description'],
  *   sortFields: { description: 'description' },
  *   facets: { description: distinctValuesFacet('description') },
