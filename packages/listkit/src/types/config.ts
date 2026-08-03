@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 import type { ColorTheme } from '../theme/colorTheme'
-import type { ListQuery } from './data'
+import type { ListQuery, SortState } from './data'
 import type { FilterSection } from './filters'
 import type { ListLabels } from './labels'
 import type { Density, ViewType } from './list'
@@ -116,26 +116,32 @@ export type TableConfig<T> = {
 	/** Per-row class names, e.g. to highlight a status. */
 	rowClassName?: (item: T, index: number) => string
 	/**
-	 * Show a column manager next to the view toggle so users can hide/show and
-	 * reorder columns. Choices persist via `<ListView columnStorage>` (localStorage
-	 * by default).
+	 * Show a column manager in the options menu so users can hide/show and reorder
+	 * columns. Choices persist via `<ListView columnStorage>` (localStorage by
+	 * default). Set `false` to lock the columns. @defaultValue true
 	 */
 	columnControl?: boolean
 	/**
 	 * Let users drag column headers directly to reorder them. Persisted alongside
-	 * the column manager's choices. @defaultValue false
+	 * the column manager's choices. @defaultValue true
 	 */
 	reorderable?: boolean
 	/**
 	 * Let users drag a column's right edge to resize it. Widths persist per
-	 * column. @defaultValue false
+	 * column. @defaultValue true
 	 */
 	resizable?: boolean
 	/**
-	 * Show a density toggle (comfortable ↔ compact rows) in the toolbar. The
-	 * choice persists. @defaultValue false
+	 * Show a density toggle (comfortable ↔ compact rows) in the options menu. The
+	 * choice persists. @defaultValue true
 	 */
 	density?: boolean
+	/**
+	 * Render the options menu (density · columns · export). Set `false` to drop it
+	 * from the toolbar entirely, whatever the individual features allow.
+	 * @defaultValue true
+	 */
+	optionsMenu?: boolean
 	/**
 	 * Initial row density before the user picks one.
 	 * @defaultValue `'compact'` when `compact` is set, otherwise `'comfortable'`
@@ -363,17 +369,32 @@ export type ListConfig<T> = {
 	search?: SearchConfig<T> | boolean
 	/** Custom client-side sort for in-memory `data`. Ignored by async adapters (use `query.sort`). */
 	sort?: (data: T[]) => T[]
+	/**
+	 * Sort applied when the URL carries none — the list's natural order, reflected
+	 * in the header arrow so the user can see and cycle it. An explicit sort in the
+	 * URL always wins, and clearing the sort is not re-applied until the next load.
+	 * `field` matches a column's {@link ColumnDef.sortField} (or its `key`).
+	 */
+	defaultSort?: SortState
 	/** Advanced filters. Renders a filter button + sidebar; values sync to the URL. */
 	filters?: FilterSection<T>[]
 	/** Title shown in the filter sidebar header. */
 	filtersTitle?: string
 	/** Stable React key for each row. @defaultValue the array index */
 	getItemKey?: (item: T, index: number) => string | number
-	/** Card renderer for the cards view. Receives the row and a {@link CardContext}. */
-	card?: (item: T, ctx: CardContext<T>) => ReactNode
+	/**
+	 * Card renderer for the cards view. Receives the row and a {@link CardContext}.
+	 *
+	 * Omit it and a table config builds its own cards from the columns (stacked
+	 * label/value pairs honoring the user's column choices), so one config serves
+	 * both views and narrow viewports have something to switch to. Pass `false` to
+	 * opt out and stay table-only.
+	 */
+	card?: ((item: T, ctx: CardContext<T>) => ReactNode) | false
 	/**
 	 * Render `card` output directly, without listkit's default `<Card>` chrome
 	 * (border/padding/shadow). Use it to drop in a fully custom card component.
+	 * Ignored by auto-generated cards, which own their own layout.
 	 */
 	bareCard?: boolean
 	/** Table-view configuration. */

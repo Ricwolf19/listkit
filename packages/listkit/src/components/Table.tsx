@@ -6,6 +6,7 @@ import { type ColorTheme } from '../theme/colorTheme'
 import type { ColumnDef } from '../types/config'
 import type { SortState } from '../types/data'
 import type { DisplayMode } from '../types/list'
+import { cellValue } from '../utils/cellValue'
 import { cn } from '../utils/cn'
 import { displayVisibility } from '../utils/displayMode'
 import { Checkbox } from './Checkbox'
@@ -65,17 +66,6 @@ type TableProps<T> = {
 	pageSomeSelected?: boolean
 	/** Select or clear every row on the page. */
 	onTogglePage?: (selected: boolean) => void
-}
-
-function valueToString(
-	value: unknown,
-	bool: { yes: string; no: string }
-): ReactNode {
-	if (value === null || value === undefined) return ''
-	if (typeof value === 'boolean') return value ? bool.yes : bool.no
-	if (typeof value === 'number') return value.toString()
-	if (typeof value === 'string') return value
-	return ''
 }
 
 const alignClass = (align?: 'left' | 'center' | 'right') =>
@@ -436,12 +426,7 @@ export function Table<T>({
 									</td>
 								)}
 								{visibleColumns.map(col => {
-									const content = col.render
-										? col.render(item, i)
-										: valueToString(
-												(item as Record<string, unknown>)[col.key],
-												labels
-											)
+									const content = cellValue(item, col, i, labels)
 									// A grow column shows its value in full (never clipped).
 									const clip = col.truncate && !col.grow
 									const title = col.tooltip

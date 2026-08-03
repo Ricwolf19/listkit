@@ -9,7 +9,6 @@
 			"react-dom",
 			"react/jsx-runtime",
 			"lucide-react",
-			"zod",
 			"react-datepicker"
 		]
 	},
@@ -24,14 +23,13 @@
 		"name": "/next — NextListView (ESM, bundles ListView)",
 		"path": "dist/next.js",
 		"import": "{ NextListView }",
-		"limit": "28 KB",
+		"limit": "29 KB",
 		"ignore": [
 			"react",
 			"react-dom",
 			"react/jsx-runtime",
 			"next",
 			"lucide-react",
-			"zod",
 			"react-datepicker"
 		]
 	},

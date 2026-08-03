@@ -1,44 +1,51 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState, useSyncExternalStore } from 'react'
 
 import type { ViewType } from '../types/list'
 
 // Below this width (tablets and phones) cards are the default, since tables
 // don't fit comfortably on narrow screens.
 const TABLE_MIN_WIDTH = 1024
+const DESKTOP_QUERY = `(min-width: ${TABLE_MIN_WIDTH}px)`
+
+const subscribe = (onChange: () => void) => {
+	const mql = window.matchMedia(DESKTOP_QUERY)
+	mql.addEventListener('change', onChange)
+	return () => mql.removeEventListener('change', onChange)
+}
+
+const isDesktopNow = () => window.matchMedia(DESKTOP_QUERY).matches
 
 /**
- * Resolves the active view from the viewport width: cards on tablet/phone, table
- * on desktop. A manual toggle holds while you stay within the same size band and
- * is dropped when the breakpoint is crossed — nothing is persisted, so the view
- * always follows the device on the next load.
+ * Resolves the active view from the viewport: cards on tablet/phone, the
+ * configured `defaultView` on desktop. A manual toggle holds while you stay in
+ * the same size band and is dropped when the breakpoint is crossed, so a window
+ * narrowed to phone width always lands on cards. Nothing is persisted — the
+ * view follows the device on the next load.
  *
- * Starts as 'table' on the server and the first client render to stay
- * hydration-safe, then syncs to the real viewport after mount. On desktop the
- * default follows `defaultView` (when both views are configured).
+ * Reads `matchMedia` rather than a resize listener: it fires only on the two
+ * crossings that matter instead of on every pixel. The server snapshot assumes
+ * desktop, so SSR markup shows `defaultView` and a mobile client corrects itself
+ * on hydration.
+ *
+ * @param defaultView - Desktop view when both views exist. @defaultValue 'table'
  */
 export function useViewType(defaultView: ViewType = 'table') {
-	const [viewType, setViewType] = useState<ViewType>('table')
-	const wasMobile = useRef<boolean | null>(null)
+	const isDesktop = useSyncExternalStore(subscribe, isDesktopNow, () => true)
 
-	const handleViewChange = (next: ViewType) => setViewType(next)
+	// null = following the viewport. A band crossing clears it during render, so
+	// the very first paint after the crossing is already correct.
+	const [manual, setManual] = useState<ViewType | null>(null)
+	const prevBand = useRef(isDesktop)
+	if (prevBand.current !== isDesktop) {
+		prevBand.current = isDesktop
+		setManual(null)
+	}
 
-	useEffect(() => {
-		const sync = (force: boolean) => {
-			const isMobile = window.innerWidth < TABLE_MIN_WIDTH
-			// Only override the current view when first mounting or when the
-			// breakpoint is actually crossed, so a manual toggle survives plain resizes.
-			if (force || isMobile !== wasMobile.current) {
-				wasMobile.current = isMobile
-				setViewType(isMobile ? 'cards' : defaultView)
-			}
-		}
-		sync(true)
-		const handleResize = () => sync(false)
-		window.addEventListener('resize', handleResize)
-		return () => window.removeEventListener('resize', handleResize)
-		// defaultView is read on mount/resize; changing it later is not expected.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [])
+	const viewType: ViewType = manual ?? (isDesktop ? defaultView : 'cards')
+
+	// Wrapped rather than handing out `setManual`: a bare setter also accepts an
+	// updater function, which is not part of this hook's contract.
+	const handleViewChange = useCallback((next: ViewType) => setManual(next), [])
 
 	return { viewType, handleViewChange }
 }
