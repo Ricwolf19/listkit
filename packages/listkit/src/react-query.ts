@@ -41,12 +41,30 @@ export const LISTKIT_QUERY_KEY = 'listkit'
  * @param query - The active {@link ListQuery}.
  * @param refreshToken - Bumped by `useListRefresh()`; part of the key so an
  * in-tree refresh refetches.
+ * @param adapterKey - {@link DataAdapter.key}, so two sources under one list id
+ * keep separate entries. Sits after `listId` to leave id-prefix targeting intact.
  */
 export const listQueryKey = (
 	listId: string | undefined,
 	query: ListQuery,
-	refreshToken?: number
-) => [LISTKIT_QUERY_KEY, listId ?? '', query, refreshToken] as const
+	refreshToken?: number,
+	adapterKey?: unknown
+) =>
+	[
+		LISTKIT_QUERY_KEY,
+		listId ?? '',
+		adapterKey ?? null,
+		query,
+		refreshToken,
+	] as const
+
+/**
+ * Whether a key's list-id segment belongs to `listId`, matching both the plain
+ * id and any `` `${id}::${cacheScope}` `` variant of it.
+ */
+export const matchesListId = (keyId: unknown, listId: string): boolean =>
+	typeof keyId === 'string' &&
+	(keyId === listId || keyId.startsWith(`${listId}::`))
 
 /**
  * A listkit `useListData` hook backed by TanStack Query: list pages live in the
@@ -77,7 +95,7 @@ export function useReactQueryListData<T>(
 			: undefined
 
 	const { data, isLoading, error } = useQuery<ListResult<T>, Error>({
-		queryKey: listQueryKey(listId, query, refreshToken),
+		queryKey: listQueryKey(listId, query, refreshToken, adapter.key),
 		queryFn: ({ signal }) => adapter.fetch(query, signal),
 		staleTime,
 		initialData: seedData,
@@ -100,6 +118,11 @@ export function useReactQueryListData<T>(
  * @param queryClient - The app's TanStack Query client.
  * @param listId - A `config.id` to refetch one list; omit to refetch every list.
  *
+ * @remarks
+ * Matches every `cacheScope` of the id too (`'users'` also refetches
+ * `'users::42'`), mirroring `invalidateListCache` — a mutation knows the list it
+ * touched, not which scoped views happen to be mounted.
+ *
  * @example
  * ```ts
  * await deleteUser(id)
@@ -107,7 +130,12 @@ export function useReactQueryListData<T>(
  * ```
  */
 export const invalidateList = (queryClient: QueryClient, listId?: string) =>
-	queryClient.invalidateQueries({
-		queryKey:
-			listId == null ? [LISTKIT_QUERY_KEY] : [LISTKIT_QUERY_KEY, listId],
-	})
+	queryClient.invalidateQueries(
+		listId == null || listId === ''
+			? { queryKey: [LISTKIT_QUERY_KEY] }
+			: {
+					predicate: q =>
+						q.queryKey[0] === LISTKIT_QUERY_KEY &&
+						matchesListId(q.queryKey[1], listId),
+				}
+	)

@@ -102,6 +102,28 @@ export function resolveListId(id: string, cacheScope?: string): string {
 }
 
 /**
+ * Cache key for one list page: the list id, the adapter's identity and the
+ * serialized query.
+ *
+ * The `${listId}::` prefix is preserved so {@link invalidateListCache} still
+ * clears every adapter and scope of a list in one call.
+ *
+ * @param listId - Resolved list id (see {@link resolveListId}).
+ * @param adapterKey - {@link DataAdapter.key}, or `undefined` when the adapter
+ *   declares none (then it contributes an empty segment).
+ * @param serializedQuery - `JSON.stringify(query)`.
+ */
+export function listCacheKey(
+	listId: string,
+	adapterKey: unknown,
+	serializedQuery: string
+): string {
+	const source =
+		adapterKey === undefined ? '' : (JSON.stringify(adapterKey) ?? '')
+	return `${listId}::${source}::${serializedQuery}`
+}
+
+/**
  * Dev-only collision detector. Records that `listId` has been mounted on `route`
  * and returns a warning when the same id now spans more than one route — the
  * fingerprint of a cache-scope collision (adapter-captured scope that the id +
@@ -169,7 +191,7 @@ export function useListData<T>(
 	// don't serve each other's rows). `refreshToken` is intentionally absent:
 	// `refresh()` invalidates the entries instead of namespacing them, so a
 	// remount can't read a pre-refresh entry.
-	const cacheKey = `${listId}::${queryKey}`
+	const cacheKey = listCacheKey(listId, adapter.key, queryKey)
 	const seedMatches = !!seed && JSON.stringify(seed.query) === queryKey
 	// Guards the once-per-mount, authoritative seed overwrite below.
 	const seededRef = useRef(false)
@@ -284,7 +306,7 @@ export function useListData<T>(
 		if (query.page * query.pageSize >= state.total) return // already last page
 
 		const nextQuery = { ...query, page: query.page + 1 }
-		const nextKey = `${listId}::${JSON.stringify(nextQuery)}`
+		const nextKey = listCacheKey(listId, adapter.key, JSON.stringify(nextQuery))
 		if (readCache<T>(nextKey)?.data) return
 
 		let cancelled = false

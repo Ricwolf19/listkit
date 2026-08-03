@@ -35,6 +35,8 @@ type UseListStateOptions<T> = {
 	listId?: string
 	/** Preferred desktop view when both views are configured. @defaultValue 'table' */
 	defaultView?: ViewType
+	/** Sort applied while the URL carries none. */
+	defaultSort?: SortState
 }
 
 /**
@@ -57,6 +59,7 @@ export function useListState<T>({
 	initialQuery,
 	listId,
 	defaultView,
+	defaultSort,
 }: UseListStateOptions<T>) {
 	const { get, set } = params
 	const { viewType, handleViewChange } = useViewType(defaultView)
@@ -86,8 +89,24 @@ export function useListState<T>({
 	// Serialized so a new array identity each render doesn't refetch needlessly.
 	const filtersKey = filters ? JSON.stringify(filters) : ''
 
+	// `defaultSort` applies on a pristine list and is overlaid on the first render
+	// so the initial fetch already carries it, then written to the URL on mount —
+	// from there the header cycle, back/forward and link sharing all work through
+	// the normal param path. Clearing the sort is not re-seeded (the ref), and an
+	// explicit URL sort always wins.
 	const sortRaw = get(SORT_PARAM)
-	const sort = useMemo(() => decodeSort(sortRaw ?? null), [sortRaw])
+	const defaultSortSeeded = useRef(false)
+	const urlSort = useMemo(() => decodeSort(sortRaw ?? null), [sortRaw])
+	const sort = urlSort ?? (defaultSortSeeded.current ? undefined : defaultSort)
+
+	useEffect(() => {
+		if (defaultSortSeeded.current) return
+		defaultSortSeeded.current = true
+		if (sortRaw != null || !defaultSort) return
+		params.setMany({ [SORT_PARAM]: encodeSort(defaultSort) })
+		// Mount-only: the default seeds the initial view; later edits/clears win.
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [])
 
 	const query = useMemo<ListQuery>(
 		() => ({
@@ -97,9 +116,9 @@ export function useListState<T>({
 			filters: filters && filters.length > 0 ? filters : undefined,
 			sort,
 		}),
-		// filtersKey stands in for `filters` contents.
+		// filtersKey stands in for `filters` contents; `sort` covers the seeded default.
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-		[currentPage, pageSize, currentSearch, filtersKey, sortRaw]
+		[currentPage, pageSize, currentSearch, filtersKey, sort]
 	)
 
 	const handleSortChange = useCallback(

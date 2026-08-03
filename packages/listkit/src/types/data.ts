@@ -58,6 +58,17 @@ export type ListResult<T> = {
 export type DataAdapter<T> = {
 	/** Resolve one page for `query`; honor `signal` to abort superseded requests. */
 	fetch(query: ListQuery, signal?: AbortSignal): Promise<ListResult<T>>
+	/**
+	 * Identity of the data source, folded into the cache key alongside the list id
+	 * and the query.
+	 *
+	 * Set it whenever the adapter decides what it returns from something the query
+	 * can't see — a URL, a tenant, a toggle carried in fixed params. Without it two
+	 * adapters under the same list id share cache entries and a switch serves the
+	 * previous source's rows until a background refetch lands. Must be JSON
+	 * serializable; `fetchAdapter` fills it with its URL.
+	 */
+	key?: unknown
 }
 
 /**

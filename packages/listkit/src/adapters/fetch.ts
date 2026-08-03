@@ -16,7 +16,18 @@ export type FetchAdapterConfig<T> = {
 	init?: RequestInit | ((query: ListQuery) => RequestInit)
 }
 
-function defaultQuery(query: ListQuery): Record<string, string> {
+/**
+ * The canonical wire encoding of a {@link ListQuery} — the exact inverse of
+ * `parseListkitQuery` from `@pibytelabs/listkit/query`.
+ *
+ * Exported so a custom adapter (or a hand-rolled request) speaks the same
+ * protocol the server parser expects, instead of re-deriving param names that
+ * then drift.
+ *
+ * @param query - The active query.
+ * @returns Flat string params, ready for `URLSearchParams`.
+ */
+export function encodeListQuery(query: ListQuery): Record<string, string> {
 	const params: Record<string, string> = {
 		page: String(query.page),
 		pageSize: String(query.pageSize),
@@ -31,6 +42,30 @@ function defaultQuery(query: ListQuery): Record<string, string> {
 		params.filters = JSON.stringify(query.filters)
 	}
 	return params
+}
+
+/**
+ * Reads a `{ results, pagination: { total } }` body — the envelope many REST
+ * backends already return — as a {@link ListResult}. Pass it as
+ * `transformResponse` while a server is migrating to the canonical shape.
+ *
+ * @throws {Error} When the body has neither shape, so a silent empty list can't be
+ * mistaken for "no rows".
+ */
+export function fromLegacyEnvelope<T>(json: unknown): ListResult<T> {
+	const body = json as {
+		results?: T[]
+		pagination?: { total?: number }
+	}
+	if (!Array.isArray(body?.results)) {
+		throw new Error(
+			'fromLegacyEnvelope: expected a { results, pagination: { total } } body'
+		)
+	}
+	return {
+		data: body.results,
+		total: body.pagination?.total ?? body.results.length,
+	}
 }
 
 /**
@@ -51,10 +86,13 @@ function defaultQuery(query: ListQuery): Record<string, string> {
  */
 export function fetchAdapter<T>(config: FetchAdapterConfig<T>): DataAdapter<T> {
 	return {
+		// The endpoint is what this adapter's rows depend on, so it namespaces the
+		// cache: two lists sharing an id but pointing at different URLs stay apart.
+		key: config.url,
 		async fetch(query, signal) {
 			const params = config.transformQuery
 				? config.transformQuery(query)
-				: defaultQuery(query)
+				: encodeListQuery(query)
 			const qs = new URLSearchParams(params).toString()
 			const url = qs ? `${config.url}?${qs}` : config.url
 			const init =

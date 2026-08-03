@@ -4,7 +4,12 @@ export {
 	type DexieCollectionLike,
 	type DexieTableLike,
 } from './adapters/dexie'
-export { fetchAdapter, type FetchAdapterConfig } from './adapters/fetch'
+export {
+	encodeListQuery,
+	fetchAdapter,
+	type FetchAdapterConfig,
+	fromLegacyEnvelope,
+} from './adapters/fetch'
 export {
 	memoryAdapter,
 	type MemoryAdapterOptions,
