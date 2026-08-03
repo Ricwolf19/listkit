@@ -22,6 +22,9 @@ export const productsConfig = defineListConfig<Product>({
 	colorTheme: brandTheme,
 	// 2.7+: explicit desktop default view ('cards' or 'table').
 	defaultView: 'table',
+	// 3.0: the sort the list opens on — reflected in the header arrow, and the
+	// user can cycle or clear it from there.
+	defaultSort: { field: 'name', dir: 'asc' },
 	searchPlaceholder: 'Buscar por nombre, SKU o categoría…',
 	emptyMessage: 'No se encontraron productos',
 	// `renderEmpty` (2.15+): custom interactive empty state instead of the plain
@@ -175,6 +178,8 @@ export const productsConfig = defineListConfig<Product>({
 					falseLabel: 'Agotado',
 					// 2.6: pre-applied on a pristine list (shows a default chip).
 					defaultValue: true,
+					// 3.0: also surfaced as a one-click chip in the toolbar.
+					pinned: true,
 					columns: 2,
 				},
 			],
@@ -193,6 +198,8 @@ export const productsConfig = defineListConfig<Product>({
 					type: 'boolean',
 					trueLabel: 'Solo destacados',
 					falseLabel: 'No destacados',
+					// 3.0: pinned without a defaultValue — the chip applies `true`.
+					pinned: true,
 				},
 			],
 		},
@@ -235,13 +242,9 @@ export const productsConfig = defineListConfig<Product>({
 	},
 
 	table: {
-		// 2.8: column manager (hide/show + reorder, persisted to localStorage).
-		columnControl: true,
-		// 2.11: drag headers to reorder, drag edges to resize, density toggle —
-		// all persisted to localStorage and folded into one toolbar options menu.
-		reorderable: true,
-		resizable: true,
-		density: true,
+		// 3.0: the column manager, header reordering, edge resizing and the density
+		// toggle are all on by default for any table — no flags needed. Switch one
+		// off with `columnControl: false` (etc.) if a list should not offer it.
 		// Header sticks to the top of the viewport as the page scrolls.
 		stickyHeader: false,
 		columns: [
