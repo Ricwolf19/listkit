@@ -437,18 +437,20 @@ import Image from 'next/image'
 
 ### Table UX: sticky header, density, reorder, resize
 
-All opt-in via `table.*`, and all persisted to localStorage alongside the column manager:
+**These are on by default.** Any config with a `table` gets the column manager, the density toggle, header drag-to-reorder, edge resizing and the options menu — no flags — and every choice persists to localStorage. Write `false` to take one away:
 
 ```tsx
 table: {
-  columnControl: true,  // hide/show + reorder via the options menu
-  reorderable: true,    // drag the header cells to reorder
-  resizable: true,      // drag a column's edge to resize
-  density: true,        // comfortable/compact toggle
+  columns,
+  // Everything below is optional; the defaults are already `true`.
+  columnControl: false,   // lock the columns (no hide/show/reorder panel)
+  reorderable: false,     // no header drag-to-reorder
+  resizable: false,       // no edge resizing
+  density: false,         // no comfortable/compact toggle
+  optionsMenu: false,     // drop the options menu entirely
   defaultDensity: 'comfortable',
   stickyHeader: true,     // header stays visible while the table scrolls
   maxBodyHeight: '70vh',  // scroll-area height for the sticky header (default '70vh')
-  columns,
 }
 ```
 
@@ -483,6 +485,46 @@ table: {
 - `width` is a hint in `auto` layout and authoritative in `fixed`; it's just the **initial** size and never blocks resizing. `minWidth`/`maxWidth` (px) are **optional** caps for the cell and the resize handle (default floor 48px, no ceiling) — note `maxWidth` also caps how far the handle drags, so omit it for unbounded resize.
 
 > **Toolbar stays tidy.** Density, columns, and export don't each add a button — `<ListView>` folds them into a single **options** menu (⚙), leaving only the essentials (view toggle, result count) inline. It's responsive (available on mobile too), and in cards view it shows export only. The standalone `DensityToggle`, `ColumnManager`, `ExportButton`, and `TableOptionsMenu` are exported if you build your own toolbar.
+
+### Cards without writing a card
+
+A table config renders a cards view too, built from the same columns — stacked label/value pairs that honor the user's column choices and each column's `render`. That is what the view toggle switches to, and what a viewport under 1024px shows automatically.
+
+```tsx
+defineListConfig<Order>({
+	id: 'orders',
+	table: { columns },
+	// card: undefined  → generated from `columns` (the default)
+	// card: item => …  → your own renderer, below
+	// card: false      → table only, no toggle, no cards on mobile
+})
+```
+
+The auto card is a starting point, not a ceiling: pass a `card` renderer as soon as a list deserves a designed one.
+
+### Opening sort (`defaultSort`)
+
+```tsx
+defineListConfig<Order>({
+	id: 'orders',
+	defaultSort: { field: 'placedAt', dir: 'desc' },
+	table: { columns: [{ key: 'placedAt', header: 'Date', sortable: true }] },
+})
+```
+
+The list opens sorted, the header shows the arrow, and clicking it cycles from there. A sort already in the URL wins, and clearing the sort is not re-applied until the next load. `buildListQuery` applies it server-side too, so an SSR seed matches the client's first query.
+
+### Pinned filter chips
+
+Some filters _are_ the list ("only unpaid", "active users"). Mark one `pinned` and it also renders as a toggleable chip above the rows:
+
+```tsx
+{ id: 'paid', field: 'paid', label: 'Paid', type: 'boolean', pinned: true },
+{ id: 'status', field: 'status', label: 'Status', type: 'select',
+  options, pinned: true, pinnedValue: 'pending' },
+```
+
+Clicking applies `pinnedValue` (or `defaultValue`, or `true` for a boolean); clicking again clears it. It stays an ordinary filter — same URL param, same `query.filters` entry, same cache key — so nothing else in the list needs to know.
 
 ### Custom cards with actions and theme
 
@@ -675,6 +717,46 @@ const [data, total] = await Promise.all([
 ])
 return { data, total } // the { data, total } shape fetchAdapter expects
 ```
+
+**Matching mirrors the in-memory engine.** Text, `select` and `multi-select` compare accent- and case-insensitively (`'cancun'` finds `'Cancún'`), and a `false` boolean also matches documents where the field was never written — the same rows a `memoryAdapter` would return, enforced by a parity suite that runs one fixture through both engines against a real mongod.
+
+Two escape hatches matter at scale:
+
+```ts
+fields: {
+	// Controlled values on an indexed field: exact equality, index-friendly.
+	status: { path: 'status', fold: false },
+	// Dates stored as Date.now() numbers instead of BSON Dates.
+	created: { path: 'createdAt', as: 'unix-ms' },
+}
+```
+
+A folded comparison is a regex, so it cannot use an equality index. For accent-insensitive _equality_ at scale, prefer a collation index (`{ locale: 'es', strength: 1 }`) and pass `collation` to the executor. Free-text search is a non-anchored regex by nature: keep `searchFields` short, pair it with an indexed `baseFilter` (a tenant, an owner), and move to Atlas Search once that stops being enough.
+
+**One call end to end.** `executeMongoList` assembles filters, search, references, sort and pagination and runs the `find` + `count`. It is driver-free — pass the native collection or a Mongoose model's `.collection`:
+
+```ts
+import { executeMongoList } from '@pibytelabs/listkit/mongo'
+import { parseListkitQuery } from '@pibytelabs/listkit/query'
+
+app.get('/api/companies', async (req, res) => {
+	const result = await executeMongoList({
+		collection: db.collection('companies'),
+		query: parseListkitQuery(req.query),
+		fields: mongoFieldMapFromFilters(companiesConfig.filters ?? []),
+		searchFields: ['legalName', 'taxId'],
+		sort: { name: 'legalName', created: 'createdAt' },
+		fallbackSort: { legalName: 1 },
+		tiebreak: { _id: 1 }, // ties would otherwise paginate non-deterministically
+		baseFilter: { organizationId: req.orgId },
+	})
+	res.json(result) // { data, total }
+})
+```
+
+**Filters on a joined collection.** `resolveReferences` turns "filter sales by their customer's name" into an `$in` of matching ids, capped (10 000 by default) so a broad filter can't pull a whole collection into one query; `buildMongoSearchWithRefs` does the same for free-text search. `/mongoose` wires both for you via `references` / `searchReferences`.
+
+**Migrating an existing endpoint.** If your API already answers `{ results, pagination }`, keep that contract while you move the internals: wrap with `toLegacyEnvelope` on the server, and read it with `fromLegacyEnvelope` as the adapter's `transformResponse` until the wire itself is migrated. `encodeListQuery` is the canonical client encoding, exported so a custom adapter can't drift from `parseListkitQuery`.
 
 A field map entry is a trusted path string, `{ path, build }` to customize the expression for **one** field, or `{ match }` to build a **complete** condition merged as-is — the latter is how a single filter spans several fields (computed buckets, cross-field rules). Compose extra conditions (auth scope, tenant id, a reference `$in` from a nested-collection lookup) with `combineFilters`, and reach for the lower-level `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` helpers when you need finer control.
 

@@ -39,7 +39,7 @@ listkit/
 │   │   ├── adapters/       # data adapters: memory, fetch, serverAction, dexie
 │   │   ├── adapters.ts     # /adapters subpath barrel
 │   │   ├── components/     # ListView, Table, Cards, Toolbar, Pagination, filters/* …
-│   │   ├── config/         # defineListConfig
+│   │   ├── config/         # defineListConfig + resolveListConfig (defaults)
 │   │   ├── context/        # ListKitProvider + context
 │   │   ├── filters/        # filter match / schemas / (de)serialize
 │   │   ├── hooks/          # useListState, useColumnPrefs, router adapters …
@@ -51,7 +51,8 @@ listkit/
 │   │   ├── server.ts       # /server subpath (RSC-safe, no DOM)
 │   │   ├── query.ts        # /query subpath (read ListQuery values)
 │   │   ├── sql.ts          # /sql subpath (Postgres-flavoured helpers)
-│   │   ├── mongo.ts        # /mongo subpath (MongoDB query builders)
+│   │   ├── mongo.ts        # /mongo subpath (MongoDB query builders + executor)
+│   │   ├── mongoose.ts     # /mongoose subpath (Mongoose executors)
 │   │   └── react-query.ts  # /react-query subpath (TanStack integration)
 │   ├── README.md           # canonical consumer docs (English)
 │   └── README.es.md        # canonical consumer docs (Spanish)
@@ -64,7 +65,7 @@ Workspaces resolve `@pibytelabs/listkit` in the playground to the local source, 
 
 ## 4. Public entry points (subpath exports)
 
-Each is a separate, tree-shakeable entry. Keep them cohesive — don't leak DOM/React code into the server-safe ones (`/server`, `/query`, `/sql`, `/mongo`).
+Each is a separate, tree-shakeable entry. Keep them cohesive — don't leak DOM/React code into the server-safe ones (`/server`, `/query`, `/sql`, `/mongo`, `/mongoose`). `/mongoose` is server-safe too, but unlike `/mongo` it is typed against `mongoose` (an optional, type-only peer).
 
 | Import                             | Purpose                                                                      |
 | ---------------------------------- | ---------------------------------------------------------------------------- |
@@ -75,7 +76,8 @@ Each is a separate, tree-shakeable entry. Keep them cohesive — don't leak DOM/
 | `@pibytelabs/listkit/server`       | RSC-safe query builders (`buildListQuery`, `loadInitialList`) — no React/DOM |
 | `@pibytelabs/listkit/query`        | Read `ListQuery` filter values (`filtersById`, `getString`, `paginate`, …)   |
 | `@pibytelabs/listkit/sql`          | Postgres-flavoured SQL fragment helpers                                      |
-| `@pibytelabs/listkit/mongo`        | MongoDB query builders (`buildMongoQuery`, `buildMongoFilter`, …)            |
+| `@pibytelabs/listkit/mongo`        | MongoDB query builders + `executeMongoList` (driver-free)                    |
+| `@pibytelabs/listkit/mongoose`     | Mongoose executors (`executePaginatedListkitQuery`, aggregate sibling)       |
 | `@pibytelabs/listkit/react-query`  | TanStack Query `useListData` + invalidation                                  |
 | `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration (CSS import)                                 |
 
@@ -134,12 +136,14 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
 1. **Config-driven, zero business logic.** No entity names, status enums, or domain rules baked into the package. Behavior comes from `defineListConfig` and adapters only.
 2. **Plain array still works.** Passing a plain array to `<ListView data={...}>` must keep working (implicit `memoryAdapter`). Don't make adapters mandatory.
 3. **No direct router imports outside adapters.** `react-router-dom` / `next/navigation` may only be imported inside their adapter files. Everything else talks to the `RouterAdapter` contract.
-4. **Server-safe entries stay DOM-free.** `/server`, `/query`, `/sql`, `/mongo` must not import React or browser APIs — they run in RSC, route handlers, and Node backends.
+4. **Server-safe entries stay DOM-free.** `/server`, `/query`, `/sql`, `/mongo`, `/mongoose` must not import React or browser APIs — they run in RSC, route handlers, and Node backends.
 5. **Field names come from whitelists, never user input.** The query/SQL/Mongo helpers only resolve fields through a config-controlled map (no injection / field-probing surface). Preserve this when extending them.
-6. **In-memory and server behavior match.** A filter/sort/search must behave the same whether served by `memoryAdapter` or a server adapter — the Mongo/SQL helpers deliberately mirror the in-memory matching semantics. Keep them in sync.
+6. **In-memory and server behavior match.** A filter/sort/search must behave the same whether served by `memoryAdapter` or a server adapter — the Mongo/SQL helpers deliberately mirror the in-memory matching semantics. `src/mongo.parity.test.ts` enforces it: one fixture through `itemMatchesFilters` and through `buildMongoFilter` against a real mongod, both asserted against explicit ids. Extend that suite whenever you touch matching.
 7. **Tailwind v4 is a peer dep.** The package ships classes + `tailwind.css`, not a precompiled stylesheet; consumers register the source. Don't introduce a build step that assumes otherwise.
 8. **User view preferences persist.** Column order/width/visibility and density are stored via the column-prefs layer (localStorage by default, pluggable). Don't bypass it when adding table features.
-9. **The list id identifies the dataset, not the view.** The response cache keys on `resolveListId(config.id, cacheScope)` + the query. `config.id` must name _which dataset_ is shown; any scope that changes the rows but isn't in the query (a `studentId` the adapter closes over) belongs in `cacheScope`, which folds into the id as `` `${id}::${scope}` ``. The `::` separator is the invalidation boundary — keep it in sync with `invalidateListCache`'s prefix match. Never key the cache on anything the adapter captures but the query can't see.
+9. **Every subpath must resolve to real JS in a TS-aware runtime.** `/mongo`, `/query`, `/mongoose` and `/server` are consumed by `tsx`/`ts-node` backends, whose loaders resolve differently from plain `node` — they honor tsconfig `paths` and can match a `types` condition, either of which hands back a `.d.ts` that transpiles to an **empty module**, so every named import is silently `undefined`. `typesVersions` maps each subpath for `moduleResolution: node` consumers so they never need a `paths` shim pointing at a declaration file. `pnpm check:subpaths` (part of `verify`) imports every server subpath under `tsx` and asserts a known export is callable — a vitest suite cannot catch this, since it never goes through that loader. Add a new server subpath to that script and to `typesVersions` in the same change.
+10. **Table features are on by default.** `resolveListConfig` turns on the column manager, density, reordering, resizing, the options menu and an auto-generated cards view for any config with a table; a consumer opts _out_ with `false`. A new table feature follows the same rule — useful by default, disabled explicitly — so a bare config keeps getting better without an edit.
+11. **The list id identifies the dataset, not the view.** The response cache keys on `resolveListId(config.id, cacheScope)` + the query. `config.id` must name _which dataset_ is shown; any scope that changes the rows but isn't in the query (a `studentId` the adapter closes over) belongs in `cacheScope`, which folds into the id as `` `${id}::${scope}` ``. The `::` separator is the invalidation boundary — keep it in sync with `invalidateListCache`'s prefix match. Never key the cache on anything the adapter captures but the query can't see.
 
 ---
 
@@ -164,3 +168,16 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
 5. Document it in the README (and `README.es.md`) under the right **Usage** subsection.
 6. `pnpm verify` (or `verify:full`) green.
 7. Commit with the right Conventional Commit type so the release PR picks it up.
+
+---
+
+## 11. Pending work
+
+- **Consumer migration to the canonical wire.** The package side is complete as of 3.0
+  (wire validation, in-memory/Mongo parity, accent folding, search, reference filters,
+  value codecs, `executeMongoList`, `typesVersions`). What remains lives in each consumer:
+  move list endpoints onto `parseListkitQuery` + `executeMongoList` (raw collection) or
+  `executePaginatedListkitQuery` (when it needs `populate`), with field maps derived from
+  the same filter config that renders the sidebar via `filterConfigToMongoFieldMaps`.
+  `toLegacyEnvelope` / `fromLegacyEnvelope` bridge a half-migrated wire, so a list can
+  move one at a time.

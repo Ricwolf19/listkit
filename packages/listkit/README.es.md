@@ -437,18 +437,20 @@ import Image from 'next/image'
 
 ### UX de tabla: encabezado fijo, densidad, reordenar, redimensionar
 
-Todo opcional vía `table.*`, y todo persistido en localStorage junto al gestor de columnas:
+**Vienen activadas por defecto.** Cualquier config con `table` obtiene el gestor de columnas, el toggle de densidad, reordenar arrastrando el encabezado, redimensionar desde el borde y el menú de opciones — sin banderas — y cada elección se persiste en localStorage. Escribe `false` para quitar alguna:
 
 ```tsx
 table: {
-  columnControl: true,  // ocultar/mostrar + reordenar desde el menú de opciones
-  reorderable: true,    // arrastra los encabezados para reordenar
-  resizable: true,      // arrastra el borde de una columna para redimensionar
-  density: true,        // toggle cómoda/compacta
+  columns,
+  // Todo lo de abajo es opcional; el valor por defecto ya es `true`.
+  columnControl: false,   // fija las columnas (sin panel de ocultar/mostrar)
+  reorderable: false,     // sin reordenar arrastrando el encabezado
+  resizable: false,       // sin redimensionar desde el borde
+  density: false,         // sin toggle cómoda/compacta
+  optionsMenu: false,     // quita por completo el menú de opciones
   defaultDensity: 'comfortable',
   stickyHeader: true,     // el encabezado permanece visible mientras la tabla hace scroll
   maxBodyHeight: '70vh',  // altura del área de scroll del encabezado fijo (por defecto '70vh')
-  columns,
 }
 ```
 
@@ -483,6 +485,46 @@ table: {
 - `width` es una pista en layout `auto` y autoritativo en `fixed`; es solo el tamaño **inicial** y nunca bloquea el redimensionado. `minWidth`/`maxWidth` (px) son topes **opcionales** para la celda y el handle (piso por defecto 48px, sin techo) — ojo: `maxWidth` también limita hasta dónde arrastra el handle, así que omítelo para resize sin tope.
 
 > **El toolbar se mantiene limpio.** Densidad, columnas y exportar no agregan un botón cada uno — `<ListView>` los pliega en un único menú de **opciones** (⚙), dejando inline solo lo esencial (toggle de vista, conteo de resultados). Es responsivo (disponible también en móvil) y en vista de tarjetas muestra solo exportar. Los componentes `DensityToggle`, `ColumnManager`, `ExportButton` y `TableOptionsMenu` se exportan por si construyes tu propio toolbar.
+
+### Tarjetas sin escribir una tarjeta
+
+Una config con tabla también renderiza vista de tarjetas, construida con esas mismas columnas — pares etiqueta/valor apilados que respetan las columnas que el usuario eligió y el `render` de cada una. Es a lo que cambia el toggle de vista, y lo que un viewport menor a 1024px muestra automáticamente.
+
+```tsx
+defineListConfig<Order>({
+	id: 'orders',
+	table: { columns },
+	// card: undefined  → generada desde `columns` (el default)
+	// card: item => …  → tu propio renderer, abajo
+	// card: false      → solo tabla, sin toggle ni tarjetas en móvil
+})
+```
+
+La tarjeta automática es un punto de partida, no un techo: pasa un `card` en cuanto una lista merezca una diseñada.
+
+### Orden inicial (`defaultSort`)
+
+```tsx
+defineListConfig<Order>({
+	id: 'orders',
+	defaultSort: { field: 'placedAt', dir: 'desc' },
+	table: { columns: [{ key: 'placedAt', header: 'Fecha', sortable: true }] },
+})
+```
+
+La lista abre ordenada, el encabezado muestra la flecha y desde ahí el usuario cicla el orden. Un sort ya presente en la URL gana, y limpiar el orden no se vuelve a aplicar hasta la siguiente carga. `buildListQuery` también lo aplica en servidor, así el seed de SSR coincide con la primera query del cliente.
+
+### Chips de filtro fijados
+
+Algunos filtros _son_ la lista ("solo pendientes de pago", "usuarios activos"). Marca uno como `pinned` y también se renderiza como chip toggleable sobre las filas:
+
+```tsx
+{ id: 'paid', field: 'paid', label: 'Pagado', type: 'boolean', pinned: true },
+{ id: 'status', field: 'status', label: 'Estado', type: 'select',
+  options, pinned: true, pinnedValue: 'pendiente' },
+```
+
+Al hacer clic aplica `pinnedValue` (o `defaultValue`, o `true` para un boolean); otro clic lo limpia. Sigue siendo un filtro común — mismo parámetro de URL, misma entrada en `query.filters`, misma cache key — así que nada más en la lista necesita enterarse.
 
 ### Tarjetas personalizadas con acciones y tema
 
@@ -661,6 +703,46 @@ const [data, total] = await Promise.all([
 ])
 return { data, total } // la forma { data, total } que espera fetchAdapter
 ```
+
+**El matching refleja el motor in-memory.** Texto, `select` y `multi-select` comparan sin acentos ni distinción de mayúsculas (`'cancun'` encuentra `'Cancún'`), y un boolean en `false` también matchea documentos donde el campo nunca se escribió — las mismas filas que devolvería un `memoryAdapter`, garantizado por una suite de paridad que corre un mismo fixture por ambos motores contra un mongod real.
+
+Dos escapes importan a escala:
+
+```ts
+fields: {
+	// Valores controlados en un campo indexado: igualdad exacta, usa el índice.
+	status: { path: 'status', fold: false },
+	// Fechas guardadas como números Date.now() en vez de Date de BSON.
+	created: { path: 'createdAt', as: 'unix-ms' },
+}
+```
+
+Una comparación con folding es un regex, así que no puede usar un índice de igualdad. Para _igualdad_ insensible a acentos a escala, usa un índice con collation (`{ locale: 'es', strength: 1 }`) y pasa `collation` al executor. La búsqueda libre es un regex no anclado por naturaleza: mantén `searchFields` corto, acompáñalo de un `baseFilter` indexado (un tenant, un dueño), y migra a Atlas Search cuando eso deje de alcanzar.
+
+**Una sola llamada de punta a punta.** `executeMongoList` arma filtros, búsqueda, referencias, orden y paginación, y corre el `find` + `count`. No depende del driver — pásale la colección nativa o el `.collection` de un modelo de Mongoose:
+
+```ts
+import { executeMongoList } from '@pibytelabs/listkit/mongo'
+import { parseListkitQuery } from '@pibytelabs/listkit/query'
+
+app.get('/api/companies', async (req, res) => {
+	const result = await executeMongoList({
+		collection: db.collection('companies'),
+		query: parseListkitQuery(req.query),
+		fields: mongoFieldMapFromFilters(companiesConfig.filters ?? []),
+		searchFields: ['legalName', 'taxId'],
+		sort: { name: 'legalName', created: 'createdAt' },
+		fallbackSort: { legalName: 1 },
+		tiebreak: { _id: 1 }, // sin esto, los empates paginan de forma no determinista
+		baseFilter: { organizationId: req.orgId },
+	})
+	res.json(result) // { data, total }
+})
+```
+
+**Filtros sobre una colección unida.** `resolveReferences` convierte "filtrar ventas por el nombre de su cliente" en un `$in` de ids que matchean, con tope (10 000 por defecto) para que un filtro amplio no arrastre una colección entera a una sola query; `buildMongoSearchWithRefs` hace lo mismo para la búsqueda libre. `/mongoose` conecta ambos por ti vía `references` / `searchReferences`.
+
+**Migrar un endpoint existente.** Si tu API ya responde `{ results, pagination }`, conserva ese contrato mientras mueves las entrañas: envuelve con `toLegacyEnvelope` en el servidor y léelo con `fromLegacyEnvelope` como `transformResponse` del adapter hasta migrar el wire. `encodeListQuery` es la codificación canónica del cliente, exportada para que un adapter propio no se desincronice de `parseListkitQuery`.
 
 Una entrada del field map es una ruta string de confianza, `{ path, build }` para personalizar la expresión de **un** campo, o `{ match }` para construir una condición **completa** fusionada tal cual — esto último es cómo un solo filtro abarca varios campos (buckets calculados, reglas entre campos). Combina condiciones extra (alcance de auth, id de tenant, un `$in` por referencia de una colección anidada) con `combineFilters`, y usa los helpers de más bajo nivel `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` / `existenceMatch` cuando necesites control fino.
 
