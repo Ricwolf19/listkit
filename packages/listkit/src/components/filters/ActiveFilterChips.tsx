@@ -3,55 +3,9 @@ import { X } from 'lucide-react'
 import { useLabels } from '../../context/ListKitContext'
 import { flattenFilters } from '../../filters/serialize'
 import { type ColorTheme, getColorTheme } from '../../theme/colorTheme'
-import type {
-	ActiveFilterValue,
-	DateRangeFilterValue,
-	FilterDefinition,
-	FilterSection,
-	NumberRangeFilterValue,
-	TextFilterValue,
-} from '../../types/filters'
-import type { ListLabels } from '../../types/labels'
+import type { ActiveFilterValue, FilterSection } from '../../types/filters'
 import { cn } from '../../utils/cn'
-
-function describe(
-	def: FilterDefinition,
-	value: unknown,
-	labels: ListLabels
-): string {
-	switch (def.type) {
-		case 'text':
-			return (value as TextFilterValue).value
-		case 'select':
-			return def.options.find(o => o.value === value)?.label ?? String(value)
-		case 'multi-select': {
-			const vals = value as string[]
-			const optionLabels = vals.map(
-				v => def.options.find(o => o.value === v)?.label ?? v
-			)
-			return optionLabels.length <= 2
-				? optionLabels.join(', ')
-				: labels.selected(optionLabels.length)
-		}
-		case 'number-range': {
-			const { min, max } = value as NumberRangeFilterValue
-			if (min != null && max != null) return `${min} – ${max}`
-			if (min != null) return `≥ ${min}`
-			return `≤ ${max}`
-		}
-		case 'date-range': {
-			const { from, to } = value as DateRangeFilterValue
-			const fmt = (s?: string) => (s ? s.slice(0, 10) : '…')
-			return `${fmt(from)} → ${fmt(to)}`
-		}
-		case 'boolean':
-			return value
-				? (def.trueLabel ?? labels.yes)
-				: (def.falseLabel ?? labels.no)
-		default:
-			return String(value)
-	}
-}
+import { describeFilterValue } from './describeFilterValue'
 
 /**
  * Props for {@link ActiveFilterChips}.
@@ -100,12 +54,12 @@ export function ActiveFilterChips<T>({
 					>
 						<span className='font-medium opacity-70'>{def.label}:</span>
 						<span className='max-w-[14rem] truncate font-medium'>
-							{describe(def, active.value, labels)}
+							{describeFilterValue(def, active.value, labels)}
 						</span>
 						<button
 							type='button'
 							onClick={() => onRemove(active.id)}
-							aria-label={`Quitar ${def.label}`}
+							aria-label={labels.removeFilter(def.label)}
 							className='-mr-1 cursor-pointer rounded-full p-0.5 opacity-60 transition hover:bg-black/10 hover:opacity-100'
 						>
 							<X className='h-3 w-3' />

@@ -83,6 +83,8 @@ export type ListLabels = {
 	no: string
 	/** Multi-select chip summary when more than 2 options are picked, e.g. `n => \`${n} selected\``. */
 	selected: (count: number) => string
+	/** Remove-filter chip button (aria-label), e.g. `label => \`Remove ${label}\``. */
+	removeFilter: (label: string) => string
 	/** Pagination: "Showing" prefix. */
 	showing: string
 	/** Pagination: "of" connector (e.g. "1–25 of 90"). */
@@ -135,6 +137,7 @@ export const DEFAULT_LABELS: ListLabels = {
 	yes: 'Yes',
 	no: 'No',
 	selected: count => `${count} selected`,
+	removeFilter: label => `Remove ${label}`,
 	showing: 'Showing',
 	of: 'of',
 	page: 'Page',
@@ -184,6 +187,7 @@ export const ES_LABELS: ListLabels = {
 	yes: 'Sí',
 	no: 'No',
 	selected: count => `${count} seleccionados`,
+	removeFilter: label => `Quitar ${label}`,
 	showing: 'Mostrando',
 	of: 'de',
 	page: 'Página',
