@@ -66,6 +66,17 @@ type BaseFilter<T> = {
 	description?: string
 	/** Columns this filter spans in the sidebar grid (1 = full width, 2 = half width). */
 	columns?: 1 | 2
+	/**
+	 * Surface this filter as a toggleable chip in the toolbar, next to the search
+	 * box, on top of its normal place in the sidebar. Use it for the one or two
+	 * filters a list is really about ("only unpaid", "active users") so they are
+	 * one click away instead of two.
+	 *
+	 * Clicking applies `pinnedValue` (or `defaultValue`, or `true` for a boolean);
+	 * clicking again clears it. It is an ordinary filter throughout — same URL
+	 * param, same `query.filters` entry, same cache key.
+	 */
+	pinned?: boolean
 }
 
 /**
@@ -95,6 +106,8 @@ export type FilterDefinition<T = unknown> =
 			 * Several filters may each set one; the user can still change or clear them.
 			 */
 			defaultValue?: TextFilterValue
+			/** Value a {@link BaseFilter.pinned} chip applies. @defaultValue `defaultValue` */
+			pinnedValue?: TextFilterValue
 	  })
 	| (BaseFilter<T> & {
 			type: 'select'
@@ -106,6 +119,8 @@ export type FilterDefinition<T = unknown> =
 			searchable?: boolean
 			/** Pre-applied option value on a pristine list. @see the `text` variant's `defaultValue`. */
 			defaultValue?: string
+			/** Value a {@link BaseFilter.pinned} chip applies. @defaultValue `defaultValue` */
+			pinnedValue?: string
 	  })
 	| (BaseFilter<T> & {
 			type: 'multi-select'
@@ -115,6 +130,8 @@ export type FilterDefinition<T = unknown> =
 			placeholder?: string
 			/** Pre-applied selected values on a pristine list. @see the `text` variant's `defaultValue`. */
 			defaultValue?: MultiSelectFilterValue
+			/** Value a {@link BaseFilter.pinned} chip applies. @defaultValue `defaultValue` */
+			pinnedValue?: MultiSelectFilterValue
 	  })
 	| (BaseFilter<T> & {
 			type: 'date-range'
@@ -122,11 +139,15 @@ export type FilterDefinition<T = unknown> =
 			withTime?: boolean
 			/** Pre-applied range on a pristine list. @see the `text` variant's `defaultValue`. */
 			defaultValue?: DateRangeFilterValue
+			/** Value a {@link BaseFilter.pinned} chip applies. @defaultValue `defaultValue` */
+			pinnedValue?: DateRangeFilterValue
 	  })
 	| (BaseFilter<T> & {
 			type: 'number-range'
 			/** Pre-applied range on a pristine list. @see the `text` variant's `defaultValue`. */
 			defaultValue?: NumberRangeFilterValue
+			/** Value a {@link BaseFilter.pinned} chip applies. @defaultValue `defaultValue` */
+			pinnedValue?: NumberRangeFilterValue
 			/** Input style: two number inputs (default) or a dual-thumb slider. @defaultValue 'inputs' */
 			display?: 'inputs' | 'slider'
 			/** Slider track lower bound. Required for `display: 'slider'`. */
@@ -146,6 +167,8 @@ export type FilterDefinition<T = unknown> =
 			falseLabel?: string
 			/** Pre-applied value on a pristine list. @see the `text` variant's `defaultValue`. */
 			defaultValue?: boolean
+			/** Value a {@link BaseFilter.pinned} chip applies. @defaultValue `true` */
+			pinnedValue?: boolean
 	  })
 
 /**

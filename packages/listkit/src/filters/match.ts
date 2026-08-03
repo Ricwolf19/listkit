@@ -4,6 +4,7 @@ import type {
 	NumberRangeFilterValue,
 	TextFilterValue,
 } from '../types/filters'
+import { warnDev } from '../utils/devWarn'
 import { foldText } from '../utils/foldText'
 import { getPath } from '../utils/getPath'
 
@@ -58,6 +59,12 @@ function matchesFilter(item: unknown, filter: ActiveFilterValue): boolean {
 		case 'boolean':
 			return Boolean(raw) === filter.value
 		default:
+			// Unknown type: the filter contributes nothing rather than hiding rows,
+			// matching what the Mongo builder does with the same input.
+			warnDev(
+				`match-filter-type:${filter.type}`,
+				`[listkit] ignoring filter "${filter.id}": unknown type "${filter.type}".`
+			)
 			return true
 	}
 }

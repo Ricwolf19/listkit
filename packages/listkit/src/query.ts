@@ -11,7 +11,8 @@
  * @packageDocumentation
  */
 import { DEFAULT_PAGE_SIZE } from './constants'
-import type { ListQuery } from './types/data'
+import { parseActiveFilters } from './filters/schemas'
+import type { ListQuery, ListResult } from './types/data'
 import type { ActiveFilterValue } from './types/filters'
 
 /** Applied value of a `date-range` filter. */
@@ -134,6 +135,58 @@ export const paginate = (
 	return { page, pageSize, offset: (page - 1) * pageSize }
 }
 
+/** Page metadata in the `{ results, pagination }` envelope many REST APIs use. */
+export type LegacyPagination = {
+	page: number
+	limit: number
+	total: number
+	totalPages: number
+	hasNext: boolean
+	hasPrev: boolean
+}
+
+/** The `{ results, pagination }` body shape. @see {@link toLegacyEnvelope} */
+export type LegacyListEnvelope<T> = {
+	results: T[]
+	pagination: LegacyPagination
+}
+
+/**
+ * Wraps a {@link ListResult} in the `{ results, pagination }` envelope.
+ *
+ * For a backend already speaking that shape to other clients: the handler can
+ * move to the listkit builders without changing its response, and the list
+ * consumes it with `fromLegacyEnvelope` until the wire is migrated too.
+ *
+ * @param result - The `{ data, total }` a query produced.
+ * @param page - The clamped pagination.
+ * @param page.page - 1-based page number.
+ * @param page.pageSize - Rows per page (from {@link paginate} / `mongoPaginate`).
+ *
+ * @example
+ * ```ts
+ * const { pageSize, page } = paginate(query)
+ * res.json(toLegacyEnvelope(await runQuery(query), { page, pageSize }))
+ * ```
+ */
+export const toLegacyEnvelope = <T>(
+	result: ListResult<T>,
+	page: { page: number; pageSize: number }
+): LegacyListEnvelope<T> => {
+	const totalPages = Math.max(1, Math.ceil(result.total / page.pageSize))
+	return {
+		results: result.data,
+		pagination: {
+			page: page.page,
+			limit: page.pageSize,
+			total: result.total,
+			totalPages,
+			hasNext: page.page < totalPages,
+			hasPrev: page.page > 1,
+		},
+	}
+}
+
 /** A request query bag (e.g. Express `req.query`); values may repeat as arrays. */
 export type ListQueryParams = Record<string, string | string[] | undefined>
 
@@ -193,10 +246,10 @@ export const parseListkitQuery = (
 	const rawFilters = firstParam(params.filters)
 	if (rawFilters) {
 		try {
-			const parsed: unknown = JSON.parse(rawFilters)
-			if (Array.isArray(parsed) && parsed.length > 0) {
-				filters = parsed as ActiveFilterValue[]
-			}
+			// Validated, never cast: the array is client-supplied and its `type`
+			// selects which operator a query builder emits.
+			const parsed = parseActiveFilters(JSON.parse(rawFilters))
+			if (parsed.length > 0) filters = parsed
 		} catch {
 			// Ignore malformed filter JSON; treat as no filters.
 		}

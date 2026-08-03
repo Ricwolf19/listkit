@@ -1,11 +1,11 @@
 import { useCallback, useMemo, useState } from 'react'
 
+import { isFilterValueActive } from '../filters/schemas'
 import {
 	decodeFilterValue,
 	encodeFilterValue,
 	filterParamKey,
 	flattenFilters,
-	isFilterValueActive,
 } from '../filters/serialize'
 import type { FilterSection } from '../types/filters'
 import type { ListParams } from './useListParams'

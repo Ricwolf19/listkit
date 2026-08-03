@@ -1,14 +1,11 @@
 import type { SortState } from '../types/data'
 import type {
 	ActiveFilterValue,
-	DateRangeFilterValue,
 	FilterComponentType,
 	FilterDefinition,
 	FilterSection,
-	NumberRangeFilterValue,
-	TextFilterValue,
 } from '../types/filters'
-import { parseFilterValue } from './schemas'
+import { isFilterValueActive, parseFilterValue } from './schemas'
 
 const PREFIX = 'f_'
 
@@ -34,33 +31,6 @@ export function flattenFilters<T>(
 	sections: FilterSection<T>[]
 ): FilterDefinition<T>[] {
 	return sections.flatMap(section => section.filters)
-}
-
-/** Whether a (valid) value represents an actually-applied filter. */
-export function isFilterValueActive(
-	type: FilterComponentType,
-	value: unknown
-): boolean {
-	switch (type) {
-		case 'text':
-			return !!(value as TextFilterValue)?.value?.trim()
-		case 'select':
-			return typeof value === 'string' && value !== ''
-		case 'multi-select':
-			return Array.isArray(value) && value.length > 0
-		case 'date-range': {
-			const v = value as DateRangeFilterValue
-			return !!(v?.from || v?.to)
-		}
-		case 'number-range': {
-			const v = value as NumberRangeFilterValue
-			return v?.min != null || v?.max != null
-		}
-		case 'boolean':
-			return typeof value === 'boolean'
-		default:
-			return false
-	}
 }
 
 export const encodeFilterValue = (value: unknown): string =>
@@ -102,6 +72,32 @@ export function buildDefaultActiveFilters<T>(
 		}
 	}
 	return active
+}
+
+/**
+ * The value a pinned chip applies when clicked: its own `pinnedValue`, else the
+ * filter's `defaultValue`, else `true` for a boolean (the only type with an
+ * obvious "on").
+ *
+ * @returns The value, or `undefined` when the filter offers none — a chip with
+ * nothing to apply is not rendered.
+ */
+export function resolvePinnedValue<T>(def: FilterDefinition<T>): unknown {
+	const { pinnedValue, defaultValue } = def
+	if (pinnedValue != null && isFilterValueActive(def.type, pinnedValue))
+		return pinnedValue
+
+	if (defaultValue != null && isFilterValueActive(def.type, defaultValue))
+		return defaultValue
+
+	return def.type === 'boolean' ? true : undefined
+}
+
+/** The pinned filters that have a value to apply, in declaration order. */
+export function pinnedFilterDefs<T>(
+	defs: FilterDefinition<T>[]
+): FilterDefinition<T>[] {
+	return defs.filter(def => def.pinned && resolvePinnedValue(def) !== undefined)
 }
 
 /** Encode active filters as a `{ paramKey: encodedValue }` patch for the store. */
