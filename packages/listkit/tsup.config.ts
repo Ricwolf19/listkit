@@ -31,7 +31,6 @@ export default defineConfig({
 		'react-router-dom',
 		'react-router',
 		'react-datepicker',
-		'zod',
 		'@tanstack/react-query',
 		'mongoose',
 	],

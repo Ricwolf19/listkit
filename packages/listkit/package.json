@@ -44,6 +44,37 @@
 	"main": "./dist/index.cjs",
 	"module": "./dist/index.js",
 	"types": "./dist/index.d.ts",
+	"typesVersions": {
+		"*": {
+			"next": [
+				"./dist/next.d.ts"
+			],
+			"react-router": [
+				"./dist/react-router.d.ts"
+			],
+			"adapters": [
+				"./dist/adapters.d.ts"
+			],
+			"server": [
+				"./dist/server.d.ts"
+			],
+			"query": [
+				"./dist/query.d.ts"
+			],
+			"sql": [
+				"./dist/sql.d.ts"
+			],
+			"mongo": [
+				"./dist/mongo.d.ts"
+			],
+			"mongoose": [
+				"./dist/mongoose.d.ts"
+			],
+			"react-query": [
+				"./dist/react-query.d.ts"
+			]
+		}
+	},
 	"exports": {
 		".": {
 			"import": {
@@ -153,6 +184,7 @@
 		"dev": "tsup --watch",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
+		"check:subpaths": "tsx scripts/check-subpaths.ts",
 		"test:watch": "vitest",
 		"clean": "rm -rf dist",
 		"size": "size-limit",
@@ -170,8 +202,7 @@
 		"react": "^18.0.0 || ^19.0.0",
 		"react-dom": "^18.0.0 || ^19.0.0",
 		"react-router-dom": "^6.0.0 || ^7.0.0",
-		"tailwindcss": "^4.0.0",
-		"zod": "^3.23.0 || ^4.0.0"
+		"tailwindcss": "^4.0.0"
 	},
 	"peerDependenciesMeta": {
 		"@tanstack/react-query": {
@@ -191,9 +222,6 @@
 		},
 		"tailwindcss": {
 			"optional": false
-		},
-		"zod": {
-			"optional": true
 		}
 	},
 	"dependencies": {
@@ -206,14 +234,16 @@
 		"@types/react": "^19.0.2",
 		"@types/react-dom": "^19.0.2",
 		"lucide-react": "^1.14.0",
+		"mongodb": "^7.5.0",
+		"mongodb-memory-server": "^11.2.0",
 		"mongoose": "^9.7.1",
 		"next": "^16.0.0",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0",
 		"react-router-dom": "^7.0.0",
 		"tsup": "^8.3.5",
+		"tsx": "^4.23.4",
 		"typescript": "^5.7.2",
-		"vitest": "^4.1.9",
-		"zod": "^4.0.0"
+		"vitest": "^4.1.9"
 	}
 }
