@@ -33,6 +33,19 @@ jobs:
       - name: Typecheck
         run: pnpm typecheck
 
+      # mongo.parity.test.ts boots a real mongod (mongodb-memory-server); cache
+      # the downloaded binary so tests don't re-download ~80 MB per run.
+      - name: Cache mongod binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/mongodb-binaries
+          key: mongodb-binaries-${{ runner.os }}-${{ hashFiles('packages/listkit/package.json') }}
+          restore-keys: |
+            mongodb-binaries-${{ runner.os }}-
+
+      - name: Tests
+        run: pnpm test
+
       - name: Unused code / deps (knip)
         run: pnpm knip
 
@@ -40,10 +53,10 @@ jobs:
         run: pnpm depcruise
 
       - name: Bundle size budget
-        run: pnpm --filter @pibytelabs/listkit size
+        run: pnpm --filter listkit size
 
       - name: Package publishability (publint)
-        run: pnpm --filter @pibytelabs/listkit check:publish
+        run: pnpm --filter listkit check:publish
 
       - name: Type emission correctness (attw)
-        run: pnpm --filter @pibytelabs/listkit check:types
+        run: pnpm --filter listkit check:types

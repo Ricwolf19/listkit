@@ -77,6 +77,18 @@ type BaseFilter<T> = {
 	 * param, same `query.filters` entry, same cache key.
 	 */
 	pinned?: boolean
+	/**
+	 * Surface this filter as a compact pill under the search box, opening its
+	 * **real** input in a popover — the frequently-used filters, one click away
+	 * instead of a trip to the sidebar.
+	 *
+	 * Complements {@link pinned}: a pinned chip toggles one predetermined value
+	 * (`only unpaid`), a quick pill lets the user pick any value the filter
+	 * accepts (a date range, an amount). Both stay ordinary filters — same URL
+	 * param, same `query.filters` entry, same cache key — and both keep working
+	 * from the sidebar. Users can hide the bar from the Options menu.
+	 */
+	quick?: boolean
 }
 
 /**
@@ -111,8 +123,18 @@ export type FilterDefinition<T = unknown> =
 	  })
 	| (BaseFilter<T> & {
 			type: 'select'
-			/** Selectable options. */
-			options: FilterOption[]
+			/** Selectable options. Omit when {@link optionsSource} supplies them. */
+			options?: FilterOption[]
+			/**
+			 * Name of a runtime option set, resolved by {@link withFilterOptions}.
+			 *
+			 * Use it when the choices come from data rather than a constant — the
+			 * companies in a project, the users of a tenant. The config stays a
+			 * static, serializable declaration (so the server can derive its field
+			 * whitelist from the same array) and the values are injected where they
+			 * are known.
+			 */
+			optionsSource?: string
 			/** Input placeholder. */
 			placeholder?: string
 			/** Show a search box inside the dropdown for long option lists. */
@@ -124,8 +146,10 @@ export type FilterDefinition<T = unknown> =
 	  })
 	| (BaseFilter<T> & {
 			type: 'multi-select'
-			/** Selectable options. */
-			options: FilterOption[]
+			/** Selectable options. Omit when {@link optionsSource} supplies them. */
+			options?: FilterOption[]
+			/** Name of a runtime option set, resolved by {@link withFilterOptions}. */
+			optionsSource?: string
 			/** Input placeholder. */
 			placeholder?: string
 			/** Pre-applied selected values on a pristine list. @see the `text` variant's `defaultValue`. */
@@ -156,7 +180,12 @@ export type FilterDefinition<T = unknown> =
 			max?: number
 			/** Slider step size. @defaultValue 1 */
 			step?: number
-			/** Format the slider's value labels (e.g. a currency formatter). */
+			/**
+			 * Format the slider's value labels and the applied chip (e.g. a currency
+			 * formatter). Both are display-only; the two number inputs keep the
+			 * locale's plain grouping so what the user types round-trips exactly.
+			 * @defaultValue the locale's number format
+			 */
 			formatValue?: (value: number) => string
 	  })
 	| (BaseFilter<T> & {
@@ -196,7 +225,7 @@ export type FilterSection<T = unknown> = {
 
 /**
  * An applied filter, as handed to the data adapter in `query.filters`. Read it
- * with the `@pibytelabs/listkit/query` helpers (e.g. `getString`, `getDateRange`).
+ * with the `listkit/query` helpers (e.g. `getString`, `getDateRange`).
  */
 export type ActiveFilterValue = {
 	/** The definition `id` this value came from. */

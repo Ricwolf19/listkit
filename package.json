@@ -1,8 +1,8 @@
 {
-	"name": "listkit-monorepo",
+	"name": "listkit-workspace",
 	"version": "0.0.0",
 	"private": true,
-	"description": "Monorepo root for @pibytelabs/listkit",
+	"description": "Workspace root for listkit",
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/Ricwolf19/listkit.git"
@@ -14,20 +14,20 @@
 		"node": ">=22"
 	},
 	"scripts": {
-		"dev": "pnpm --parallel --filter @pibytelabs/listkit --filter playground run dev",
+		"dev": "pnpm --parallel --filter listkit --filter playground run dev",
 		"dev:playground": "pnpm --filter playground dev",
-		"dev:package": "pnpm --filter @pibytelabs/listkit dev",
-		"build": "pnpm --filter @pibytelabs/listkit build",
+		"dev:package": "pnpm --filter listkit dev",
+		"build": "pnpm --filter listkit build",
 		"build:all": "pnpm -r build",
-		"docs": "pnpm --filter @pibytelabs/listkit run docs",
+		"docs": "pnpm --filter listkit run docs",
 		"lint": "eslint .",
 		"format": "prettier --write .",
 		"format:check": "prettier --check .",
 		"typecheck": "pnpm -r typecheck",
 		"test": "pnpm -r test",
-		"verify": "pnpm lint && pnpm build && pnpm typecheck && pnpm --filter @pibytelabs/listkit check:subpaths",
-		"verify:full": "pnpm format:check && pnpm lint && pnpm build && pnpm typecheck && pnpm --filter @pibytelabs/listkit check:subpaths && pnpm knip && pnpm depcruise && pnpm --filter @pibytelabs/listkit size && pnpm --filter @pibytelabs/listkit check:publish && pnpm --filter @pibytelabs/listkit check:types",
-		"verify:ci": "pnpm lint && pnpm exec secretlint --secretlintignore .gitignore \"**/*\" && pnpm build && pnpm typecheck && pnpm --filter @pibytelabs/listkit check:subpaths && pnpm knip && pnpm depcruise && pnpm --filter @pibytelabs/listkit size && pnpm --filter @pibytelabs/listkit check:publish && pnpm --filter @pibytelabs/listkit check:types",
+		"verify": "pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm --filter listkit check:subpaths",
+		"verify:full": "pnpm format:check && pnpm lint && pnpm build && pnpm typecheck && pnpm test && pnpm --filter listkit check:subpaths && pnpm knip && pnpm depcruise && pnpm --filter listkit size && pnpm --filter listkit check:publish && pnpm --filter listkit check:types",
+		"verify:ci": "pnpm lint && pnpm exec secretlint --secretlintignore .gitignore \"**/*\" && pnpm build && pnpm typecheck && pnpm test && pnpm --filter listkit check:subpaths && pnpm knip && pnpm depcruise && pnpm --filter listkit size && pnpm --filter listkit check:publish && pnpm --filter listkit check:types",
 		"fix": "pnpm format && pnpm lint --fix && pnpm knip:fix",
 		"knip": "knip",
 		"knip:fix": "knip --fix",

@@ -56,6 +56,8 @@ function reconcile<T>(
 		hidden,
 		widths: pruneWidths(stored.widths, known),
 		density: stored.density,
+		pageSize: stored.pageSize,
+		quickFilters: stored.quickFilters,
 	}
 }
 
@@ -216,11 +218,20 @@ export function useColumnPrefs<T>(
 	const density: Density = prefs.density ?? defaultDensity
 	const setDensity = (next: Density) => persist({ ...prefs, density: next })
 
+	// View preferences that aren't about columns still belong in this store:
+	// same per-list key, same pluggable backend, one write path.
+	const setPageSize = (next: number | undefined) =>
+		persist({ ...prefs, pageSize: next })
+	const setQuickFilters = (visible: boolean) =>
+		persist({ ...prefs, quickFilters: visible })
+
 	const reset = () =>
 		persist({
 			order: [...allKeys],
 			hidden: [...defaultHiddenKeys],
 			density: prefs.density,
+			pageSize: prefs.pageSize,
+			quickFilters: prefs.quickFilters,
 		})
 
 	return {
@@ -233,6 +244,10 @@ export function useColumnPrefs<T>(
 		resize,
 		density,
 		setDensity,
+		storedPageSize: prefs.pageSize,
+		setPageSize,
+		storedQuickFilters: prefs.quickFilters,
+		setQuickFilters,
 		reset,
 	}
 }

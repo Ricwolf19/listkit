@@ -1,6 +1,6 @@
 {
 	"$schema": "https://typedoc.org/schema.json",
-	"name": "@pibytelabs/listkit",
+	"name": "listkit",
 	"entryPoints": [
 		"src/index.ts",
 		"src/next.tsx",

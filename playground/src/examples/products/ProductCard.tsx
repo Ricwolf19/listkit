@@ -1,4 +1,4 @@
-import { type CardContext, Checkbox, ListImage } from '@pibytelabs/listkit'
+import { type CardContext, Checkbox, ListImage } from 'listkit'
 import { Pencil, Trash2 } from 'lucide-react'
 
 import { currency, type Product } from './types'

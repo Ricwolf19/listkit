@@ -1,8 +1,10 @@
 import { itemMatchesFilters } from '../filters/match'
 import type { DataAdapter, ListQuery } from '../types/data'
 import type { ActiveFilterValue } from '../types/filters'
+import { lkError } from '../utils/diagnostics'
 import { foldText } from '../utils/foldText'
 import { getPath } from '../utils/getPath'
+import { getPathValues } from '../utils/getPathValues'
 
 /**
  * How {@link memoryAdapter} searches: a list of `fields` to substring-match, or
@@ -35,13 +37,15 @@ function applySearch<T>(
 	if (search.fn) return search.fn(items, term)
 	const q = foldText(term)
 	return items.filter(item =>
-		search.fields!.some(field => {
-			const value = getPath(item, field)
-			return (
-				(typeof value === 'string' || typeof value === 'number') &&
-				foldText(value).includes(q)
+		search.fields!.some(field =>
+			// Multivalue resolution so a field like `products.name` searches every
+			// element, matching the filter engine's (and Mongo's) semantics.
+			getPathValues(item, field).some(
+				value =>
+					(typeof value === 'string' || typeof value === 'number') &&
+					foldText(value).includes(q)
 			)
-		})
+		)
 	)
 }
 
@@ -84,6 +88,16 @@ export function memoryAdapter<T>(
 				rows = [...rows].sort((a, b) => {
 					const av = getPath(a, field)
 					const bv = getPath(b, field)
+					if (Array.isArray(av) || Array.isArray(bv)) {
+						// LK1004: an array has no scalar order. Precompute a flat field
+						// (`listProductNames`) and sort by that instead.
+						lkError(
+							'LK1004',
+							`cannot sort by "${field}": the path resolves to an array. ` +
+								`Precompute a flat field for sorting (e.g. a "list*" column).`
+						)
+						return 0
+					}
 					if (av == null && bv == null) return 0
 					if (av == null) return 1
 					if (bv == null) return -1

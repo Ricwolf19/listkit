@@ -1,113 +1,50 @@
 import { useEffect, useRef } from 'react'
 
-import { getSearchShortcut } from '../utils/shortcut'
+import { type ShortcutId, SHORTCUTS } from './shortcutRegistry'
 
-type Handlers = {
-	onFocusSearch?: () => void
-	onOpenFilters?: () => void
-	onToggleView?: () => void
-	/** Remove the most recently applied filter. Bound to `-`. */
-	onRemoveLastFilter?: () => void
-	/** Open the filter sidebar focused on its quick-search box. Bound to `+`. */
-	onOpenFilterSearch?: () => void
-}
+/**
+ * One optional handler per shortcut id. An action with no handler is inert —
+ * a list without selection simply never binds the selection keys.
+ */
+export type ShortcutHandlers = Partial<Record<ShortcutId, () => void>>
 
-export function useListShortcuts(handlers: Handlers) {
-	// Keep the latest handlers in a ref so the listener can be attached once
-	// instead of re-subscribing on every render (callers pass inline arrows).
+/**
+ * Bind the list keyboard shortcuts declared in {@link SHORTCUTS}.
+ *
+ * @remarks
+ * Dispatch is table-driven: the first entry whose `match` accepts the event and
+ * that has a handler wins. Adding a shortcut is one entry in the registry, and
+ * it shows up in the help overlay for free.
+ *
+ * Keystrokes are ignored while the user is typing in a field, except `Escape`
+ * — which must stay able to back out of a control.
+ */
+export function useListShortcuts(handlers: ShortcutHandlers) {
+	// Keep the latest handlers in a ref so the listener attaches once instead of
+	// re-subscribing on every render (callers pass inline arrows).
 	const handlersRef = useRef(handlers)
 	handlersRef.current = handlers
 
 	useEffect(() => {
-		const searchShortcut = getSearchShortcut()
-
-		const handle = (e: KeyboardEvent) => {
-			const {
-				onFocusSearch,
-				onOpenFilters,
-				onToggleView,
-				onRemoveLastFilter,
-				onOpenFilterSearch,
-			} = handlersRef.current
-
-			// Skip if the user is typing inside an input/textarea/select
-			const target = e.target as HTMLElement
-			const tag = target.tagName.toLowerCase()
+		const handle = (event: KeyboardEvent) => {
+			const target = event.target as HTMLElement | null
+			const tag = target?.tagName.toLowerCase()
 			const isEditable =
-				target.isContentEditable ||
-				tag === 'input' ||
-				tag === 'textarea' ||
-				tag === 'select'
+				!!target &&
+				(target.isContentEditable ||
+					tag === 'input' ||
+					tag === 'textarea' ||
+					tag === 'select')
 
-			// Search focus: meta/ctrl + k
-			if (
-				onFocusSearch &&
-				!isEditable &&
-				e[searchShortcut.modifier] &&
-				e.key.toLowerCase() === searchShortcut.key
-			) {
-				e.preventDefault()
-				onFocusSearch()
-				return
-			}
-
-			// Open filters: shift + f
-			if (
-				onOpenFilters &&
-				!isEditable &&
-				e.shiftKey &&
-				!e.metaKey &&
-				!e.ctrlKey &&
-				!e.altKey &&
-				e.key.toLowerCase() === 'f'
-			) {
-				e.preventDefault()
-				onOpenFilters()
-				return
-			}
-
-			// Toggle view: shift + v
-			if (
-				onToggleView &&
-				!isEditable &&
-				e.shiftKey &&
-				!e.metaKey &&
-				!e.ctrlKey &&
-				!e.altKey &&
-				e.key.toLowerCase() === 'v'
-			) {
-				e.preventDefault()
-				onToggleView()
-				return
-			}
-
-			// Open filters focused on the quick-search box: `+` (Shift + = on most
-			// layouts). Falls back to plainly opening the sidebar.
-			const openSearch = onOpenFilterSearch ?? onOpenFilters
-			if (
-				openSearch &&
-				!isEditable &&
-				!e.metaKey &&
-				!e.ctrlKey &&
-				!e.altKey &&
-				e.key === '+'
-			) {
-				e.preventDefault()
-				openSearch()
-				return
-			}
-
-			// Remove the most recently applied filter: `-`.
-			if (
-				onRemoveLastFilter &&
-				!isEditable &&
-				!e.metaKey &&
-				!e.ctrlKey &&
-				!e.altKey &&
-				e.key === '-'
-			) {
-				e.preventDefault()
-				onRemoveLastFilter()
+			for (const shortcut of SHORTCUTS) {
+				const run = handlersRef.current[shortcut.id]
+				if (!run) continue
+				// Escape is the one key a field must not swallow: it is how a user
+				// backs out of the control they are typing in.
+				if (isEditable && shortcut.id !== 'clearSelection') continue
+				if (!shortcut.match(event)) continue
+				event.preventDefault()
+				run()
 				return
 			}
 		}

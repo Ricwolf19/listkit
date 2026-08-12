@@ -1,93 +1,52 @@
-import {
-	ES_LABELS,
-	ListKitProvider,
-	useBrowserRouterAdapter,
-} from '@pibytelabs/listkit'
+import { ES_LABELS, ListKitProvider, useBrowserRouterAdapter } from 'listkit'
 import { useState } from 'react'
 
-import { HelloListKit } from './examples/HelloListKit'
-import { OrdersExample } from './examples/orders/OrdersExample'
+import { DEFAULT_DEMO_ID, DEMOS } from './shell/registry'
+import { Sidebar } from './shell/Sidebar'
 
-const EXAMPLES = {
-	products: {
-		label: 'Productos (card propia)',
-		render: () => <HelloListKit />,
-	},
-	orders: {
-		label: 'Pedidos (auto-card)',
-		render: () => <OrdersExample />,
-	},
-} as const
+const DEMO_PARAM = 'demo'
+
+const demoFromUrl = () => {
+	const id = new URLSearchParams(window.location.search).get(DEMO_PARAM)
+	return DEMOS.some(demo => demo.id === id) ? id! : DEFAULT_DEMO_ID
+}
+
+/**
+ * Switch demos and drop every other query param.
+ *
+ * Each list owns the same param names (`search`, `page`, `f_*`), so carrying
+ * them across would apply the tickets list's filters to the invoices list and
+ * open a demo on an empty, already-filtered table — which reads as a bug in
+ * listkit rather than as leftover state.
+ */
+const selectDemo = (id: string) => {
+	window.history.replaceState(null, '', `?${DEMO_PARAM}=${id}`)
+}
 
 export function App() {
-	const [example, setExample] = useState<keyof typeof EXAMPLES>('products')
+	const [demoId, setDemoId] = useState(demoFromUrl)
 	// Sync list state (search, page, filters) to the URL with the built-in
 	// framework-free adapter — no Next.js / React Router needed.
 	const router = useBrowserRouterAdapter()
 
+	const demo = DEMOS.find(d => d.id === demoId) ?? DEMOS[0]!
+	const Demo = demo.render
+
 	return (
 		<ListKitProvider router={router} labels={ES_LABELS}>
-			<div className='min-h-screen bg-gray-50 p-8'>
-				<header className='mb-8'>
-					<h1 className='text-3xl font-bold text-gray-900'>
-						listkit playground
-					</h1>
-					<p className='mt-1 text-gray-600'>
-						Local development environment for @pibytelabs/listkit
-					</p>
-					<div className='mt-3 flex flex-wrap gap-2 text-xs'>
-						{[
-							'options menu → density · columns · export',
-							'columns → reveal default-hidden (Proveedor, Origen, …)',
-							'CSV export → page or all',
-							'row selection + bulk actions',
-							'export selected',
-							'sticky header (scrolls with the page)',
-							'drag headers to reorder',
-							'drag column edges to resize',
-							'lazy <ListImage> thumbnails',
-							'Shift + ←/→ → first / last page',
-							'header slots',
-							'default filter (En stock)',
-							'open filters → press +',
-							'remove last filter → press -',
-							'filter quick-search (6+ filters)',
-							'collapsible sections (Origen / Otros)',
-							'range sliders (Precio / Calificación)',
-							'Shift+V toggle view',
-							'3.0 · features on by default (no flags)',
-							'3.0 · auto-card from the columns (Pedidos)',
-							'3.0 · resize under 1024px → cards',
-							'3.0 · defaultSort (Nombre ↑)',
-							'3.0 · pinned filter chips',
-							'3.0 · adapter key → per-scope cache (Pedidos)',
-						].map(hint => (
-							<span
-								key={hint}
-								className='rounded-full border border-gray-200 bg-white px-2.5 py-1 font-medium text-gray-600'
-							>
-								{hint}
-							</span>
-						))}
-					</div>
-				</header>
-				<nav className='mb-6 inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-1 shadow-sm'>
-					{Object.entries(EXAMPLES).map(([key, value]) => (
-						<button
-							key={key}
-							onClick={() => setExample(key as keyof typeof EXAMPLES)}
-							className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-								example === key
-									? 'bg-gray-900 text-white'
-									: 'text-gray-600 hover:bg-gray-100'
-							}`}
-						>
-							{value.label}
-						</button>
-					))}
-				</nav>
-
-				<main>{EXAMPLES[example].render()}</main>
+			<div className='min-h-screen bg-gray-50 lg:flex'>
+				<Sidebar
+					current={demo.id}
+					onSelect={id => {
+						selectDemo(id)
+						setDemoId(id)
+					}}
+				/>
+				{/* `min-w-0` so a wide table scrolls inside this column instead of
+				    stretching the flex row and pushing the sidebar off-screen. */}
+				<main className='min-w-0 flex-1 p-6 lg:p-8'>
+					<Demo key={demo.id} />
+				</main>
 			</div>
 		</ListKitProvider>
 	)

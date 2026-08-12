@@ -13,6 +13,17 @@ export type ColumnPrefs = {
 	widths?: Record<string, number>
 	/** Row density chosen via the density toggle. */
 	density?: Density
+	/**
+	 * Rows per page chosen from the pagination selector.
+	 *
+	 * Persisted because it is a stable statement about how this user reads this
+	 * list ("I work at 100 rows"), not about one visit — re-picking it on every
+	 * navigation is exactly the friction the selector was meant to remove. The
+	 * URL still wins when present, so a shared link shows what the sender saw.
+	 */
+	pageSize?: number
+	/** Whether the quick-filter bar is shown (toggled from the options menu). */
+	quickFilters?: boolean
 }
 
 /**

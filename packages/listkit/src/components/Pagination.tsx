@@ -4,17 +4,31 @@ import {
 	ChevronsLeft,
 	ChevronsRight,
 } from 'lucide-react'
-import { useEffect, useRef } from 'react'
+import { type CSSProperties, useRef } from 'react'
 
 import { useLabels } from '../context/ListKitContext'
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import { cn } from '../utils/cn'
 import { Button } from './Button'
+import { Select } from './Select'
 
-/** Layout of the pagination bar. */
-export type PaginationVariant = 'fixed' | 'sticky'
+/**
+ * Layout of the pagination bar.
+ *
+ * - `'sticky'` (default) — a floating card that stays in the content flow.
+ *   Needs no viewport offset and reserves no page padding, which is why it is
+ *   the default: it works inside any shell without the consumer patching CSS.
+ * - `'fixed'` — pinned across the bottom of the viewport. Spans the full width,
+ *   so an app with a fixed sidebar must pass {@link PaginationProps.offsetLeft}
+ *   or the bar slides underneath it.
+ * - `'inline'` — static, at the end of its container. For a list inside a
+ *   bounded card: pair with a flex-column parent and the bar settles at the
+ *   bottom even when the list is short or empty.
+ */
+export type PaginationVariant = 'fixed' | 'sticky' | 'inline'
 
-type PaginationProps = {
+/** Props for {@link Pagination}. */
+export type PaginationProps = {
 	currentPage: number
 	totalPages: number
 	totalItems: number
@@ -24,6 +38,19 @@ type PaginationProps = {
 	colorTheme?: ColorTheme
 	className?: string
 	variant?: PaginationVariant
+	/**
+	 * Left inset for `variant='fixed'`, so the bar clears an app's fixed
+	 * sidebar instead of running under it. Any CSS length — usually a custom
+	 * property the shell publishes, e.g. `'var(--app-sidebar-w)'`. Applied from
+	 * the `lg` breakpoint up, where such sidebars are visible.
+	 */
+	offsetLeft?: string
+	/** Rows-per-page selector, rendered next to the range. Omit to hide it. */
+	pageSize?: {
+		value: number
+		options: number[]
+		onChange: (size: number) => void
+	}
 }
 
 function getPageNumbers(
@@ -52,13 +79,14 @@ function getPageNumbers(
 }
 
 /**
- * Pagination bar with page numbers and prev/next controls.
+ * Pagination bar with page numbers, prev/next controls, and an optional
+ * rows-per-page selector.
  *
  * @remarks
- * `variant='fixed'` (default) pins it across the bottom of the viewport;
- * `variant='sticky'` renders it as a floating, semi-transparent card that stays
- * in the content flow — better for landing/storefront pages where a full-width
- * fixed bar would overlap the footer.
+ * Always renders, even with zero results: a bar that vanishes on an empty
+ * filter makes the layout jump and hides the rows-per-page control exactly
+ * when a user is trying to widen their view. See {@link PaginationVariant} for
+ * how each layout behaves inside an app shell.
  */
 export function Pagination({
 	currentPage,
@@ -69,30 +97,18 @@ export function Pagination({
 	isLoading = false,
 	colorTheme = 'red',
 	className,
-	variant = 'fixed',
+	variant = 'sticky',
+	offsetLeft,
+	pageSize,
 }: PaginationProps) {
 	const ref = useRef<HTMLDivElement>(null)
 	const theme = getColorTheme(colorTheme)
 	const labels = useLabels()
 
-	useEffect(() => {
-		const handleKeyDown = (event: KeyboardEvent) => {
-			if (!ref.current || isLoading) return
-			const tag = document.activeElement?.tagName
-			if (tag === 'INPUT' || tag === 'TEXTAREA') return
-			if (event.metaKey || event.ctrlKey || event.altKey) return
-			// Shift + arrow jumps to the first/last page; plain arrow steps by one.
-			if (event.key === 'ArrowLeft' && currentPage > 1) {
-				event.preventDefault()
-				onPageChange(event.shiftKey ? 1 : currentPage - 1)
-			} else if (event.key === 'ArrowRight' && currentPage < totalPages) {
-				event.preventDefault()
-				onPageChange(event.shiftKey ? totalPages : currentPage + 1)
-			}
-		}
-		document.addEventListener('keydown', handleKeyDown)
-		return () => document.removeEventListener('keydown', handleKeyDown)
-	}, [currentPage, totalPages, onPageChange, isLoading])
+	// Arrow-key paging lives in the shortcut registry (`useListShortcuts`), not
+	// here: two document listeners for the same keys would page twice, and the
+	// registry is what the help overlay reads. A standalone `<Pagination>` gets
+	// its keys by wiring that hook.
 
 	const pageNumbers = getPageNumbers(currentPage, totalPages)
 	const startItem = totalItems === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1
@@ -107,31 +123,76 @@ export function Pagination({
 
 	const arrowBtn = 'h-9 w-9 p-2 text-gray-600'
 
-	const isSticky = variant === 'sticky'
-	const containerClass = isSticky
-		? // Floating card in the content flow — semi-transparent + blur, never
-			// spans full width, so it sits above the list without overlapping a
-			// page footer.
-			cn(
-				'sticky bottom-4 z-30 mt-5 flex items-center justify-between gap-4 rounded-2xl border border-gray-200 bg-white/80 px-4 py-3 shadow-lg backdrop-blur-md sm:px-6',
-				className
-			)
-		: cn(
-				'fixed right-0 bottom-0 left-0 z-10 flex items-center justify-between gap-4 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm sm:px-6',
-				className
-			)
+	const isFixed = variant === 'fixed'
+	const base =
+		'flex items-center justify-between gap-4 border-gray-200 px-4 py-3 sm:px-6'
+	const containerClass = cn(
+		base,
+		// `z-40` on both floating variants: the table's pinned cells carry
+		// z-indexes up to the pinned header's `z-40` (the Z scale in Table.tsx),
+		// so anything lower lets a pinned checkbox or actions column paint over
+		// the bar as rows scroll past it. The tie against the pinned header
+		// resolves to the bar, which renders after the table in the DOM; the
+		// filter sidebar (`z-50`) and popups (`z-60`) stay above it.
+		variant === 'sticky' &&
+			// Floating card in the content flow — never spans full width, so it sits
+			// above the list without overlapping a page footer or an app sidebar.
+			'sticky bottom-4 z-40 mt-5 rounded-2xl border bg-white/80 shadow-lg backdrop-blur-md',
+		isFixed &&
+			'fixed right-0 bottom-0 left-0 z-40 border-t bg-white/95 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm',
+		// Clears an app's fixed sidebar from `lg` up (below it those shells
+		// collapse). Reads the inset set inline, defaulting to flush-left — this
+		// is the contract that replaces every consumer's own pagination patch.
+		isFixed && offsetLeft && 'lg:left-[var(--lk-pagination-left,0px)]',
+		variant === 'inline' &&
+			// `mt-auto` is what pins it to the bottom of a flex-column container
+			// when the list is short — no `position`, no consumer override needed.
+			// The generous top margin keeps it from crowding the last row: inline
+			// sits *in* the content, so it needs the breathing room the floating
+			// variants get from being detached.
+			'mt-6 rounded-2xl border bg-white py-4',
+		className
+	)
 
 	return (
 		<div
 			ref={ref}
 			className={containerClass}
 			style={
-				isSticky
-					? undefined
-					: { paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)' }
+				isFixed
+					? ({
+							paddingBottom: 'max(env(safe-area-inset-bottom), 0.75rem)',
+							...(offsetLeft ? { '--lk-pagination-left': offsetLeft } : {}),
+						} as CSSProperties)
+					: undefined
 			}
+			data-lk-pagination={variant}
 			aria-label='Paginación'
 		>
+			{/* Leftmost and fixed: anchored here its position depends only on its
+			    own width, so it stays put while the range text and the page numbers
+			    grow and shrink. Between them it slid on every page change. */}
+			{pageSize && (
+				// Visible on every width: a phone is exactly where a user wants
+				// fewer rows per page. Only its text label folds away.
+				<div className='flex shrink-0 items-center gap-1.5 text-xs text-gray-500'>
+					<span className='hidden whitespace-nowrap sm:inline'>
+						{labels.rowsPerPage}
+					</span>
+					<Select
+						value={String(pageSize.value)}
+						options={pageSize.options.map(size => ({
+							value: String(size),
+							label: String(size),
+						}))}
+						onChange={size => pageSize.onChange(Number(size))}
+						disabled={isLoading}
+						aria-label={labels.rowsPerPage}
+						colorTheme={colorTheme}
+					/>
+				</div>
+			)}
+
 			<div className='min-w-0 flex-1 truncate text-xs text-gray-600 sm:text-sm'>
 				{isLoading ? (
 					<span className='inline-flex items-center gap-2'>

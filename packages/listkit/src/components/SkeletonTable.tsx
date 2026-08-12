@@ -1,6 +1,9 @@
 import { cn } from '../utils/cn'
 
-type SkeletonTableProps = {
+/**
+ *
+ */
+export type SkeletonTableProps = {
 	rows?: number
 	columns?: number
 	hasHeader?: boolean

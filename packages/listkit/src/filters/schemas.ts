@@ -110,8 +110,12 @@ export function isFilterValueActive(
 			return !!(v?.from || v?.to)
 		}
 		case 'number-range': {
+			// Finite, not merely present: `defaultValue`/`pinnedValue` and the live
+			// client state reach the adapter through this check alone (the wire path
+			// also runs `parseFilterValue`), so a `NaN` bound would render an active
+			// chip over a comparison that constrains nothing.
 			const v = value as NumberRangeFilterValue
-			return v?.min != null || v?.max != null
+			return Number.isFinite(v?.min) || Number.isFinite(v?.max)
 		}
 		case 'boolean':
 			return typeof value === 'boolean'

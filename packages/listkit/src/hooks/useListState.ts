@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { DEFAULT_PAGE_SIZE } from '../constants'
-import { decodeSort, encodeSort, SORT_PARAM } from '../filters/serialize'
+import {
+	decodeSort,
+	encodeSort,
+	PAGE_SIZE_PARAM,
+	SORT_PARAM,
+} from '../filters/serialize'
 import type {
 	DataAdapter,
 	ListDataSeed,
@@ -50,7 +55,7 @@ export function useListState<T>({
 	adapter,
 	params,
 	filters,
-	pageSize = DEFAULT_PAGE_SIZE,
+	pageSize: configPageSize = DEFAULT_PAGE_SIZE,
 	searchDebounce = 400,
 	refreshToken = 0,
 	useListData = defaultUseListData,
@@ -66,6 +71,15 @@ export function useListState<T>({
 
 	const currentSearch = get('search') ?? ''
 	const currentPage = Math.max(1, parseInt(get('page') ?? '1', 10) || 1)
+
+	// Rows per page lives in the URL like every other list param, so a chosen
+	// size survives reload, back/forward and a shared link. The config value is
+	// the default, never a cap.
+	const pageSizeParam = parseInt(get(PAGE_SIZE_PARAM) ?? '', 10)
+	const pageSize =
+		Number.isFinite(pageSizeParam) && pageSizeParam > 0
+			? pageSizeParam
+			: configPageSize
 
 	const [localSearchTerm, setLocalSearchTerm] = useState(currentSearch)
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -163,6 +177,18 @@ export function useListState<T>({
 		[set]
 	)
 
+	const handlePageSizeChange = useCallback(
+		(size: number) => {
+			// Back to page 1: the row that was on page 7 of 20-per-page is on a
+			// different page at 100-per-page, so keeping the number is meaningless.
+			params.setMany({
+				[PAGE_SIZE_PARAM]: size === configPageSize ? null : String(size),
+				page: null,
+			})
+		},
+		[params, configPageSize]
+	)
+
 	// Snap back to a valid page once results reveal the active page is out of range.
 	useEffect(() => {
 		if (total > 0 && currentPage > totalPages) {
@@ -201,6 +227,7 @@ export function useListState<T>({
 		handleSearchChange,
 		pagination,
 		handlePageChange,
+		handlePageSizeChange,
 		data,
 		isLoading,
 		error,

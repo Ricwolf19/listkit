@@ -3,12 +3,62 @@ import {
 	// memoryAdapter,
 	serverActionAdapter,
 	useListRefresh,
-} from '@pibytelabs/listkit'
-import { Plus, RefreshCw } from 'lucide-react'
+} from 'listkit'
+import { Plus, RefreshCw, Upload } from 'lucide-react'
 import { useState } from 'react'
 
+import { ExampleShell, type Legend } from '../shell/ExampleShell'
+import { Segmented } from '../shell/Segmented'
 import { productsConfig } from './products/config'
 import { PRODUCTS } from './products/data'
+
+const LEGENDS: Legend[] = [
+	{
+		action: 'Cambia de página en modo Async',
+		expect:
+			'la primera vez muestra skeletons; al volver es instantáneo — la respuesta quedó en cache (staleTime 10 s).',
+	},
+	{
+		action: 'Pulsa «Refrescar lista»',
+		expect:
+			'useListRefresh() invalida y refetchea desde un componente hermano, sin recargar la página.',
+	},
+	{
+		action: 'Cambia a In-memory',
+		expect:
+			'la misma config sin adapter: pasar un arreglo plano sigue siendo válido.',
+	},
+	{
+		action: 'Mira las tarjetas',
+		expect:
+			'card propia (ProductCard) en vez de la autogenerada de las columnas.',
+	},
+	{
+		action: 'Achica la ventana bajo 1024px',
+		expect: 'la vista cambia sola a tarjetas.',
+	},
+	{
+		action: 'Fíjate en los extremos del encabezado',
+		expect: 'headerContent monta slots propios a izquierda y derecha.',
+	},
+	{
+		action: 'Angosta la ventana hasta que el toolbar no quepa',
+		expect:
+			'las acciones se pliegan en el ••• del toolbar, agrupadas bajo «Datos».',
+	},
+	{
+		action: 'Abre Opciones → Columnas',
+		expect: 'revela las ocultas por defecto (Proveedor, Origen…).',
+	},
+	{
+		action: 'Fíjate en las miniaturas al scrollear',
+		expect: 'ListImage carga en diferido con shimmer y fallback de error.',
+	},
+	{
+		action: 'Filtra hasta vaciar la lista',
+		expect: 'renderEmpty pone un vacío propio en lugar del genérico.',
+	},
+]
 
 // const memory = memoryAdapter(PRODUCTS, {
 // 	search: { fields: ['name', 'sku', 'category'] },
@@ -118,33 +168,24 @@ export function HelloListKit() {
 	const [mode, setMode] = useState<'async' | 'memory'>('async')
 
 	return (
-		<div className='space-y-4'>
-			<div className='flex items-center gap-3'>
-				<div className='inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-1 shadow-sm'>
-					<button
-						onClick={() => setMode('async')}
-						className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-							mode === 'async'
-								? 'bg-gray-900 text-white'
-								: 'text-gray-600 hover:bg-gray-100'
-						}`}
-					>
-						Async (con cache)
-					</button>
-					<button
-						onClick={() => setMode('memory')}
-						className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-							mode === 'memory'
-								? 'bg-gray-900 text-white'
-								: 'text-gray-600 hover:bg-gray-100'
-						}`}
-					>
-						In-memory
-					</button>
-				</div>
-				{mode === 'async' && <RefreshBadge />}
-			</div>
-
+		<ExampleShell
+			title='Async y cache'
+			subtitle='El mismo catálogo servido por un adapter con 300 ms de latencia o desde memoria, para comparar skeletons, cache y refresco.'
+			legends={LEGENDS}
+			controls={
+				<>
+					<Segmented
+						value={mode}
+						onChange={setMode}
+						options={[
+							{ value: 'async', label: 'Async (con cache)' },
+							{ value: 'memory', label: 'In-memory' },
+						]}
+					/>
+					{mode === 'async' && <RefreshBadge />}
+				</>
+			}
+		>
 			<ListView
 				config={productsConfig}
 				adapter={mode === 'async' ? asyncAdapter : undefined}
@@ -155,7 +196,7 @@ export function HelloListKit() {
 					left: <Metric label='Catálogo' value={PRODUCTS.length} />,
 					right: (
 						<span className='rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700'>
-							v2.11 showcase
+							header slot
 						</span>
 					),
 				}}
@@ -165,9 +206,23 @@ export function HelloListKit() {
 						icon: <Plus size={16} />,
 						onClick: () => alert('Nuevo producto'),
 					},
+					{
+						label: 'Importar CSV',
+						icon: <Upload size={16} />,
+						variant: 'outline',
+						group: 'Datos',
+						onClick: () => alert('Importar'),
+					},
+					{
+						label: 'Sincronizar catálogo',
+						icon: <RefreshCw size={16} />,
+						variant: 'outline',
+						group: 'Datos',
+						onClick: () => alert('Sincronizar'),
+					},
 				]}
 			/>
-		</div>
+		</ExampleShell>
 	)
 }
 

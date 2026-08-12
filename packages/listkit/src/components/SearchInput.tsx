@@ -8,7 +8,10 @@ import { getSearchShortcut } from '../utils/shortcut'
 
 type Shortcut = ReturnType<typeof getSearchShortcut>
 
-type SearchInputProps = {
+/**
+ *
+ */
+export type SearchInputProps = {
 	id?: string
 	value: string
 	onChange: (value: string) => void
@@ -21,7 +24,7 @@ type SearchInputProps = {
 
 /** Debounced search box with a leading icon and clear button. */
 export function SearchInput({
-	// id,
+	id,
 	value,
 	onChange,
 	placeholder = 'Buscar...',
@@ -72,6 +75,7 @@ export function SearchInput({
 			</span>
 
 			<input
+				id={id}
 				ref={inputRef}
 				type='search'
 				name='search'

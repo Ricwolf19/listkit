@@ -8,6 +8,8 @@ export type FilterTextProps = {
 	onChange: (value: TextFilterValue) => void
 	placeholder?: string
 	defaultMatch?: TextMatch
+	/** Focus the input on mount — for a popover host opened to type right away. */
+	autoFocus?: boolean
 	colorTheme?: ColorTheme
 }
 
@@ -16,6 +18,7 @@ export function FilterText({
 	onChange,
 	placeholder,
 	defaultMatch = 'partial',
+	autoFocus = false,
 	colorTheme = 'red',
 }: FilterTextProps) {
 	const theme = getColorTheme(colorTheme)
@@ -29,6 +32,7 @@ export function FilterText({
 				value={text}
 				placeholder={placeholder}
 				onChange={e => onChange({ value: e.target.value, match })}
+				autoFocus={autoFocus}
 				className={fieldClass(theme)}
 			/>
 			<div className='inline-flex rounded-md bg-gray-100 p-0.5 text-xs'>

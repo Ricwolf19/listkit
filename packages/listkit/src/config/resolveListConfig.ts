@@ -47,7 +47,7 @@ export type ResolvedListConfig<T> = Omit<
  * unless a custom `card` is supplied or `card: false` opts out — which is what
  * makes a narrow viewport able to swap the table for cards.
  *
- * Pure and DOM-free: also exported from `@pibytelabs/listkit/server`.
+ * Pure and DOM-free: also exported from `listkit/server`.
  *
  * @typeParam T - The row type.
  * @param config - The authored list configuration.

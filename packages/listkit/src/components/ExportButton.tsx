@@ -1,7 +1,9 @@
 import { Download, FileDown, Loader2, Table2 } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { useLabels } from '../context/ListKitContext'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useOutsideClick } from '../hooks/useOutsideClick'
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import { cn } from '../utils/cn'
 
@@ -35,21 +37,9 @@ export function ExportButton({
 	const [open, setOpen] = useState(false)
 	const ref = useRef<HTMLDivElement>(null)
 
-	useEffect(() => {
-		if (!open) return
-		const onPointer = (e: MouseEvent) => {
-			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-		}
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setOpen(false)
-		}
-		document.addEventListener('mousedown', onPointer)
-		document.addEventListener('keydown', onKey)
-		return () => {
-			document.removeEventListener('mousedown', onPointer)
-			document.removeEventListener('keydown', onKey)
-		}
-	}, [open])
+	const close = useCallback(() => setOpen(false), [])
+	useOutsideClick(ref, open, close)
+	useEscapeKey(open, close)
 
 	const icon = exporting ? (
 		<Loader2 className='h-4 w-4 animate-spin' />

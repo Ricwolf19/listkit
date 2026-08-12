@@ -1,6 +1,12 @@
 /** The active rendering mode of a list. */
 export type ViewType = 'table' | 'cards'
 
+/**
+ * Whether the selection is the rows the user picked, or every row matching the
+ * current query minus the ones they unticked.
+ */
+export type SelectionMode = 'explicit' | 'all-matching'
+
 /** Table row density: roomy (`'comfortable'`) or tight (`'compact'`). */
 export type Density = 'comfortable' | 'compact'
 

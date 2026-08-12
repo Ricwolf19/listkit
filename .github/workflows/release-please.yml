@@ -31,10 +31,15 @@ jobs:
           manifest-file: .release-please-manifest.json
 
   publish:
-    name: Publish to Verdaccio
+    name: Publish to npm
     needs: release-please
     if: ${{ needs.release-please.outputs.releases_created == 'true' }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Required for `--provenance`: npm exchanges this OIDC token for a signed
+      # attestation linking the tarball to this workflow run.
+      id-token: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -47,20 +52,14 @@ jobs:
       - name: Build
         run: pnpm build:all
 
-      - name: Configure Verdaccio auth
-        run: |
-          echo "@pibytelabs:registry=https://registry.alagrandelepusecuca.mx/" > ~/.npmrc
-          echo "//registry.alagrandelepusecuca.mx/:_authToken=\${NODE_AUTH_TOKEN}" >> ~/.npmrc
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish to Verdaccio
+      - name: Publish
         run: |
           VERSION=$(jq -r '.version' packages/listkit/package.json)
-          if npm view @pibytelabs/listkit@"$VERSION" version > /dev/null 2>&1; then
+          if npm view listkit@"$VERSION" version > /dev/null 2>&1; then
             echo "Version $VERSION already published. Skipping publish."
           else
-            cd packages/listkit && npm publish
+            cd packages/listkit && npm publish --access public --provenance
           fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NPM_CONFIG_REGISTRY: https://registry.npmjs.org

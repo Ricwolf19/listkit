@@ -18,7 +18,7 @@ NOT COVERED BY THE MIT LICENSE
 The following are reserved by the author and are NOT licensed for reuse,
 modification, redistribution, or commercial exploitation under the MIT License:
 
-  1. The names "listkit", "@pibytelabs/listkit", and any associated marks,
+  1. The names "listkit", "listkit", and any associated marks,
      logos, icons, or visual identity.
 
   2. Documentation prose — including (but not limited to) this NOTICE file,
@@ -35,7 +35,7 @@ You MAY:
 
   - Use, fork, modify, and ship the source code under the MIT License terms.
   - Cite this project by name with attribution (e.g., "powered by listkit"
-    or "based on @pibytelabs/listkit").
+    or "based on listkit").
   - Reproduce small excerpts of documentation for review, commentary,
     education, or interoperability ("fair use" / "fair dealing").
 

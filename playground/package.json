@@ -10,7 +10,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@pibytelabs/listkit": "workspace:*",
+		"listkit": "workspace:*",
 		"lucide-react": "^0.575.0",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"

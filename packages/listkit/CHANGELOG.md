@@ -1,4 +1,85 @@
-# @pibytelabs/listkit
+# listkit
+
+## [4.2.1](https://github.com/Ricwolf19/listkit/compare/listkit-4.2.0...listkit-4.2.1) (2026-08-11)
+
+
+### Bug Fixes
+
+* modal & portal z-index related issues with other components ([d926c57](https://github.com/Ricwolf19/listkit/commit/d926c570740582bd554a90c4fe4af764619fbea7))
+
+## [4.2.0](https://github.com/Ricwolf19/listkit/compare/listkit-4.1.0...listkit-4.2.0) (2026-08-11)
+
+
+### Features
+
+* **filters:** open a quick filter armed to use ([175ed77](https://github.com/Ricwolf19/listkit/commit/175ed77ee261e5d531ffc1cca668759fb7dad978))
+* **shortcuts:** make + the one filter shortcut ([9f5be6d](https://github.com/Ricwolf19/listkit/commit/9f5be6dbdde7db9a5cf58cf7960d37d563eb8bea))
+
+## [4.1.0](https://github.com/Ricwolf19/listkit/compare/listkit-4.0.0...listkit-4.1.0) (2026-08-10)
+
+
+### Features
+
+* **table:** make wide tables usable with edge actions ([6b55d19](https://github.com/Ricwolf19/listkit/commit/6b55d191d54513f48d8ac916fb3646c30406af4e))
+
+
+### Bug Fixes
+
+* **export:** keep overlay columns out of the universe ([8f794f7](https://github.com/Ricwolf19/listkit/commit/8f794f7420f28b3d5bdee79ed3f5395c8ed57a52))
+* **overlays:** position popups under css zoom ([13fc39e](https://github.com/Ricwolf19/listkit/commit/13fc39e37d2bfbefa1b0ccd3cef3393c7e3f53bf))
+* **pagination:** raise the bar above pinned cells ([885b79d](https://github.com/Ricwolf19/listkit/commit/885b79d7fa80bca080fb1ae6e5d28eb0fb3fbc5c))
+
+## [4.0.0](https://github.com/Ricwolf19/listkit/compare/listkit-3.0.0...listkit-4.0.0) (2026-08-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **listview:** pagination defaults to 'sticky'; pass paginationVariant='fixed' (with paginationOffsetLeft) for the old layout. A rows-per-page selector renders by default (pageSizeOptions: false to drop it) and page changes scroll to the list top (scrollToTopOnPageChange: false to keep the viewport).
+* **table:** columns clip overflowing text by default. Restore the previous behavior per column with `truncate: false`.
+
+### Features
+
+* **export:** add the multi-stack export contract ([16dd94b](https://github.com/Ricwolf19/listkit/commit/16dd94baba988adb21cb91bfae0136149d191f8b))
+* **filters:** add quick bar, arranging and facets ([349622a](https://github.com/Ricwolf19/listkit/commit/349622a05e02212dc805c84810ff3f24747ebde2))
+* **filters:** resolve paths that cross arrays ([312ee06](https://github.com/Ricwolf19/listkit/commit/312ee06c3681846a67a3e4726eadef66507c081f))
+* **listview:** stick pagination and split the orchestrator ([2de235e](https://github.com/Ricwolf19/listkit/commit/2de235e51fd7b45140781f20defba9f4a9831f57))
+* **overlays:** add portal, modal and scroll primitives ([1e0328e](https://github.com/Ricwolf19/listkit/commit/1e0328e562f5e15b3214ae97fda962a738f89240))
+* **selection:** select every matching result ([7c002e8](https://github.com/Ricwolf19/listkit/commit/7c002e8a4ae09379683b71bf7955ff9efcd50804))
+* **shortcuts:** add the registry and help overlay ([2bb9b3a](https://github.com/Ricwolf19/listkit/commit/2bb9b3a1d3e42ea5eae794b7e00d9ab33eb42387))
+* **table:** clip overflow and pin columns by default ([3fbaebb](https://github.com/Ricwolf19/listkit/commit/3fbaebb1c017ed594eb4930f399ab859bd0ded47))
+
+
+### Bug Fixes
+
+* **ui:** modal bug flashing with quick scrolling & problems with quick ([8543e2a](https://github.com/Ricwolf19/listkit/commit/8543e2a49d93558699dbc95575ad550ba1908086))
+
+## [3.0.0](https://github.com/Ricwolf19/listkit/compare/listkit-2.14.2...listkit-3.0.0) (2026-08-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* **config:** table features that previously required opting in are now on by default. A list that relied on them being absent must set the corresponding table flag to false.
+
+### Features
+
+* **config:** enable table features by default ([d63f332](https://github.com/Ricwolf19/listkit/commit/d63f3325a1611ec0314745d2882492e5f54556ae))
+* **data:** key cache by adapter and seed default sort ([535463e](https://github.com/Ricwolf19/listkit/commit/535463e4cc60b7c297461bb113cf725e64ce1a19))
+* **filters:** add pinned toolbar chips ([3590864](https://github.com/Ricwolf19/listkit/commit/3590864c5e140916b775fae4d75d9a80f5a7b887))
+* **filters:** validate the wire contract without zod ([dec4748](https://github.com/Ricwolf19/listkit/commit/dec4748a218ca08eb521f847811848445c940f11))
+* **mongo:** add list executor and parity suite ([482bc17](https://github.com/Ricwolf19/listkit/commit/482bc17fc720fb06e186c7f519b34f4a51d2e281))
+* wire the resolved config and chips into ListView ([8f4409a](https://github.com/Ricwolf19/listkit/commit/8f4409ade6ea081aa0407837cbca8299107f8cf9))
+
+
+### Bug Fixes
+
+* **exports:** resolve subpath types and verify them under tsx ([5c74b38](https://github.com/Ricwolf19/listkit/commit/5c74b38f091b26ba0e60997131ed1e32291bf99e))
+
+## [2.14.2](https://github.com/Ricwolf19/listkit/compare/listkit-2.14.1...listkit-2.14.2) (2026-07-03)
+
+
+### Bug Fixes
+
+* cache bug related with liskit, new cacheScope and warnings ([cb61b2b](https://github.com/Ricwolf19/listkit/commit/cb61b2b7e7b700ed155ffa0c63aff5c6a652d330))
 
 ## [2.14.1](https://github.com/Ricwolf19/listkit/compare/listkit-2.14.0...listkit-2.14.1) (2026-06-30)
 
@@ -91,8 +172,8 @@
 
 ### Minor Changes
 
-- 419e915: `@pibytelabs/listkit/mongo` field maps now accept a `{ match }` spec for computed and cross-field filters. `build` always wraps its result under a single `path` (`{ [path]: expr }`), so it can only express one field; `match` returns a complete condition that is merged as-is, letting a single filter span several fields — e.g. a "certificate active" bucket that requires the files to be present AND the date to be in the future. Existing string and `{ path, build }` specs are unchanged.
-- 419e915: Add a first-class TanStack Query integration at `@pibytelabs/listkit/react-query`. `useReactQueryListData` is a drop-in `useListData` hook that backs a list's pages with React Query instead of the built-in cache, so lists share the app's cache, retries, and devtools — pass it via `<ListView useListData={useReactQueryListData} />`. `invalidateList(queryClient, listId?)` refetches one list (or all) from anywhere, e.g. a mutation `onSuccess` outside the list tree, and `listQueryKey` exposes the key shape. `@tanstack/react-query` is an optional peer dependency, so the module loads only for apps that import it. `useListRefresh()` keeps working (it bumps `refreshToken`, which is part of the key) and `keepPreviousData` avoids an empty flash on page/filter changes.
+- 419e915: `listkit/mongo` field maps now accept a `{ match }` spec for computed and cross-field filters. `build` always wraps its result under a single `path` (`{ [path]: expr }`), so it can only express one field; `match` returns a complete condition that is merged as-is, letting a single filter span several fields — e.g. a "certificate active" bucket that requires the files to be present AND the date to be in the future. Existing string and `{ path, build }` specs are unchanged.
+- 419e915: Add a first-class TanStack Query integration at `listkit/react-query`. `useReactQueryListData` is a drop-in `useListData` hook that backs a list's pages with React Query instead of the built-in cache, so lists share the app's cache, retries, and devtools — pass it via `<ListView useListData={useReactQueryListData} />`. `invalidateList(queryClient, listId?)` refetches one list (or all) from anywhere, e.g. a mutation `onSuccess` outside the list tree, and `listQueryKey` exposes the key shape. `@tanstack/react-query` is an optional peer dependency, so the module loads only for apps that import it. `useListRefresh()` keeps working (it bumps `refreshToken`, which is part of the key) and `keepPreviousData` avoids an empty flash on page/filter changes.
 
 ### Patch Changes
 
@@ -165,15 +246,15 @@
 
 ### Patch Changes
 
-- b427874: docs: document the `@pibytelabs/listkit/mongo` subpath in the Spanish README (parity with English) and add the subpath-exports table row.
+- b427874: docs: document the `listkit/mongo` subpath in the Spanish README (parity with English) and add the subpath-exports table row.
 
 ## 2.5.0
 
 ### Minor Changes
 
-- a742e97: feat(mongo): add `@pibytelabs/listkit/mongo` subpath
+- a742e97: feat(mongo): add `listkit/mongo` subpath
 
-  A backend-agnostic, dependency-free translation layer that turns a listkit `ListQuery` into plain MongoDB query objects — mirroring `@pibytelabs/listkit/sql` for Mongo-backed apps.
+  A backend-agnostic, dependency-free translation layer that turns a listkit `ListQuery` into plain MongoDB query objects — mirroring `listkit/sql` for Mongo-backed apps.
   - `buildMongoQuery` — one call → `{ filter, sort, skip, limit }` from a whitelisted field map.
   - `buildMongoFilter` / `buildMongoSort` / `mongoPaginate` — composable building blocks.
   - `combineFilters`, `escapeRegex`, `existenceMatch`, and per-type matchers (`textMatch`, `numberRangeMatch`, `dateRangeMatch`).
@@ -279,11 +360,11 @@
   the main entry, whose barrel evaluates `ListKitProvider`'s `createContext` —
   so importing `ListSkeleton` into a Server Component (e.g. a `<Suspense>`
   fallback in a `page.tsx`) threw "createContext only works in Client Components".
-  It's now also re-exported from `@pibytelabs/listkit/server` (RSC-safe, no
+  It's now also re-exported from `listkit/server` (RSC-safe, no
   client context). Import the Suspense fallback from there in Server Components:
 
   ```tsx
-  import { ListSkeleton, loadInitialList } from '@pibytelabs/listkit/server'
+  import { ListSkeleton, loadInitialList } from 'listkit/server'
   ```
 
 - 4a34b9d: Refactor and professionalize the package README.
@@ -298,15 +379,15 @@
 
 - Less boilerplate on the consumer side — three helpers that every SSR/Next app
   was hand-rolling are now built in:
-  - **`NextListView`** (from `@pibytelabs/listkit/next`): `<ListView>` pre-wired
+  - **`NextListView`** (from `listkit/next`): `<ListView>` pre-wired
     with the Next.js App Router adapter (search/page/filters/sort sync to the URL).
     Replaces the per-app "provider + `useNextRouterAdapter` + `<ListView>`" wrapper.
     Optional `theme` prop; omit it to inherit a root `<ListKitProvider theme={…}>`.
   - **`loadInitialList(config, searchParams, fetcher)`** (from
-    `@pibytelabs/listkit/server`): rebuilds the URL-derived query, fetches the
+    `listkit/server`): rebuilds the URL-derived query, fetches the
     first page on the server, and degrades to a client fetch on error. Returns
     `{ initialData, initialQuery }` for `<ListView>`/`NextListView`.
-  - **`ListSkeleton`** (from `@pibytelabs/listkit`): ready-made page-level
+  - **`ListSkeleton`** (from `listkit`): ready-made page-level
     `<Suspense>` fallback (toolbar bar + skeleton table) for the SSR pattern.
 
   Also: `ListKitProvider` now inherits unspecified `router`/`theme` from a parent
@@ -315,12 +396,12 @@
 
 - Standardized query helpers so apps stop re-implementing the
   `ListQuery` → backend translation in every project:
-  - **`@pibytelabs/listkit/query`** (backend-agnostic, RSC-safe): `filtersById`,
+  - **`listkit/query`** (backend-agnostic, RSC-safe): `filtersById`,
     `getString`, `getBoolean`, `getStringArray`, `getDateRange`, `getNumberRange`,
     `getText`, `paginate`, plus the `DateRangeValue` / `NumberRangeValue` /
     `TextValue` types. These read a `ListQuery`'s filters by config `id` and clamp
     pagination — useful from any data fetcher (server action, route handler, repo).
-  - **`@pibytelabs/listkit/sql`** (Postgres-flavoured): `buildOrderBy` (safe,
+  - **`listkit/sql`** (Postgres-flavoured): `buildOrderBy` (safe,
     whitelist-only `ORDER BY`) and `textCondition` (`lower(col) LIKE/= $n`).
 
   Per-backend SQL/Mongo/Dexie helpers stay opt-in subpaths and intentionally
@@ -374,7 +455,7 @@
 ### Patch Changes
 
 - 73ce8f9: ### Fixes
-  - **`defineListConfig` is now exported from `@pibytelabs/listkit/server`** so a list config can be built inside a React Server Component (to feed `buildListQuery` for SSR `initialData`) without importing the main entry. Importing `defineListConfig` from the main barrel pulled in the client context (`createContext`) and crashed the server render with "createContext only works in Client Components". Build SSR-bound configs with `import { defineListConfig } from '@pibytelabs/listkit/server'`; the main-entry export is unchanged for client code.
+  - **`defineListConfig` is now exported from `listkit/server`** so a list config can be built inside a React Server Component (to feed `buildListQuery` for SSR `initialData`) without importing the main entry. Importing `defineListConfig` from the main barrel pulled in the client context (`createContext`) and crashed the server render with "createContext only works in Client Components". Build SSR-bound configs with `import { defineListConfig } from 'listkit/server'`; the main-entry export is unchanged for client code.
 
 ## 2.1.0
 
@@ -382,7 +463,7 @@
 
 - c9dbf13: ### Features
   - **Server-side rendering with `initialData`** — `<ListView>` now accepts `initialData` (a server-fetched first page) and `initialQuery`. When the live query matches `initialQuery`, the list renders those rows in the initial HTML and skips the client's first fetch — SEO-friendly, no loading flash, and it hydrates cleanly. Paging/filtering afterwards still run on the client, and any query change (or `useListRefresh()`) falls back to a normal fetch. Fully opt-in: lists without `initialData` are unchanged.
-  - **`buildListQuery(config, searchParams)`** — new helper exported from the React Server Component-safe entry `@pibytelabs/listkit/server` (no React/DOM imports). It rebuilds, on the server, the exact `ListQuery` the client derives from the same URL, so the `initialData` snapshot matches the first client render byte-for-byte and avoids hydration mismatches.
+  - **`buildListQuery(config, searchParams)`** — new helper exported from the React Server Component-safe entry `listkit/server` (no React/DOM imports). It rebuilds, on the server, the exact `ListQuery` the client derives from the same URL, so the `initialData` snapshot matches the first client render byte-for-byte and avoids hydration mismatches.
   - The `UseListDataHook` contract gains an optional 5th `seed` argument so injected hooks (e.g. TanStack Query) can opt into the same SSR snapshot if they want; they may also ignore it and seed via their own library.
   - **Column sorting** — `ColumnDef` gains `sortable` (and optional `sortField`). Sortable headers cycle asc → desc → off, sync the active sort to a `sort` URL param, and flow into `query.sort` for adapters (the in-memory adapter sorts automatically; server actions read `query.sort` for SQL). `buildListQuery` reads the same param so SSR stays consistent.
   - **Next-page prefetch** — after a page loads, the built-in hook prefetches the next page on idle (`requestIdleCallback`) into the shared cache, so forward pagination is instant. Best-effort and client-only; injected hooks are unaffected.
@@ -500,7 +581,7 @@
 
 - 74290df: Viewport mode now follows the viewport size automatically and is no longer persisted to `localStorage`. The manual toggle is respected during the session but resets on reload, eliminating stale view state across devices.
 
-- Tailwind CSS source file shipped: consumers can now register package classes with `@import '@pibytelabs/listkit/tailwind.css';` instead of hand-writing an `@source` path into `node_modules`.
+- Tailwind CSS source file shipped: consumers can now register package classes with `@import 'listkit/tailwind.css';` instead of hand-writing an `@source` path into `node_modules`.
 
 ## 0.1.1
 

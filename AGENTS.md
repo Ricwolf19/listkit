@@ -1,4 +1,4 @@
-# AGENT.md — `@pibytelabs/listkit`
+# AGENT.md — `listkit`
 
 > Operating guide for any AI agent (or contributor) working on this package. Read it top-to-bottom before changing code. It is the source of truth for **how to work here**, the **invariants** that must not break, and the **conventions** to follow. It deliberately does **not** re-document the public API — that lives in the package README and is the canonical reference for behavior.
 >
@@ -8,7 +8,7 @@
 
 ## 1. What this package is
 
-`@pibytelabs/listkit` turns a single declarative config into a complete list view — toolbar (search, filters, view toggle, options menu, export), a table/cards display, pagination, and row selection — from **one** `defineListConfig<T>()` call. It is framework-pluggable (Next.js, React Router, plain Vite) and data-source-agnostic (in-memory arrays, REST, server actions, IndexedDB/Dexie, SQL, MongoDB) through small adapter contracts.
+`listkit` turns a single declarative config into a complete list view — toolbar (search, filters, view toggle, options menu, export), a table/cards display, pagination, and row selection — from **one** `defineListConfig<T>()` call. It is framework-pluggable (Next.js, React Router, plain Vite) and data-source-agnostic (in-memory arrays, REST, server actions, IndexedDB/Dexie, SQL, MongoDB) through small adapter contracts.
 
 The mental model: **the consumer writes config and adapters; listkit owns the UI, the URL/state wiring, and the query shape.** Everything the package renders must be driven by config or props — never by hardcoded business logic.
 
@@ -33,15 +33,19 @@ For the full feature list, install steps, and copy-paste examples, see the READM
 
 ```
 listkit/
-├── packages/listkit/      # the publishable package (@pibytelabs/listkit)
+├── packages/listkit/      # the publishable package (listkit)
 │   ├── src/
 │   │   ├── index.ts        # main public barrel
 │   │   ├── adapters/       # data adapters: memory, fetch, serverAction, dexie
 │   │   ├── adapters.ts     # /adapters subpath barrel
-│   │   ├── components/     # ListView, Table, Cards, Toolbar, Pagination, filters/* …
+│   │   ├── components/     # ListView, Table, Cards, Toolbar, Pagination …
+│   │   │   ├── overlays/   # Modal (portal, scroll lock, focus trap)
+│   │   │   ├── export/     # ExportDialog + its pure reducer
+│   │   │   └── filters/    # sidebar, chips, quick bar, per-type inputs
 │   │   ├── config/         # defineListConfig + resolveListConfig (defaults)
 │   │   ├── context/        # ListKitProvider + context
-│   │   ├── filters/        # filter match / schemas / (de)serialize
+│   │   ├── export/         # export universe, cell normalization, CSV, wire
+│   │   ├── filters/        # filter match / schemas / (de)serialize / arrange
 │   │   ├── hooks/          # useListState, useColumnPrefs, router adapters …
 │   │   ├── theme/          # built-in palettes + ThemeClasses contract
 │   │   ├── types/          # public TypeScript types
@@ -59,7 +63,7 @@ listkit/
 └── playground/             # local Vite app for development & manual testing (never published)
 ```
 
-Workspaces resolve `@pibytelabs/listkit` in the playground to the local source, so package edits reflect instantly via Vite HMR — no `npm link`, no rebuild.
+The playground resolves `listkit` to the package **source** through aliases in `playground/vite.config.ts`, so edits hot-reload with no build step. That alias is load-bearing, not a convenience: `pnpm dev` runs tsup's watcher and Vite in parallel and tsup `clean`s `dist` on start, so resolving through the package `exports` races an empty directory ("Failed to resolve entry for package"). Add any new subpath to that alias list.
 
 ---
 
@@ -67,19 +71,19 @@ Workspaces resolve `@pibytelabs/listkit` in the playground to the local source, 
 
 Each is a separate, tree-shakeable entry. Keep them cohesive — don't leak DOM/React code into the server-safe ones (`/server`, `/query`, `/sql`, `/mongo`, `/mongoose`). `/mongoose` is server-safe too, but unlike `/mongo` it is typed against `mongoose` (an optional, type-only peer).
 
-| Import                             | Purpose                                                                      |
-| ---------------------------------- | ---------------------------------------------------------------------------- |
-| `@pibytelabs/listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, hooks, primitives, types  |
-| `@pibytelabs/listkit/next`         | Next.js router adapter + `NextListView`                                      |
-| `@pibytelabs/listkit/react-router` | React Router adapter                                                         |
-| `@pibytelabs/listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter` |
-| `@pibytelabs/listkit/server`       | RSC-safe query builders (`buildListQuery`, `loadInitialList`) — no React/DOM |
-| `@pibytelabs/listkit/query`        | Read `ListQuery` filter values (`filtersById`, `getString`, `paginate`, …)   |
-| `@pibytelabs/listkit/sql`          | Postgres-flavoured SQL fragment helpers                                      |
-| `@pibytelabs/listkit/mongo`        | MongoDB query builders + `executeMongoList` (driver-free)                    |
-| `@pibytelabs/listkit/mongoose`     | Mongoose executors (`executePaginatedListkitQuery`, aggregate sibling)       |
-| `@pibytelabs/listkit/react-query`  | TanStack Query `useListData` + invalidation                                  |
-| `@pibytelabs/listkit/tailwind.css` | Tailwind v4 source registration (CSS import)                                 |
+| Import                 | Purpose                                                                      |
+| ---------------------- | ---------------------------------------------------------------------------- |
+| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, hooks, primitives, types  |
+| `listkit/next`         | Next.js router adapter + `NextListView`                                      |
+| `listkit/react-router` | React Router adapter                                                         |
+| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter` |
+| `listkit/server`       | RSC-safe query builders (`buildListQuery`, `loadInitialList`) — no React/DOM |
+| `listkit/query`        | Read `ListQuery` filter values (`filtersById`, `getString`, `paginate`, …)   |
+| `listkit/sql`          | Postgres-flavoured SQL fragment helpers                                      |
+| `listkit/mongo`        | MongoDB query builders + `executeMongoList` (driver-free)                    |
+| `listkit/mongoose`     | Mongoose executors (`executePaginatedListkitQuery`, aggregate sibling)       |
+| `listkit/react-query`  | TanStack Query `useListData` + invalidation                                  |
+| `listkit/tailwind.css` | Tailwind v4 source registration (CSS import)                                 |
 
 The exhaustive contents of each are documented in the README section **Subpath Exports**. The shapes of the data/router/filter contracts are in the README sections **Async data (server-side)**, **MongoDB backend**, and **Advanced filters**.
 
@@ -94,10 +98,11 @@ pnpm install        # install all workspace deps (also installs Husky hooks)
 pnpm dev            # run the playground (Vite) against package source
 pnpm build          # build the package (tsup → ESM + CJS + .d.ts)
 pnpm typecheck      # type-check all workspaces
+pnpm test           # vitest (includes the mongod/pglite parity suites)
 pnpm lint           # eslint
 pnpm format         # prettier write
 pnpm fix            # prettier + eslint --fix + knip --fix
-pnpm verify         # what pre-push runs: lint + build + typecheck
+pnpm verify         # what pre-push runs: lint + build + typecheck + test + check:subpaths
 pnpm verify:full    # everything CI runs: + format:check, knip, depcruise, size-limit, publint, attw
 ```
 
@@ -138,12 +143,20 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
 3. **No direct router imports outside adapters.** `react-router-dom` / `next/navigation` may only be imported inside their adapter files. Everything else talks to the `RouterAdapter` contract.
 4. **Server-safe entries stay DOM-free.** `/server`, `/query`, `/sql`, `/mongo`, `/mongoose` must not import React or browser APIs — they run in RSC, route handlers, and Node backends.
 5. **Field names come from whitelists, never user input.** The query/SQL/Mongo helpers only resolve fields through a config-controlled map (no injection / field-probing surface). Preserve this when extending them.
-6. **In-memory and server behavior match.** A filter/sort/search must behave the same whether served by `memoryAdapter` or a server adapter — the Mongo/SQL helpers deliberately mirror the in-memory matching semantics. `src/mongo.parity.test.ts` enforces it: one fixture through `itemMatchesFilters` and through `buildMongoFilter` against a real mongod, both asserted against explicit ids. Extend that suite whenever you touch matching.
+6. **In-memory and server behavior match.** A filter/sort/search must behave the same whether served by `memoryAdapter` or a server adapter — the Mongo/SQL helpers deliberately mirror the in-memory matching semantics. `src/mongo.parity.test.ts` enforces it: one fixture through `itemMatchesFilters` and through `buildMongoFilter` against a real mongod, both asserted against explicit ids. Extend that suite whenever you touch matching. The same promise covers **exports**: `src/export.parity.test.ts` runs one fixture through the in-memory resolver, `buildMongoExport` against a real mongod, and `buildSqlExport` against a real Postgres (pglite), asserting **byte-identical CSV** — extend it whenever you touch export assembly, cell rendering, or a stack builder. Two scoped caveats hold: SQL equality does not accent-fold (keep option values ASCII or add a fold), and every export path requires a total-order sort (`tiebreak`).
+
+   For **array-crossing paths** (`products.name`): filters/search resolve through `getPathValues` with ANY-element semantics (Mongo's), sort deliberately does not (LK1004 — an array has no scalar order). The recommended consumer pattern for in-memory lists is still a precomputed flat field (`listProductNames`-style, as cafe-combate does): it sorts, indexes in Dexie, and costs one map at load time. Native traversal is the parity safety net, not the preferred path.
+
 7. **Tailwind v4 is a peer dep.** The package ships classes + `tailwind.css`, not a precompiled stylesheet; consumers register the source. Don't introduce a build step that assumes otherwise.
-8. **User view preferences persist.** Column order/width/visibility and density are stored via the column-prefs layer (localStorage by default, pluggable). Don't bypass it when adding table features.
+8. **User view preferences persist.** Anything describing _how a user works with this list_ — column order/width/visibility, density, table-vs-cards, page size, the quick-filter bar — is stored through the column-prefs layer (localStorage by default, pluggable via `columnStorage`). A URL param always wins over the stored value, so a shared link shows the sender's view. A new view-level toggle joins that record; a value that changes _which rows_ are shown belongs in the URL instead, never in storage.
 9. **Every subpath must resolve to real JS in a TS-aware runtime.** `/mongo`, `/query`, `/mongoose` and `/server` are consumed by `tsx`/`ts-node` backends, whose loaders resolve differently from plain `node` — they honor tsconfig `paths` and can match a `types` condition, either of which hands back a `.d.ts` that transpiles to an **empty module**, so every named import is silently `undefined`. `typesVersions` maps each subpath for `moduleResolution: node` consumers so they never need a `paths` shim pointing at a declaration file. `pnpm check:subpaths` (part of `verify`) imports every server subpath under `tsx` and asserts a known export is callable — a vitest suite cannot catch this, since it never goes through that loader. Add a new server subpath to that script and to `typesVersions` in the same change.
 10. **Table features are on by default.** `resolveListConfig` turns on the column manager, density, reordering, resizing, the options menu and an auto-generated cards view for any config with a table; a consumer opts _out_ with `false`. A new table feature follows the same rule — useful by default, disabled explicitly — so a bare config keeps getting better without an edit.
 11. **The list id identifies the dataset, not the view.** The response cache keys on `resolveListId(config.id, cacheScope)` + the query. `config.id` must name _which dataset_ is shown; any scope that changes the rows but isn't in the query (a `studentId` the adapter closes over) belongs in `cacheScope`, which folds into the id as `` `${id}::${scope}` ``. The `::` separator is the invalidation boundary — keep it in sync with `invalidateListCache`'s prefix match. Never key the cache on anything the adapter captures but the query can't see.
+12. **Everything that floats goes through the overlay primitives.** Dropdowns, popovers and menus render through `PopupPortal` + `useAnchoredPopup`; dialogs go through `components/overlays/Modal`. Hand-rolling an absolutely-positioned panel reintroduces the two bugs those primitives exist to kill: a parent with `overflow-hidden` clips it, and a right-aligned trigger pushes it off a narrow viewport. Dismissal is `useOutsideClick` + `useEscapeKey`, never a bespoke listener — `Modal` refcounts the scroll lock and keeps an open-stack so Escape closes the innermost overlay, and a second implementation would fight it. Any scrollable region uses `ScrollArea`, whose `overscroll-behavior` is per-axis on purpose (a blanket `overscroll-contain` over an x-only scroller swallows the page's vertical wheel delta).
+13. **A shortcut binds by capability, never by state.** `hooks/shortcutRegistry.ts` holds each shortcut's `match` and its displayed `keys()` on one object, and the help overlay reads that same registry — so it cannot advertise a key nothing handles. Gate a handler on whether the list _has_ the feature (`export` configured, filters defined), not on whether it currently has anything to act on: a key that appears and disappears as rows come and go is worse than one that occasionally no-ops, and it makes the overlay reshuffle under the reader. Add a shortcut to the registry, its labels to `ListLabels`, and its capability flag to the `useListKeyboard` dep list in the same change.
+14. **The table's stacking order is a closed scale, and `z-40` is its ceiling.** `Table.tsx` declares the whole ladder in one place (`Z_PINNED_CELL` / `Z_HEADER` / `Z_PINNED_HEADER`) because the layers only mean anything relative to each other: the floor is the `ScrollArea`'s edge fades at `z-10` (a pinned cell that ties with them gets the white gradient painted over it, which reads as the pinned column going translucent exactly where it should be opaque), the sticky header must clear the pinned body cells, and a pinned header cell must clear both. The ceiling is external — the pagination bar also sits at `z-40` and must paint over every pinned cell as rows scroll past it, winning the tie by rendering after the table. A new layer above `z-40` inside the table puts table chrome on top of the bar. Note that `cn` resolves conflicts last-wins, so a `z-` passed at a call site loses to one baked into a helper that returns after it — pass the layer _into_ the helper.
+15. **A pinned cell paints with `bg-inherit`, so a row background must be opaque.** Any alpha on the row — a `hover:bg-gray-50/70`, a `rowClassName` returning `bg-amber-50/60` — lets the scrolling content show straight through the pinned column, which is the one place it must not. listkit's own row states are fully opaque; keep them that way, and document the constraint on any new hook that lets a consumer style a row.
+16. **User-facing failures get a diagnostic code, not a console dump.** `utils/diagnostics.ts` owns the ranges: `LK1xxx` throws in dev and no-ops in production (a contract the consumer broke — a duplicate export key, a field outside the whitelist), `LK2xxx` warns once per key (a value listkit had to coerce), `LK3xxx` surfaces **in the UI** (a truncated export the user must know about). Every code is documented in the README's diagnostics table; an undocumented `LK2003` in someone's console is worse than no code at all.
 
 ---
 
@@ -181,3 +194,18 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
   the same filter config that renders the sidebar via `filterConfigToMongoFieldMaps`.
   `toLegacyEnvelope` / `fromLegacyEnvelope` bridge a half-migrated wire, so a list can
   move one at a time.
+
+- **Consumer adoption of the 4.0 export surface.** The package side is complete
+  (`ExportRequest`/`ExportResolver`, `buildMongoExport`, `buildSqlExport`, the byte-identical
+  parity suite, the configurable dialog, virtual selection). What remains is per stack:
+  corpfiscal wires `resolve` into `createMongoListAdapter`; agates replaces
+  `ADMIN_EXPORT = { allowExportAll: false }` with a `buildSqlExport` resolver — it is the one
+  that gains the most, since today it cannot export past a single page; cafe-combate needs
+  nothing, in-memory inherits the dialog for free.
+
+- **Consumer CSS patches to delete.** Several consumers hand-patch what the package now owns:
+  a `--lk-content-left` variable in four projects, agates' `.profile-list-fill` +
+  `position: static !important`, cafe-combate's z-index override. The `paginationOffsetLeft` and
+  `paginationVariant` props on `ListView`, plus the sticky-by-default footer, replace all of
+  them. Each deletion is a
+  consumer-side change, but a patch left in place will fight the package's own layout.

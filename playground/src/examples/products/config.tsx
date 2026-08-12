@@ -1,4 +1,4 @@
-import { defineListConfig, ListImage } from '@pibytelabs/listkit'
+import { defineListConfig, ListImage } from 'listkit'
 import { Star, Trash2 } from 'lucide-react'
 
 import { PRODUCTS } from './data'
@@ -27,8 +27,7 @@ export const productsConfig = defineListConfig<Product>({
 	defaultSort: { field: 'name', dir: 'asc' },
 	searchPlaceholder: 'Buscar por nombre, SKU o categoría…',
 	emptyMessage: 'No se encontraron productos',
-	// `renderEmpty` (2.15+): custom interactive empty state instead of the plain
-	// message — filter down to zero results to see it.
+	// Filter down to zero results to see it.
 	renderEmpty: () => (
 		<div className='flex flex-col items-center gap-3 py-14 text-center'>
 			<div className='flex h-16 w-16 items-center justify-center rounded-full bg-gray-100'>
@@ -163,6 +162,17 @@ export const productsConfig = defineListConfig<Product>({
 					columns: 2,
 				},
 				{
+					// The grouping demo. Type `1,500,000` with the separators and it
+					// parses; the applied chip reads through `formatValue`, the inputs
+					// through the locale's plain grouping so the text round-trips.
+					id: 'revenue',
+					field: 'revenueMXN',
+					label: 'Ventas acumuladas',
+					type: 'number-range',
+					formatValue: currency,
+					columns: 1,
+				},
+				{
 					id: 'createdAt',
 					field: 'createdAt',
 					label: 'Fecha de alta',
@@ -260,14 +270,10 @@ export const productsConfig = defineListConfig<Product>({
 			{ key: 'name', header: 'Nombre', sortable: true, truncate: true },
 			{ key: 'sku', header: 'SKU' },
 			{ key: 'category', header: 'Categoría', sortable: true },
-			// truncate clips to the column's visible width and is fully dynamic:
-			// resize the column (or double-click the edge to auto-fit) and the
-			// ellipsis follows. `width` is just the initial size; min/max are
-			// optional caps (omitted here so resize is unbounded).
-			// `defaultHidden` (2.14+): hidden on first load but still listed in
-			// the column manager so the user can opt it back in (persisted per
-			// list). Unlike `hidden`, which hard-hides a column and keeps it out
-			// of the manager entirely.
+			// `truncate` follows the column's live width — resize (or double-click
+			// the edge to auto-fit) and the ellipsis moves with it. `defaultHidden`
+			// starts a column off but leaves it in the manager, so switch these on
+			// from Opciones → Columnas.
 			{
 				key: 'supplier',
 				header: 'Proveedor',
@@ -284,6 +290,14 @@ export const productsConfig = defineListConfig<Product>({
 				render: item => currency(item.price),
 				// render returns a string here, but show the explicit export value.
 				exportValue: item => item.price,
+			},
+			{
+				key: 'revenueMXN',
+				header: 'Ventas',
+				align: 'right',
+				sortable: true,
+				render: item => currency(item.revenueMXN),
+				exportValue: item => item.revenueMXN,
 			},
 			// More default-hidden columns to exercise the toggle: open the options
 			// menu → "Columnas" and switch these on.

@@ -4,16 +4,13 @@
  * their config `id` and clamp pagination. Pure and RSC-safe (no React/DOM).
  *
  * @remarks
- * Pair with `@pibytelabs/listkit/sql` (or your own translation layer) to turn
+ * Pair with `listkit/sql` (or your own translation layer) to turn
  * the values into a query. The typical flow is `filtersById(query)` once, then
  * one `get*` call per filter.
  *
  * @packageDocumentation
  */
-import { DEFAULT_PAGE_SIZE } from './constants'
-import { parseActiveFilters } from './filters/schemas'
 import type { ListQuery, ListResult } from './types/data'
-import type { ActiveFilterValue } from './types/filters'
 
 /** Applied value of a `date-range` filter. */
 export type DateRangeValue = { from?: string; to?: string }
@@ -86,6 +83,12 @@ export const getDateRange = (
 /**
  * Read a `number-range` filter value.
  *
+ * @remarks
+ * Only finite bounds survive; anything else reads as unset. A `NaN` passes the
+ * bare `typeof === 'number'` check every query builder used to do and becomes a
+ * comparison no row can satisfy — or, in memory, one no row can fail. Dropping
+ * it here keeps all three backends agreeing on a malformed bound.
+ *
  * @returns `{ min?, max? }` (empty object when unset).
  */
 export const getNumberRange = (
@@ -93,7 +96,12 @@ export const getNumberRange = (
 	id: string
 ): NumberRangeValue => {
 	const v = byId.get(id)
-	return v && typeof v === 'object' ? (v as NumberRangeValue) : {}
+	if (!v || typeof v !== 'object') return {}
+	const { min, max } = v as NumberRangeValue
+	return {
+		...(Number.isFinite(min) ? { min } : {}),
+		...(Number.isFinite(max) ? { max } : {}),
+	}
 }
 
 /**
@@ -187,73 +195,30 @@ export const toLegacyEnvelope = <T>(
 	}
 }
 
-/** A request query bag (e.g. Express `req.query`); values may repeat as arrays. */
-export type ListQueryParams = Record<string, string | string[] | undefined>
+// The implementation lives in utils/ so `export/wire.ts` can share it without
+// a module cycle through this subpath entry.
+export { type ListQueryParams, parseListkitQuery } from './utils/parseListQuery'
 
-const firstParam = (v: string | string[] | undefined): string | undefined =>
-	Array.isArray(v) ? v[0] : v
+// Export-request wire helpers: build/serialize on the client, validate on the
+// server. Same subpath as the query readers because that is where server code
+// already looks.
+export {
+	type ExportRequestBody,
+	exportRequestToBody,
+	exportRequestToParams,
+	parseExportRequest,
+	type ParseExportRequestOptions,
+} from './export/wire'
 
 /**
- * Parse a backend request's query params into a listkit {@link ListQuery} — the
- * inverse of what `fetchAdapter` serializes (`page`, `pageSize`, `search`,
- * `sortField`/`sortDir`, and `filters` as a JSON array). Use it in a Node/Express
- * route or controller before handing the query to the `/mongo` or `/sql`
- * builders.
- *
- * @remarks
- * This is for plain request bags. For RSC/URL `searchParams` (the front-end's
- * own URL sync), use `buildListQuery` from `@pibytelabs/listkit/server`, which is
- * config-aware. Pagination is parsed as-is here; clamp it downstream with
- * {@link paginate} / `mongoPaginate`. Malformed `filters` JSON is ignored.
- *
- * @param params - The request query bag (e.g. `req.query`).
- * @param defaultPageSize - Page size when the param is missing. @defaultValue 20
- * @returns The parsed {@link ListQuery}.
- *
- * @example
- * ```ts
- * app.get('/api/companies', async (req, res) => {
- *   const query = parseListkitQuery(req.query)
- *   const { filter, sort, skip, limit } = buildMongoQuery(query, { fields, sort: sortMap })
- *   // ...run the query, return { data, total }
- * })
- * ```
+ * Pure filter-config helpers, re-exported here so SERVER code can reach them
+ * without the main entry: a config module that calls `withFilterOptions` and is
+ * shared with an API must not drag the React bundle (and its CSS imports) into
+ * Node just to fill some options.
  */
-export const parseListkitQuery = (
-	params: ListQueryParams,
-	defaultPageSize: number = DEFAULT_PAGE_SIZE
-): ListQuery => {
-	const page = Math.max(1, parseInt(firstParam(params.page) ?? '1', 10) || 1)
-	const pageSize = Math.max(
-		1,
-		parseInt(firstParam(params.pageSize) ?? String(defaultPageSize), 10) ||
-			defaultPageSize
-	)
-	const search = firstParam(params.search)?.trim() || undefined
-
-	const sortField = firstParam(params.sortField)
-	const sort = sortField
-		? {
-				field: sortField,
-				dir:
-					firstParam(params.sortDir) === 'desc'
-						? ('desc' as const)
-						: ('asc' as const),
-			}
-		: undefined
-
-	let filters: ActiveFilterValue[] | undefined
-	const rawFilters = firstParam(params.filters)
-	if (rawFilters) {
-		try {
-			// Validated, never cast: the array is client-supplied and its `type`
-			// selects which operator a query builder emits.
-			const parsed = parseActiveFilters(JSON.parse(rawFilters))
-			if (parsed.length > 0) filters = parsed
-		} catch {
-			// Ignore malformed filter JSON; treat as no filters.
-		}
-	}
-
-	return { page, pageSize, search, filters, sort }
-}
+export { decodeDistinctFacet } from './filters/facets'
+export {
+	type FilterOptionSources,
+	filterOptionSources,
+	withFilterOptions,
+} from './filters/options'

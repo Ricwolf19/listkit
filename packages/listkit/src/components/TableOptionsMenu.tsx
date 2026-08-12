@@ -1,11 +1,15 @@
 import { FileDown, Loader2, Settings, Table2 } from 'lucide-react'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useRef, useState } from 'react'
 
 import { useLabels } from '../context/ListKitContext'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useOutsideClick } from '../hooks/useOutsideClick'
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import type { Density } from '../types/list'
 import { cn } from '../utils/cn'
+import { Checkbox } from './Checkbox'
 import { ColumnManagerPanel, type ColumnManagerProps } from './ColumnManager'
+import { ScrollArea } from './ScrollArea'
 
 /** Props for {@link TableOptionsMenu}. */
 export type TableOptionsMenuProps = {
@@ -15,10 +19,14 @@ export type TableOptionsMenuProps = {
 	exportControl?: {
 		onExportPage: () => void
 		onExportAll?: () => void
+		/** Open the export configuration dialog; replaces the direct actions. */
+		onConfigure?: () => void
 		exporting?: boolean
 	}
 	/** Column manager. Omit to hide the section. */
 	columns?: ColumnManagerProps
+	/** Show/hide the quick-filter bar. Omit when the list declares no quick filters. */
+	quickFilters?: { visible: boolean; onToggle: (visible: boolean) => void }
 	colorTheme?: ColorTheme
 }
 
@@ -43,6 +51,7 @@ export function TableOptionsMenu({
 	density,
 	exportControl,
 	columns,
+	quickFilters,
 	colorTheme = 'red',
 }: TableOptionsMenuProps) {
 	const labels = useLabels()
@@ -50,23 +59,11 @@ export function TableOptionsMenu({
 	const [open, setOpen] = useState(false)
 	const ref = useRef<HTMLDivElement>(null)
 
-	useEffect(() => {
-		if (!open) return
-		const onPointer = (e: MouseEvent) => {
-			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-		}
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setOpen(false)
-		}
-		document.addEventListener('mousedown', onPointer)
-		document.addEventListener('keydown', onKey)
-		return () => {
-			document.removeEventListener('mousedown', onPointer)
-			document.removeEventListener('keydown', onKey)
-		}
-	}, [open])
+	const close = useCallback(() => setOpen(false), [])
+	useOutsideClick(ref, open, close)
+	useEscapeKey(open, close)
 
-	if (!density && !exportControl && !columns) return null
+	if (!density && !exportControl && !columns && !quickFilters) return null
 
 	const exporting = exportControl?.exporting ?? false
 	const exportItem =
@@ -108,10 +105,10 @@ export function TableOptionsMenu({
 						role='menu'
 						className={cn(
 							'z-50 border-gray-200 bg-white shadow-xl',
-							// Mobile: bottom sheet (full width, scrollable, safe-area aware).
-							'fixed inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-2xl border-t p-2 pb-[max(env(safe-area-inset-bottom),1rem)]',
+							// Mobile: bottom sheet (full width, safe-area aware).
+							'fixed inset-x-0 bottom-0 rounded-t-2xl border-t p-2 pb-[max(env(safe-area-inset-bottom),1rem)]',
 							// Desktop: dropdown anchored to the button.
-							'sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-auto sm:mt-2 sm:max-h-none sm:w-72 sm:rounded-xl sm:border sm:p-1'
+							'sm:absolute sm:inset-x-auto sm:right-0 sm:bottom-auto sm:mt-2 sm:w-72 sm:rounded-xl sm:border sm:p-1'
 						)}
 					>
 						{/* Bottom-sheet affordance + title (mobile only). */}
@@ -122,53 +119,55 @@ export function TableOptionsMenu({
 							</p>
 						</div>
 
-						<div className='divide-y divide-gray-100'>
-							{density && (
-								<Section title={labels.density}>
-									<div className='flex rounded-lg border border-gray-200 p-0.5'>
-										{(['comfortable', 'compact'] as Density[]).map(d => (
-											<button
-												key={d}
-												type='button'
-												onClick={() => density.onChange(d)}
-												className={cn(
-													'flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
-													density.value === d
-														? cn(theme.primaryBg, theme.primaryText)
-														: 'text-gray-600 hover:bg-gray-100'
-												)}
-											>
-												{d === 'comfortable'
-													? labels.densityComfortable
-													: labels.densityCompact}
-											</button>
-										))}
-									</div>
-								</Section>
-							)}
+						<ScrollArea className='max-h-[70vh] sm:max-h-[70vh]'>
+							<div className='divide-y divide-gray-100'>
+								{quickFilters && (
+									<Section title={labels.quickFilters}>
+										<label className={cn(exportItem, 'justify-between')}>
+											<span>{labels.showQuickFilters}</span>
+											<Checkbox
+												checked={quickFilters.visible}
+												onChange={quickFilters.onToggle}
+												colorTheme={colorTheme}
+												aria-label={labels.showQuickFilters}
+											/>
+										</label>
+									</Section>
+								)}
 
-							{exportControl && (
-								<Section title={labels.exportData}>
-									<button
-										type='button'
-										className={exportItem}
-										disabled={exporting}
-										onClick={() => {
-											setOpen(false)
-											exportControl.onExportPage()
-										}}
-									>
-										<Table2 className={cn('h-4 w-4', theme.accentText)} />
-										{labels.exportCurrentPage}
-									</button>
-									{exportControl.onExportAll && (
+								{density && (
+									<Section title={labels.density}>
+										<div className='flex rounded-lg border border-gray-200 p-0.5'>
+											{(['comfortable', 'compact'] as Density[]).map(d => (
+												<button
+													key={d}
+													type='button'
+													onClick={() => density.onChange(d)}
+													className={cn(
+														'flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
+														density.value === d
+															? cn(theme.primaryBg, theme.primaryText)
+															: 'text-gray-600 hover:bg-gray-100'
+													)}
+												>
+													{d === 'comfortable'
+														? labels.densityComfortable
+														: labels.densityCompact}
+												</button>
+											))}
+										</div>
+									</Section>
+								)}
+
+								{exportControl?.onConfigure && (
+									<Section title={labels.exportData}>
 										<button
 											type='button'
 											className={exportItem}
 											disabled={exporting}
 											onClick={() => {
 												setOpen(false)
-												exportControl.onExportAll!()
+												exportControl.onConfigure!()
 											}}
 										>
 											{exporting ? (
@@ -176,20 +175,57 @@ export function TableOptionsMenu({
 											) : (
 												<FileDown className={cn('h-4 w-4', theme.accentText)} />
 											)}
-											{labels.exportAll}
+											{labels.exportConfigure}
 										</button>
-									)}
-								</Section>
-							)}
+									</Section>
+								)}
 
-							{columns && (
-								// The panel renders its own "Columns / Reset" header, so it
-								// acts as this section's heading — no extra <Section> title.
-								<div className='px-1 py-1.5'>
-									<ColumnManagerPanel {...columns} colorTheme={colorTheme} />
-								</div>
-							)}
-						</div>
+								{exportControl && !exportControl.onConfigure && (
+									<Section title={labels.exportData}>
+										<button
+											type='button'
+											className={exportItem}
+											disabled={exporting}
+											onClick={() => {
+												setOpen(false)
+												exportControl.onExportPage()
+											}}
+										>
+											<Table2 className={cn('h-4 w-4', theme.accentText)} />
+											{labels.exportCurrentPage}
+										</button>
+										{exportControl.onExportAll && (
+											<button
+												type='button'
+												className={exportItem}
+												disabled={exporting}
+												onClick={() => {
+													setOpen(false)
+													exportControl.onExportAll!()
+												}}
+											>
+												{exporting ? (
+													<Loader2 className='h-4 w-4 animate-spin text-gray-400' />
+												) : (
+													<FileDown
+														className={cn('h-4 w-4', theme.accentText)}
+													/>
+												)}
+												{labels.exportAll}
+											</button>
+										)}
+									</Section>
+								)}
+
+								{columns && (
+									// The panel renders its own "Columns / Reset" header, so it
+									// acts as this section's heading — no extra <Section> title.
+									<div className='px-1 py-1.5'>
+										<ColumnManagerPanel {...columns} colorTheme={colorTheme} />
+									</div>
+								)}
+							</div>
+						</ScrollArea>
 					</div>
 				</>
 			)}

@@ -1,11 +1,14 @@
 import { ChevronDown, ChevronUp, Columns3, GripVertical } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { useLabels } from '../context/ListKitContext'
 import type { ColumnPrefItem } from '../hooks/useColumnPrefs'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useOutsideClick } from '../hooks/useOutsideClick'
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import { cn } from '../utils/cn'
 import { Checkbox } from './Checkbox'
+import { ScrollArea } from './ScrollArea'
 
 /** Props for {@link ColumnManagerPanel} and {@link ColumnManager}. */
 export type ColumnManagerProps = {
@@ -65,67 +68,69 @@ export function ColumnManagerPanel({
 					{labels.resetColumns}
 				</button>
 			</div>
-			<ul className='mt-1 max-h-72 overflow-y-auto'>
-				{items.map((item, index) => {
-					const isDropTarget =
-						dragIndex !== null && overIndex === index && dragIndex !== index
-					return (
-						<li
-							key={item.key}
-							draggable
-							onDragStart={() => setDragIndex(index)}
-							onDragEnter={() => setOverIndex(index)}
-							onDragOver={e => e.preventDefault()}
-							onDrop={() => {
-								if (dragIndex !== null) onReorder(dragIndex, index)
-								endDrag()
-							}}
-							onDragEnd={endDrag}
-							className={cn(
-								'relative flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50',
-								dragIndex === index && 'opacity-40'
-							)}
-						>
-							{isDropTarget && (
-								<span
-									className={cn(
-										'absolute inset-x-2 -top-px h-0.5 rounded-full',
-										theme.primaryBg
-									)}
+			<ScrollArea className='max-h-72' wrapperClassName='mt-1'>
+				<ul>
+					{items.map((item, index) => {
+						const isDropTarget =
+							dragIndex !== null && overIndex === index && dragIndex !== index
+						return (
+							<li
+								key={item.key}
+								draggable
+								onDragStart={() => setDragIndex(index)}
+								onDragEnter={() => setOverIndex(index)}
+								onDragOver={e => e.preventDefault()}
+								onDrop={() => {
+									if (dragIndex !== null) onReorder(dragIndex, index)
+									endDrag()
+								}}
+								onDragEnd={endDrag}
+								className={cn(
+									'relative flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50',
+									dragIndex === index && 'opacity-40'
+								)}
+							>
+								{isDropTarget && (
+									<span
+										className={cn(
+											'absolute inset-x-2 -top-px h-0.5 rounded-full',
+											theme.primaryBg
+										)}
+									/>
+								)}
+								<GripVertical className='h-4 w-4 shrink-0 cursor-grab text-gray-300 active:cursor-grabbing' />
+								<Checkbox
+									checked={item.visible}
+									onChange={() => onToggle(item.key)}
+									colorTheme={colorTheme}
+									aria-label={item.label}
 								/>
-							)}
-							<GripVertical className='h-4 w-4 shrink-0 cursor-grab text-gray-300 active:cursor-grabbing' />
-							<Checkbox
-								checked={item.visible}
-								onChange={() => onToggle(item.key)}
-								colorTheme={colorTheme}
-								aria-label={item.label}
-							/>
-							<span className='min-w-0 flex-1 truncate text-sm text-gray-700'>
-								{item.label}
-							</span>
-							<button
-								type='button'
-								onClick={() => onMove(item.key, -1)}
-								disabled={index === 0}
-								className={arrow}
-								aria-label={`${item.label} ↑`}
-							>
-								<ChevronUp className='h-4 w-4' />
-							</button>
-							<button
-								type='button'
-								onClick={() => onMove(item.key, 1)}
-								disabled={index === items.length - 1}
-								className={arrow}
-								aria-label={`${item.label} ↓`}
-							>
-								<ChevronDown className='h-4 w-4' />
-							</button>
-						</li>
-					)
-				})}
-			</ul>
+								<span className='min-w-0 flex-1 truncate text-sm text-gray-700'>
+									{item.label}
+								</span>
+								<button
+									type='button'
+									onClick={() => onMove(item.key, -1)}
+									disabled={index === 0}
+									className={arrow}
+									aria-label={`${item.label} ↑`}
+								>
+									<ChevronUp className='h-4 w-4' />
+								</button>
+								<button
+									type='button'
+									onClick={() => onMove(item.key, 1)}
+									disabled={index === items.length - 1}
+									className={arrow}
+									aria-label={`${item.label} ↓`}
+								>
+									<ChevronDown className='h-4 w-4' />
+								</button>
+							</li>
+						)
+					})}
+				</ul>
+			</ScrollArea>
 		</div>
 	)
 }
@@ -141,21 +146,9 @@ export function ColumnManager(props: ColumnManagerProps) {
 	const [open, setOpen] = useState(false)
 	const ref = useRef<HTMLDivElement>(null)
 
-	useEffect(() => {
-		if (!open) return
-		const onPointer = (e: MouseEvent) => {
-			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-		}
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setOpen(false)
-		}
-		document.addEventListener('mousedown', onPointer)
-		document.addEventListener('keydown', onKey)
-		return () => {
-			document.removeEventListener('mousedown', onPointer)
-			document.removeEventListener('keydown', onKey)
-		}
-	}, [open])
+	const close = useCallback(() => setOpen(false), [])
+	useOutsideClick(ref, open, close)
+	useEscapeKey(open, close)
 
 	return (
 		<div className='relative' ref={ref}>

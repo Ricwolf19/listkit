@@ -6,9 +6,13 @@ export {
 } from './adapters/dexie'
 export {
 	encodeListQuery,
+	EXPORT_ALL_PAGE_SIZE,
 	fetchAdapter,
 	type FetchAdapterConfig,
+	type FetchDataAdapter,
+	type FetchParams,
 	fromLegacyEnvelope,
+	readListBody,
 } from './adapters/fetch'
 export {
 	memoryAdapter,

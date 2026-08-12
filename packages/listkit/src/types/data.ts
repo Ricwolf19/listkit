@@ -17,7 +17,7 @@ export type SortState = {
  * @remarks
  * `page` is 1-based. `filters` carries the applied advanced filters; each entry
  * knows its target `field`, `type`, and validated `value` (read them with the
- * `@pibytelabs/listkit/query` helpers).
+ * `listkit/query` helpers).
  */
 export type ListQuery = {
 	/** 1-based page number. */
@@ -42,6 +42,15 @@ export type ListResult<T> = {
 	data: T[]
 	/** Total rows across all pages (drives pagination). */
 	total: number
+	/**
+	 * Whatever the source returned alongside the page — the aggregate facets that
+	 * populate a select's options, a stats header, a server-computed subtotal.
+	 *
+	 * It rides with the page rather than needing a second request because it
+	 * comes off the same scan. Decode a `distinctValuesFacet` payload with
+	 * `decodeDistinctFacet`.
+	 */
+	meta?: Record<string, unknown>
 }
 
 /**

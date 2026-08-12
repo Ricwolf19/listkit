@@ -14,6 +14,8 @@ export type Product = {
 	roastLevel: string
 	rating: number // 0–5
 	weightGrams: number
+	/** Six/seven figures on purpose — the one field where grouping is legible. */
+	revenueMXN: number
 	featured: boolean
 }
 

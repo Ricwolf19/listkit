@@ -2,7 +2,7 @@
  * Mongoose executor for listkit lists. Runs the paginated `find` + `count` for a
  * {@link ListQuery} — free-text search, advanced filters, populated references,
  * and an export-all path — composed from the driver-free
- * `@pibytelabs/listkit/mongo` builders.
+ * `listkit/mongo` builders.
  *
  * `mongoose` is an **optional, type-only** peer dependency: it is imported with
  * `import type` only, so this entry pulls in **no `mongoose` runtime** and adds
@@ -317,7 +317,7 @@ export function buildAggregatePipelines(
  * Aggregation-based sibling of {@link executePaginatedListkitQuery} for lists
  * that need a pipeline the plain `find` can't express — `$unwind` rows, `$lookup`
  * joins, or computed (`$addFields`) columns the user filters/sorts by. It reuses
- * the very same `@pibytelabs/listkit/mongo` builders, so search/filter/sort
+ * the very same `listkit/mongo` builders, so search/filter/sort
  * semantics are identical to the find-based executor.
  *
  * @typeParam T - The row (shaped document) type.

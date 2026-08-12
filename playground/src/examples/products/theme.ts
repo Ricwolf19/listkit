@@ -1,4 +1,4 @@
-import type { ThemeClasses } from '@pibytelabs/listkit'
+import type { ThemeClasses } from 'listkit'
 
 /**
  * A custom brand theme — not one of the 8 built-ins. Pass a full `ThemeClasses`

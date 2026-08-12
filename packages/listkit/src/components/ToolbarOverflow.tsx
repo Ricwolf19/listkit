@@ -1,9 +1,12 @@
 import { MoreVertical } from 'lucide-react'
-import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type ReactNode, useCallback, useRef, useState } from 'react'
 
 import { useLabels } from '../context/ListKitContext'
+import { useEscapeKey } from '../hooks/useEscapeKey'
+import { useOutsideClick } from '../hooks/useOutsideClick'
 import type { ToolbarAction } from '../types/config'
 import { cn } from '../utils/cn'
+import { sectionByGroup } from '../utils/sections'
 
 /** Props for {@link ToolbarOverflow}. */
 export type ToolbarOverflowProps = {
@@ -26,21 +29,11 @@ export function ToolbarOverflow({
 	const [open, setOpen] = useState(false)
 	const ref = useRef<HTMLDivElement>(null)
 
-	useEffect(() => {
-		if (!open) return
-		const onPointer = (e: MouseEvent) => {
-			if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
-		}
-		const onKey = (e: KeyboardEvent) => {
-			if (e.key === 'Escape') setOpen(false)
-		}
-		document.addEventListener('mousedown', onPointer)
-		document.addEventListener('keydown', onKey)
-		return () => {
-			document.removeEventListener('mousedown', onPointer)
-			document.removeEventListener('keydown', onKey)
-		}
-	}, [open])
+	const close = useCallback(() => setOpen(false), [])
+	useOutsideClick(ref, open, close)
+	useEscapeKey(open, close)
+
+	const sections = sectionByGroup(actions, action => action.group)
 
 	return (
 		<div ref={ref} className='relative shrink-0'>
@@ -71,23 +64,43 @@ export function ToolbarOverflow({
 							{customContent}
 						</div>
 					)}
-					{actions.map((action, idx) => (
-						<button
-							key={idx}
-							type='button'
-							role='menuitem'
-							onClick={() => {
-								action.onClick()
-								setOpen(false)
-							}}
-							className={cn(
-								'inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100',
-								action.className
-							)}
+					{sections.map((section, si) => (
+						<div
+							key={section.title ?? `section-${si}`}
+							role='group'
+							aria-label={section.title}
+							className='flex flex-col gap-1'
 						>
-							{action.icon}
-							{action.label}
-						</button>
+							{(si > 0 || customContent) && section.title && (
+								<div
+									role='separator'
+									className='-mx-1.5 border-t border-gray-100'
+								/>
+							)}
+							{section.title && (
+								<div className='px-3 pt-1 text-sm font-semibold text-gray-900'>
+									{section.title}
+								</div>
+							)}
+							{section.items.map((action, idx) => (
+								<button
+									key={idx}
+									type='button'
+									role='menuitem'
+									onClick={() => {
+										action.onClick()
+										setOpen(false)
+									}}
+									className={cn(
+										'inline-flex h-9 cursor-pointer items-center gap-2 rounded-lg px-3 text-left text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100',
+										action.className
+									)}
+								>
+									{action.icon}
+									{action.label}
+								</button>
+							))}
+						</div>
 					))}
 				</div>
 			)}

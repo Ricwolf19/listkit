@@ -33,6 +33,13 @@ type Row = {
 	amount?: number
 	createdAt?: Date
 	createdMs?: number
+	/** Array-of-objects field: `products.*` paths must traverse it. */
+	products?: {
+		name: string
+		qty?: number
+		inStock?: boolean
+		deliveredAt?: Date
+	}[]
 }
 
 const day = (iso: string) => new Date(`${iso}T12:00:00.000Z`)
@@ -47,6 +54,20 @@ const ROWS: Row[] = [
 		amount: 0,
 		createdAt: day('2026-01-05'),
 		createdMs: day('2026-01-05').getTime(),
+		products: [
+			{
+				name: 'Café Túrbo',
+				qty: 5,
+				inStock: true,
+				deliveredAt: day('2026-01-10'),
+			},
+			{
+				name: 'Azúcar',
+				qty: 2,
+				inStock: false,
+				deliveredAt: day('2026-02-20'),
+			},
+		],
 	},
 	{
 		_id: 2,
@@ -57,6 +78,7 @@ const ROWS: Row[] = [
 		amount: 10,
 		createdAt: day('2026-02-10'),
 		createdMs: day('2026-02-10').getTime(),
+		products: [{ name: 'cafe turbo', qty: 50 }],
 	},
 	{
 		_id: 3,
@@ -66,6 +88,7 @@ const ROWS: Row[] = [
 		amount: 100,
 		createdAt: day('2026-03-15'),
 		createdMs: day('2026-03-15').getTime(),
+		products: [{ name: 'Té Verde', qty: 1, inStock: true }],
 	},
 	{
 		_id: 4,
@@ -96,6 +119,10 @@ const FIELDS: MongoFieldMap = {
 	created: 'createdAt',
 	createdMs: { path: 'createdMs', as: 'unix-ms' },
 	statusExact: { path: 'status', fold: false },
+	productName: 'products.name',
+	productQty: 'products.qty',
+	productInStock: 'products.inStock',
+	productDeliveredAt: 'products.deliveredAt',
 }
 
 /** The in-memory engine reads `field`; the Mongo one reads the spec's path. */
@@ -203,10 +230,98 @@ describe('in-memory ↔ mongo parity', () => {
 		await expectParity([filter('active', 'boolean', true)], [1, 4])
 	})
 
+	// Paths that cross an array of objects (`products.name`). Mongo traverses
+	// arrays natively; the in-memory engine mirrors it through `getPathValues`.
+	// A filter matches when ANY element does.
+	describe('array-of-objects paths', () => {
+		it('matches text through the array, accent-insensitive', async () => {
+			await expectParity(
+				[
+					filter(
+						'productName',
+						'text',
+						{ value: 'cafe', match: 'partial' },
+						'products.name'
+					),
+				],
+				[1, 2]
+			)
+		})
+
+		it('matches select through the array, folded', async () => {
+			await expectParity(
+				[filter('productName', 'select', 'cafe turbo', 'products.name')],
+				[1, 2]
+			)
+		})
+
+		it('matches multi-select through the array', async () => {
+			await expectParity(
+				[filter('productName', 'multi-select', ['té verde'], 'products.name')],
+				[3]
+			)
+		})
+
+		it('applies number-range to every element (any match)', async () => {
+			await expectParity(
+				[filter('productQty', 'number-range', { min: 3 }, 'products.qty')],
+				[1, 2]
+			)
+		})
+
+		it('matches boolean true when any element is true', async () => {
+			await expectParity(
+				[filter('productInStock', 'boolean', true, 'products.inStock')],
+				[1, 3]
+			)
+		})
+
+		it('boolean false means NO element is true, and covers unreachable paths', async () => {
+			// Row 1 has a true element, so it belongs to the `true` side only —
+			// the two options stay disjoint over arrays. Row 2's product lacks the
+			// key; rows 4-5 have no products at all: both count as false.
+			await expectParity(
+				[filter('productInStock', 'boolean', false, 'products.inStock')],
+				[2, 4, 5]
+			)
+		})
+
+		it('applies date-range through the array', async () => {
+			await expectParity(
+				[
+					filter(
+						'productDeliveredAt',
+						'date-range',
+						{ from: '2026-02-01' },
+						'products.deliveredAt'
+					),
+				],
+				[1]
+			)
+		})
+	})
+
 	it('applies number-range bounds', async () => {
 		await expectParity(
 			[filter('amount', 'number-range', { min: 10, max: 100 })],
 			[2, 3, 5]
+		)
+	})
+
+	// A NaN bound survives a bare `typeof === 'number'` check but no comparison
+	// it reaches can hold: Mongo would match nothing, memory would fail to reject
+	// anything. Both engines have to read it as unset instead.
+	it('drops a non-finite bound and keeps the finite one', async () => {
+		await expectParity(
+			[filter('amount', 'number-range', { min: Number.NaN, max: 100 })],
+			[1, 2, 3, 5]
+		)
+	})
+
+	it('constrains nothing when every bound is non-finite', async () => {
+		await expectParity(
+			[filter('amount', 'number-range', { min: Number.NaN })],
+			[1, 2, 3, 4, 5]
 		)
 	})
 

@@ -20,7 +20,7 @@ function cellToString(value: CsvCell): string {
 }
 
 /** Quote a field when it contains a delimiter, quote, or newline (RFC 4180). */
-function escapeField(field: string, delimiter: string): string {
+export function escapeCsvField(field: string, delimiter: string): string {
 	if (
 		field.includes(delimiter) ||
 		field.includes('"') ||
@@ -51,7 +51,7 @@ export function rowsToCsv<T>(
 ): string {
 	const cols = columns.filter(c => c.exportable !== false && !c.hidden)
 	const header = cols
-		.map(c => escapeField(exportHeader(c), delimiter))
+		.map(c => escapeCsvField(exportHeader(c), delimiter))
 		.join(delimiter)
 	const lines = data.map(item =>
 		cols
@@ -59,7 +59,7 @@ export function rowsToCsv<T>(
 				const raw = col.exportValue
 					? col.exportValue(item)
 					: (getPath(item, col.key) as CsvCell)
-				return escapeField(cellToString(raw), delimiter)
+				return escapeCsvField(cellToString(raw), delimiter)
 			})
 			.join(delimiter)
 	)

@@ -12,16 +12,16 @@
  * Usage: `pnpm check:subpaths`
  */
 const CHECKS = [
-	{ subpath: '@pibytelabs/listkit/query', name: 'parseListkitQuery' },
-	{ subpath: '@pibytelabs/listkit/mongo', name: 'buildMongoSort' },
-	{ subpath: '@pibytelabs/listkit/mongo', name: 'executeMongoList' },
+	{ subpath: 'listkit/query', name: 'parseListkitQuery' },
+	{ subpath: 'listkit/mongo', name: 'buildMongoSort' },
+	{ subpath: 'listkit/mongo', name: 'executeMongoList' },
 	{
-		subpath: '@pibytelabs/listkit/mongoose',
+		subpath: 'listkit/mongoose',
 		name: 'executePaginatedListkitQuery',
 	},
-	{ subpath: '@pibytelabs/listkit/sql', name: 'buildSqlFilter' },
-	{ subpath: '@pibytelabs/listkit/server', name: 'buildListQuery' },
-	{ subpath: '@pibytelabs/listkit/adapters', name: 'encodeListQuery' },
+	{ subpath: 'listkit/sql', name: 'buildSqlFilter' },
+	{ subpath: 'listkit/server', name: 'buildListQuery' },
+	{ subpath: 'listkit/adapters', name: 'encodeListQuery' },
 ] as const
 
 const failures: string[] = []

@@ -16,10 +16,22 @@ import {
 	FilterText,
 } from './inputs'
 
-type DynamicFilterProps = {
+/** Props for {@link DynamicFilter}. */
+export type DynamicFilterProps = {
 	def: FilterDefinition
 	value: unknown
 	onChange: (value: unknown) => void
+	/**
+	 * Arm the input on mount, for hosts the user just clicked into (the
+	 * quick-filter popover) where reaching the input is the only possible intent.
+	 * The sidebar renders every filter at once and must leave this off.
+	 *
+	 * Only the types with something to arm honour it: a select opens its
+	 * dropdown, text and number-range take focus. Multi-select and the range
+	 * pickers already render every control visible, so there is nothing to open
+	 * and nothing to reach.
+	 */
+	autoFocus?: boolean
 	colorTheme?: ColorTheme
 }
 
@@ -28,6 +40,7 @@ export function DynamicFilter({
 	def,
 	value,
 	onChange,
+	autoFocus = false,
 	colorTheme,
 }: DynamicFilterProps) {
 	switch (def.type) {
@@ -38,6 +51,7 @@ export function DynamicFilter({
 					onChange={onChange}
 					placeholder={def.placeholder}
 					defaultMatch={def.defaultMatch}
+					autoFocus={autoFocus}
 					colorTheme={colorTheme}
 				/>
 			)
@@ -46,9 +60,10 @@ export function DynamicFilter({
 				<FilterSelect
 					value={value as string | undefined}
 					onChange={onChange}
-					options={def.options}
+					options={def.options ?? []}
 					placeholder={def.placeholder}
 					searchable={def.searchable}
+					autoOpen={autoFocus}
 					colorTheme={colorTheme}
 				/>
 			)
@@ -57,7 +72,7 @@ export function DynamicFilter({
 				<FilterMultiSelect
 					value={value as MultiSelectFilterValue | undefined}
 					onChange={onChange}
-					options={def.options}
+					options={def.options ?? []}
 					colorTheme={colorTheme}
 				/>
 			)
@@ -85,6 +100,7 @@ export function DynamicFilter({
 				<FilterNumberRange
 					value={value as NumberRangeFilterValue | undefined}
 					onChange={onChange}
+					autoFocus={autoFocus}
 					colorTheme={colorTheme}
 				/>
 			)

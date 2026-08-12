@@ -1,5 +1,3 @@
-export const VERSION = '1.0.0'
-
 export { ListView, type ListViewProps } from './components/ListView'
 export { defineListConfig } from './config/defineListConfig'
 export {
@@ -17,46 +15,107 @@ export {
 	useListRefresh,
 } from './context/ListKitContext'
 
-// Sub-components for advanced composition
+/**
+ * Sub-components, each usable on its own.
+ *
+ * `<ListView>` is a composition of these, not a gate in front of them: every
+ * one is driven entirely by props and reads only optional context (labels fall
+ * back to {@link DEFAULT_LABELS}), so `<Table>` over your own data — no config,
+ * no adapter, no provider — is a supported use, and its props type is exported
+ * so you can wrap it.
+ *
+ * @example
+ * ```tsx
+ * <Table data={rows} columns={columns} sort={sort} onSort={setSort} />
+ * ```
+ */
 export { AutoCard, type AutoCardProps } from './components/AutoCard'
-export { Card } from './components/Card'
-export { Cards } from './components/Cards'
+export { Card, type CardProps } from './components/Card'
+export { Cards, type CardsProps } from './components/Cards'
 export { Checkbox, type CheckboxProps } from './components/Checkbox'
 export {
 	DensityToggle,
 	type DensityToggleProps,
 } from './components/DensityToggle'
-export { EmptyState } from './components/EmptyState'
+export { EmptyState, type EmptyStateProps } from './components/EmptyState'
 export { ExportButton, type ExportButtonProps } from './components/ExportButton'
 export {
 	PinnedFilterChips,
 	type PinnedFilterChipsProps,
 } from './components/filters/PinnedFilterChips'
+export {
+	QuickFilterBar,
+	type QuickFilterBarProps,
+} from './components/filters/QuickFilterBar'
 export { ListImage, type ListImageProps } from './components/ListImage'
-export { ListSkeleton } from './components/ListSkeleton'
-export { Pagination, type PaginationVariant } from './components/Pagination'
-export { SearchInput } from './components/SearchInput'
+export { ListSkeleton, type ListSkeletonProps } from './components/ListSkeleton'
+export {
+	Pagination,
+	type PaginationProps,
+	type PaginationVariant,
+} from './components/Pagination'
+export {
+	type RowAction,
+	RowActions,
+	type RowActionsProps,
+} from './components/RowActions'
+export {
+	ScrollArea,
+	type ScrollAreaProps,
+	type ScrollAxis,
+} from './components/ScrollArea'
+export { SearchInput, type SearchInputProps } from './components/SearchInput'
+export {
+	Select,
+	type SelectOption,
+	type SelectProps,
+} from './components/Select'
 export { SelectionBar, type SelectionBarProps } from './components/SelectionBar'
-export { SkeletonCards } from './components/SkeletonCards'
-export { SkeletonTable } from './components/SkeletonTable'
-export { Table } from './components/Table'
+export {
+	SkeletonCards,
+	type SkeletonCardsProps,
+} from './components/SkeletonCards'
+export {
+	SkeletonTable,
+	type SkeletonTableProps,
+} from './components/SkeletonTable'
+export { Table, type TableProps } from './components/Table'
 export {
 	TableOptionsMenu,
 	type TableOptionsMenuProps,
 } from './components/TableOptionsMenu'
 export { Toolbar, type ToolbarProps } from './components/Toolbar'
-export { ViewToggle } from './components/ViewToggle'
+export { ViewToggle, type ViewToggleProps } from './components/ViewToggle'
+export {
+	type ArrangedSection,
+	type ArrangeOptions,
+	arrangeSections,
+} from './filters/arrange'
+export { useIsNarrow } from './hooks/useIsNarrow'
+export { type ScrollFadeEdges, useScrollFade } from './hooks/useScrollFade'
 
-// Filters (v2.0)
+// Filters
 export {
 	ColumnManager,
 	ColumnManagerPanel,
 	type ColumnManagerProps,
 } from './components/ColumnManager'
-export { ActiveFilterChips } from './components/filters/ActiveFilterChips'
-export { DynamicFilter } from './components/filters/DynamicFilter'
-export { FilterButton } from './components/filters/FilterButton'
-export { FilterSidebar } from './components/filters/FilterSidebar'
+export {
+	ActiveFilterChips,
+	type ActiveFilterChipsProps,
+} from './components/filters/ActiveFilterChips'
+export {
+	DynamicFilter,
+	type DynamicFilterProps,
+} from './components/filters/DynamicFilter'
+export {
+	FilterButton,
+	type FilterButtonProps,
+} from './components/filters/FilterButton'
+export {
+	FilterSidebar,
+	type FilterSidebarProps,
+} from './components/filters/FilterSidebar'
 
 // Hooks
 export { useBrowserRouterAdapter } from './hooks/useBrowserRouterAdapter'
@@ -84,11 +143,16 @@ export {
 	localStorageColumns,
 } from './types/columns'
 
-// Data layer (built-in adapters; more live in @pibytelabs/listkit/adapters)
+// Data layer (built-in adapters; more live in listkit/adapters)
 export {
 	encodeListQuery,
+	EXPORT_ALL_PAGE_SIZE,
 	fetchAdapter,
+	type FetchAdapterConfig,
+	type FetchDataAdapter,
+	type FetchParams,
 	fromLegacyEnvelope,
+	readListBody,
 } from './adapters/fetch'
 export { memoryAdapter } from './adapters/memory'
 export { serverActionAdapter } from './adapters/serverAction'
@@ -104,6 +168,7 @@ export type {
 
 // Theme
 export {
+	type BuiltInColorTheme,
 	type ColorTheme,
 	DEFAULT_COLOR_THEME,
 	getColorTheme,
@@ -113,7 +178,39 @@ export {
 // CSV export helpers
 export { downloadCsv, exportRowsToCsv, rowsToCsv } from './utils/exportCsv'
 
+// Configurable export (scope + field selection + ordering)
+export { resolveExportFields } from './export/resolveExportFields'
+export {
+	resolveExportRows,
+	type ResolveExportRowsOptions,
+} from './export/resolveExportRows'
+export {
+	rowsToCsvFields,
+	type RowsToCsvFieldsOptions,
+} from './export/rowsToCsvFields'
+export {
+	exportRequestToBody,
+	exportRequestToParams,
+	parseExportRequest,
+} from './export/wire'
+export type {
+	ExportCellValue,
+	ExportDateFormat,
+	ExportField,
+	ExportFieldGroup,
+	ExportRequest,
+	ExportResolver,
+	ExportResult,
+	ExportScope,
+} from './types/export'
+
 // Types
+export { decodeDistinctFacet } from './filters/facets'
+export {
+	type FilterOptionSources,
+	filterOptionSources,
+	withFilterOptions,
+} from './filters/options'
 export type {
 	BulkAction,
 	CardContext,
@@ -146,6 +243,7 @@ export type {
 	Density,
 	DisplayMode,
 	PaginationState,
+	SelectionMode,
 	ViewType,
 } from './types/list'
 export type { RouterAdapter } from './types/router'

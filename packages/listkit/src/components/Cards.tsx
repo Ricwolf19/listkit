@@ -7,7 +7,10 @@ import { Card } from './Card'
 import { EmptyState } from './EmptyState'
 import { SkeletonCards } from './SkeletonCards'
 
-type CardsProps<T> = {
+/**
+ *
+ */
+export type CardsProps<T> = {
 	data: T[]
 	renderCard: (item: T, index: number) => ReactNode
 	keyExtractor: (item: T, index: number) => string | number

@@ -6,7 +6,7 @@
  * `Model.find(filter).sort(sort).skip(skip).limit(limit)` (or the native
  * driver) and `countDocuments(filter)` for the page total.
  *
- * Opt-in and composable — pair it with `@pibytelabs/listkit/query`. Field names
+ * Opt-in and composable — pair it with `listkit/query`. Field names
  * only ever come from a whitelist you control (the `fields` map), never from
  * user input, so there is no NoSQL-injection / field-probing surface. Text
  * values are regex-escaped before they reach `$regex`.
@@ -36,6 +36,7 @@ import {
 	type TextValue,
 } from './query'
 import type { ListQuery, SortState } from './types/data'
+import type { ExportRequest } from './types/export'
 import type { FilterDefinition, FilterSection } from './types/filters'
 import { warnDev } from './utils/devWarn'
 
@@ -270,10 +271,35 @@ export type MongoFieldMaps = {
  */
 const isExistenceFilter = (f: FilterDefinition): boolean =>
 	f.type === 'select' &&
-	f.options.length > 0 &&
-	f.options.every(
+	// A runtime `optionsSource` leaves `options` undefined here. Existence
+	// filters are always declared with literal sentinels, so that is never one.
+	(f.options?.length ?? 0) > 0 &&
+	(f.options ?? []).every(
 		o => o.value === EXISTENCE_WITH || o.value === EXISTENCE_WITHOUT
 	)
+
+/**
+ * Per-filter spec overrides, keyed by filter `id`.
+ *
+ * A `string` replaces the trusted path; an object is merged over the derived
+ * spec, so the common case is a one-key hint like `{ as: 'unix-ms' }` rather
+ * than restating the path.
+ */
+export type MongoFieldOverrides = Record<
+	string,
+	string | Partial<Exclude<MongoFieldSpec, string>>
+>
+
+const applyOverride = (
+	spec: MongoFieldSpec,
+	override: MongoFieldOverrides[string] | undefined,
+	path: string
+): MongoFieldSpec => {
+	if (override === undefined) return spec
+	if (typeof override === 'string') return override
+	const base = typeof spec === 'string' ? { path: spec } : spec
+	return { path, ...base, ...override } as MongoFieldSpec
+}
 
 const specFor = (path: string, f: FilterDefinition): MongoFieldSpec =>
 	isExistenceFilter(f) ? { path, build: existenceMatch } : path
@@ -290,16 +316,24 @@ const specFor = (path: string, f: FilterDefinition): MongoFieldSpec =>
  * lands in `refs.csf` under the stripped path `'generalData.status'`, while the
  * rest stay in `main`. Feed `main` (and each `refs[*]`) to {@link buildMongoFilter}.
  *
+ * Pass `overrides` for what the UI declaration cannot know: how the column is
+ * stored. The one that bites is a date range over `Date.now()` numbers — built
+ * as BSON `Date`s it matches **nothing**, silently, so the list just looks
+ * empty. `{ as: 'unix-ms' }` is the fix, and it belongs here rather than in
+ * every app that hits the same field.
+ *
  * @typeParam T - The row type.
  * @param filters - The list config's filter sections.
  * @param options - Options.
  * @param options.references - Map of reference name → field-path prefix.
+ * @param options.overrides - Per-filter spec overrides, keyed by filter `id`.
  * @returns The `{ main, refs }` field maps.
  *
  * @example
  * ```ts
  * const maps = filterConfigToMongoFieldMaps(config.filters ?? [], {
  *   references: { csf: 'csf' },
+ *   overrides: { date: { as: 'unix-ms' }, status: { fold: false } },
  * })
  * const filter = combineFilters(
  *   buildMongoFilter(query, maps.main),
@@ -309,9 +343,13 @@ const specFor = (path: string, f: FilterDefinition): MongoFieldSpec =>
  */
 export const filterConfigToMongoFieldMaps = <T = unknown>(
 	filters: FilterSection<T>[],
-	options: { references?: Record<string, string> } = {}
+	options: {
+		references?: Record<string, string>
+		overrides?: MongoFieldOverrides
+	} = {}
 ): MongoFieldMaps => {
 	const references = options.references ?? {}
+	const overrides = options.overrides ?? {}
 	const main: MongoFieldMap = {}
 	const refs: Record<string, MongoFieldMap> = {}
 
@@ -322,12 +360,18 @@ export const filterConfigToMongoFieldMaps = <T = unknown>(
 				const prefix = references[key]
 				return !!prefix && field.startsWith(`${prefix}.`)
 			})
+			// Read off the literal config, never off a prototype: a filter id of
+			// `constructor` must not resolve to `Object.prototype.constructor`.
+			const override = Object.hasOwn(overrides, f.id)
+				? overrides[f.id]
+				: undefined
 			if (refKey) {
 				const prefix = references[refKey]!
+				const path = field.slice(prefix.length + 1)
 				const map = (refs[refKey] ??= {})
-				map[f.id] = specFor(field.slice(prefix.length + 1), f)
+				map[f.id] = applyOverride(specFor(path, f), override, path)
 			} else {
-				main[f.id] = specFor(field, f)
+				main[f.id] = applyOverride(specFor(field, f), override, field)
 			}
 		}
 	}
@@ -839,6 +883,104 @@ export const buildMongoQuery = (
 		limit,
 		isExport,
 	}
+}
+
+/** Options for {@link buildMongoExport}. */
+export type MongoExportConfig = {
+	/** Whitelist for advanced filters — the same map the list endpoint uses. */
+	fields: MongoFieldMap
+	/**
+	 * Whitelist: export field key → trusted Mongo path to project. Keys absent
+	 * here are skipped — a request can never project an unlisted path.
+	 */
+	exportPaths: Record<string, string>
+	/** Trusted field paths the free-text search spans. */
+	searchFields?: string[]
+	/** Whitelist for sortable columns. @see {@link buildMongoSort} */
+	sort?: Record<string, string>
+	/** Sort when none is active. @defaultValue the `tiebreak` (order must be total) */
+	fallbackSort?: Record<string, 1 | -1>
+	/**
+	 * Unique-suffix sort (e.g. `{ _id: 1 }`). Required: without a total order,
+	 * ties make a long export duplicate or skip rows across batches.
+	 */
+	tiebreak: Record<string, 1 | -1>
+	/** Path the selection keys refer to. @defaultValue '_id' */
+	idField?: string
+	/** Row ceiling for `all`/`selected` scopes. @defaultValue 50_000 */
+	maxRows?: number
+}
+
+/**
+ * Translate an `ExportRequest` into everything a Mongo find needs: the match
+ * document (query filters + search + the request's key selection), a total-order
+ * sort, a projection limited to the whitelisted export paths, and `skip`/`limit`.
+ *
+ * @remarks
+ * Returns documents, not a file — the rows go back to the client, whose
+ * `rowsToCsvFields` renders them so per-field formatting matches every other
+ * scope and stack. `scope: 'selected'` pins `includeKeys`; an all-matching
+ * selection subtracts `excludeKeys`; `scope: 'page'` honors the query's own
+ * pagination.
+ *
+ * @example
+ * ```ts
+ * const request = parseExportRequest(req.body, { fields: EXPORT_KEYS })
+ * if (!request) return res.status(400).end()
+ * const { filter, sort, projection, skip, limit } = buildMongoExport(request, {
+ *   fields: FIELDS,
+ *   exportPaths: { name: 'legalName', 'products.name': 'products.name' },
+ *   tiebreak: { _id: 1 },
+ * })
+ * const rows = await Model.find(filter, projection).sort(sort).skip(skip).limit(limit).lean()
+ * res.json({ rows, total: await Model.countDocuments(filter) })
+ * ```
+ */
+export const buildMongoExport = (
+	request: ExportRequest,
+	config: MongoExportConfig
+): {
+	filter: MongoCondition
+	sort: Record<string, 1 | -1>
+	projection: Record<string, 1>
+	skip: number
+	limit: number
+} => {
+	const idField = config.idField ?? '_id'
+	const maxRows = config.maxRows ?? 50_000
+
+	const keyCondition: MongoCondition =
+		request.scope === 'selected' && request.includeKeys?.length
+			? { [idField]: { $in: request.includeKeys } }
+			: request.excludeKeys?.length
+				? { [idField]: { $nin: request.excludeKeys } }
+				: {}
+
+	const filter = combineFilters(
+		buildMongoFilter(request.query, config.fields),
+		buildMongoSearch(request.query.search, config.searchFields ?? []),
+		keyCondition
+	)
+
+	const projection: Record<string, 1> = {}
+	for (const key of request.fields) {
+		if (!Object.prototype.hasOwnProperty.call(config.exportPaths, key)) continue
+		const path = config.exportPaths[key]
+		if (path) projection[path] = 1
+	}
+
+	const sort = buildMongoSort(
+		request.query.sort,
+		config.sort ?? {},
+		config.fallbackSort ?? config.tiebreak,
+		config.tiebreak
+	)
+
+	if (request.scope === 'page') {
+		const { skip, limit } = mongoPaginate(request.query)
+		return { filter, sort, projection, skip, limit }
+	}
+	return { filter, sort, projection, skip: 0, limit: maxRows }
 }
 
 /**

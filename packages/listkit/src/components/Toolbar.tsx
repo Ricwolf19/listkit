@@ -54,7 +54,7 @@ export function Toolbar({
 	onOpenFilters,
 	onClearFilters,
 	filterCount = 0,
-	// searchInputId,
+	searchInputId,
 	filterShortcutHint,
 	viewShortcutHint,
 }: ToolbarProps) {
@@ -118,6 +118,7 @@ export function Toolbar({
 						{showSearch && (
 							<div className='flex-1'>
 								<SearchInput
+									id={searchInputId}
 									placeholder={placeholder ?? labels.searchPlaceholder}
 									value={searchTerm}
 									onChange={onSearchChange}

@@ -64,7 +64,7 @@ function writeCache<T>(key: string, entry: CacheEntry<T>): void {
  *
  * @example
  * ```ts
- * import { invalidateListCache } from '@pibytelabs/listkit'
+ * import { invalidateListCache } from 'listkit'
  * await createUser(data)
  * invalidateListCache('users')
  * ```

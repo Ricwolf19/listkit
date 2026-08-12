@@ -92,6 +92,9 @@ function generateProduct(index: number): Product {
 		roastLevel: ROAST_LEVELS[rand(ROAST_LEVELS.length)]!,
 		rating: Math.round(randFloat(1, 5) * 10) / 10,
 		weightGrams: [250, 500, 1000][rand(3)]!,
+		// Lifetime sales: the magnitude is the point — six and seven figures are
+		// where a number-range bound stops being readable without grouping.
+		revenueMXN: Math.round(randFloat(29, 899) * (500 + rand(4500))),
 		featured: seededRandom(seed * 5.5) > 0.7,
 	}
 }

@@ -3,7 +3,7 @@
 	"packages": {
 		"packages/listkit": {
 			"release-type": "node",
-			"package-name": "@pibytelabs/listkit",
+			"package-name": "listkit",
 			"changelog-path": "CHANGELOG.md",
 			"include-v-in-tag": false
 		}

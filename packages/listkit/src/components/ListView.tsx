@@ -1,5 +1,7 @@
 import {
+	lazy,
 	type ReactNode,
+	Suspense,
 	useCallback,
 	useEffect,
 	useMemo,
@@ -9,6 +11,7 @@ import {
 
 import { memoryAdapter } from '../adapters/memory'
 import { resolveListConfig } from '../config/resolveListConfig'
+import { DEFAULT_PAGE_SIZE_OPTIONS } from '../constants'
 import {
 	LabelsProvider,
 	ListRefreshProvider,
@@ -16,15 +19,6 @@ import {
 	useListKitLabels,
 	useListKitTheme,
 } from '../context/ListKitContext'
-import {
-	activeFiltersToParams,
-	buildDefaultActiveFilters,
-	encodeFilterValue,
-	filterParamKey,
-	flattenFilters,
-	pinnedFilterDefs,
-	readActiveFilters,
-} from '../filters/serialize'
 import { useColumnPrefs } from '../hooks/useColumnPrefs'
 import {
 	invalidateListCache,
@@ -32,29 +26,61 @@ import {
 	noteListMount,
 	resolveListId,
 } from '../hooks/useListData'
+import { useListExport } from '../hooks/useListExport'
+import { useListFilters } from '../hooks/useListFilters'
+import { useListKeyboard } from '../hooks/useListKeyboard'
 import { useListParams } from '../hooks/useListParams'
-import { useListShortcuts } from '../hooks/useListShortcuts'
+import type { ShortcutHandlers } from '../hooks/useListShortcuts'
 import { useListState } from '../hooks/useListState'
 import { useRowSelection } from '../hooks/useRowSelection'
+import { useShortcutHelp } from '../hooks/useShortcutHelp'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
 import type { ColumnStorage } from '../types/columns'
-import type { CardContext, ListConfig, ToolbarAction } from '../types/config'
+import type {
+	CardContext,
+	ColumnDef,
+	ListConfig,
+	ToolbarAction,
+} from '../types/config'
 import type {
 	DataAdapter,
 	ListQuery,
 	ListResult,
 	UseListDataHook,
 } from '../types/data'
+import type { ExportField } from '../types/export'
 import { resolveLabels } from '../types/labels'
-import { exportRowsToCsv } from '../utils/exportCsv'
+import { cn } from '../utils/cn'
 import { AutoCard } from './AutoCard'
 import { Cards } from './Cards'
+import { EmptyState } from './EmptyState'
 import { ActiveFilterChips } from './filters/ActiveFilterChips'
-import { FilterSidebar } from './filters/FilterSidebar'
 import { PinnedFilterChips } from './filters/PinnedFilterChips'
+import { QuickFilterBar } from './filters/QuickFilterBar'
 import { Pagination, type PaginationVariant } from './Pagination'
+import { RowActions } from './RowActions'
 import { SelectionBar } from './SelectionBar'
 import { Table } from './Table'
+
+// Loaded on demand: the sidebar drags react-datepicker along, which no list
+// needs until the user actually opens the filters. Keeps the main render path
+// (and the /next bundle) free of it.
+const FilterSidebar = lazy(() =>
+	import('./filters/FilterSidebar').then(m => ({ default: m.FilterSidebar }))
+)
+
+// Same treatment: most sessions never export, so the dialog (and the modal
+// machinery under it) only downloads on the first "Export…" click.
+const ExportDialog = lazy(() =>
+	import('./export/ExportDialog').then(m => ({ default: m.ExportDialog }))
+)
+
+// Also lazy — and for a reason the bundler makes visible: a static import here
+// pulls `Modal` into the main chunk, which would undo the split above for
+// every list, exporting or not.
+const ShortcutHelp = lazy(() =>
+	import('./ShortcutHelp').then(m => ({ default: m.ShortcutHelp }))
+)
 import { TableOptionsMenu } from './TableOptionsMenu'
 import { Toolbar } from './Toolbar'
 
@@ -121,6 +147,12 @@ export type ListViewProps<T> = {
 	 * the content flow — better for landing/storefront pages.
 	 */
 	paginationVariant?: PaginationVariant
+	/**
+	 * Left inset for `paginationVariant='fixed'` so the bar clears the app's
+	 * fixed sidebar — usually a custom property the shell publishes, e.g.
+	 * `'var(--app-sidebar-w)'`. Replaces hand-written `lg:pl-[…]` overrides.
+	 */
+	paginationOffsetLeft?: string
 	/** Data hook override (e.g. a TanStack Query implementation). */
 	useListData?: UseListDataHook<T>
 	/** Milliseconds to keep adapter responses in memory. @defaultValue 30_000 */
@@ -171,7 +203,8 @@ export function ListView<T>({
 	portals,
 	errorMessage,
 	paginationClassName,
-	paginationVariant = 'fixed',
+	paginationVariant = 'sticky',
+	paginationOffsetLeft,
 	useListData,
 	staleTime,
 	initialData,
@@ -209,44 +242,42 @@ export function ListView<T>({
 	const filterSections = useMemo(() => config.filters ?? [], [config.filters])
 	const hasFilters = filterSections.length > 0
 	const searchInputId = `listkit-search-${config.id}`
-	const flatDefs = useMemo(
-		() => flattenFilters(filterSections),
-		[filterSections]
-	)
-	// Computed every render so it always reflects the current URL/param values
-	// (cheap: a short loop over the filter definitions).
-	const urlActiveFilters = readActiveFilters(flatDefs, params.get)
+	const {
+		pinnedDefs,
+		quickDefs,
+		activeFilters,
+		applyFilter,
+		removeFilter,
+		clearAllFilters,
+	} = useListFilters<T>({
+		sections: filterSections,
+		params,
+		hasInitialData: !!initialData,
+	})
 
-	// Filter `defaultValue`s pre-apply on a pristine list (no filters in the URL,
-	// no SSR seed). They're overlaid on the very first render so the first fetch
-	// already carries them (no wasted request), then written to the URL on mount
-	// so chips, clearing, and link-sharing all work through the normal paths.
-	const defaultActiveFilters = useMemo(
-		() => buildDefaultActiveFilters(flatDefs),
-		[flatDefs]
-	)
-	const defaultsSeeded = useRef(false)
-	const usingDefaults =
-		!defaultsSeeded.current &&
-		!initialData &&
-		urlActiveFilters.length === 0 &&
-		defaultActiveFilters.length > 0
-	const activeFilters = usingDefaults ? defaultActiveFilters : urlActiveFilters
+	// Rows-per-page choices; `false` locks the list to the config's pageSize.
+	const pageSizeOptions =
+		config.pageSizeOptions === false
+			? undefined
+			: (config.pageSizeOptions ?? DEFAULT_PAGE_SIZE_OPTIONS)
 
-	useEffect(() => {
-		if (defaultsSeeded.current) return
-		defaultsSeeded.current = true
-		if (initialData || urlActiveFilters.length > 0) return
-		const updates = activeFiltersToParams(defaultActiveFilters)
-		if (Object.keys(updates).length > 0) params.setMany(updates)
-		// Mount-only: defaults seed the initial view; later edits/clears win.
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [])
+	const listTopRef = useRef<HTMLDivElement>(null)
+	const shortcutHelp = useShortcutHelp()
+
+	// Empty state, most specific first: a full replacement, then the composed
+	// one, then the plain message the table falls back to on its own.
+	const emptyState =
+		config.renderEmpty?.() ??
+		(config.empty ? <EmptyState {...config.empty} /> : undefined)
 
 	const [filtersOpen, setFiltersOpen] = useState(false)
-	const [autoFocusFilterSearch, setAutoFocusFilterSearch] = useState(false)
-	const openFilters = (focusSearch = false) => {
-		setAutoFocusFilterSearch(focusSearch)
+	// Mount the (lazy) sidebar only after the first open, so its chunk isn't
+	// fetched on page load; it stays mounted afterwards for the exit animation.
+	const [filtersEverOpened, setFiltersEverOpened] = useState(false)
+	// The panel always opens armed on its quick-search box: whoever opened it came
+	// to find a filter, and that box is how you find one.
+	const openFilters = () => {
+		setFiltersEverOpened(true)
 		setFiltersOpen(true)
 	}
 
@@ -280,27 +311,6 @@ export function ListView<T>({
 		setRefreshToken(t => t + 1)
 	}, [resolvedListId])
 
-	const removeFilter = (id: string) => {
-		params.setMany({ [filterParamKey(id)]: null, page: null })
-	}
-
-	// Pinned filters are ordinary filters with a shortcut: the chip writes the
-	// same URL param the sidebar does, so the query, the cache key and the chip
-	// row all update through the paths they already use.
-	const pinnedDefs = useMemo(() => pinnedFilterDefs(flatDefs), [flatDefs])
-	const applyFilter = (id: string, value: unknown) => {
-		params.setMany({
-			[filterParamKey(id)]: encodeFilterValue(value),
-			page: null,
-		})
-	}
-
-	const clearAllFilters = () => {
-		const updates: Record<string, string | null> = { page: null }
-		for (const def of flatDefs) updates[filterParamKey(def.id)] = null
-		params.setMany(updates)
-	}
-
 	// Table column hide/show + reorder + resize + density (all persisted). On by
 	// default for any table; `table.<flag>: false` opts out individually.
 	const columnControlEnabled = !!resolved.table?.columnControl
@@ -309,10 +319,40 @@ export function ListView<T>({
 	const densityEnabled = !!resolved.table?.density
 	const tablePrefsEnabled =
 		columnControlEnabled || reorderEnabled || resizeEnabled || densityEnabled
-	const tableColumns = useMemo(
-		() => resolved.table?.columns ?? [],
-		[resolved.table]
-	)
+	// `rowActions` appends its own column: pinned right, never exported, and
+	// rendered as the "•••" menu. Appended here so the column manager and the
+	// export universe see it like any other.
+	const tableColumns = useMemo(() => {
+		const columns = resolved.table?.columns ?? []
+		if (!config.rowActions?.length || columns.length === 0) return columns
+		return [
+			...columns,
+			{
+				key: '__lk_actions',
+				header: '',
+				// The column manager and the export universe fall back to the raw
+				// key when a column has no textual header — which would surface
+				// `__lk_actions` to the user. `label` is what they read instead.
+				label: labels.actionsColumn,
+				align: 'center',
+				// The edge-action treatment `ColumnDef.overlay` documents for
+				// actions columns — the checkbox mirror: always visible, pinned
+				// right from `md`, divider instead of a header label.
+				overlay: true,
+				width: '56px',
+				exportable: false,
+				truncate: false,
+				render: (item: T, index: number) => (
+					<RowActions
+						item={item}
+						index={index}
+						actions={config.rowActions!}
+						colorTheme={colorTheme}
+					/>
+				),
+			} satisfies ColumnDef<T>,
+		]
+	}, [resolved.table, config.rowActions, colorTheme, labels.actionsColumn])
 	const {
 		resolvedColumns,
 		items: columnItems,
@@ -323,6 +363,10 @@ export function ListView<T>({
 		resize: resizeColumn,
 		density,
 		setDensity,
+		storedPageSize,
+		setPageSize: persistPageSize,
+		storedQuickFilters,
+		setQuickFilters: persistQuickFilters,
 		reset: resetColumns,
 	} = useColumnPrefs(config.id, tableColumns, {
 		enabled: tablePrefsEnabled,
@@ -333,11 +377,16 @@ export function ListView<T>({
 			(config.table?.compact ? 'compact' : 'comfortable'),
 	})
 
+	// Reads a persisted preference, so it lands after the prefs hook.
+	const quickFiltersVisible = storedQuickFilters ?? true
+	const showQuickBar = quickDefs.length > 0 && quickFiltersVisible
+
 	const {
 		localSearchTerm,
 		handleSearchChange,
 		pagination,
-		handlePageChange,
+		handlePageChange: rawHandlePageChange,
+		handlePageSizeChange,
 		data: rows,
 		isLoading: dataLoading,
 		error,
@@ -352,7 +401,9 @@ export function ListView<T>({
 		adapter: resolvedAdapter,
 		params,
 		filters: activeFilters,
-		pageSize: resolved.pageSize,
+		// A remembered choice is the list's default; an explicit `?size=` in the
+		// URL still wins, so a shared link shows what the sender saw.
+		pageSize: storedPageSize ?? resolved.pageSize,
 		refreshToken,
 		useListData,
 		// In-memory `data` (no explicit adapter): default to no caching so the
@@ -367,6 +418,23 @@ export function ListView<T>({
 		defaultView: resolved.defaultView,
 		defaultSort: resolved.defaultSort,
 	})
+
+	// Paginating from the bottom of a long table otherwise drops the user
+	// mid-list on the next page. Scrolls the list's own top into view, not the
+	// document's, so an embedded list doesn't yank the whole page.
+	const handlePageChange = useCallback(
+		(page: number) => {
+			rawHandlePageChange(page)
+			if (config.scrollToTopOnPageChange === false) return
+			const el = listTopRef.current
+			if (!el || typeof window === 'undefined') return
+			const top = el.getBoundingClientRect().top + window.scrollY
+			// Only scroll up: paginating while already above the list shouldn't
+			// drag the viewport down to it.
+			if (window.scrollY > top) window.scrollTo({ top, behavior: 'smooth' })
+		},
+		[rawHandlePageChange, config.scrollToTopOnPageChange]
+	)
 
 	const isLoading = externalLoading || dataLoading
 
@@ -403,6 +471,7 @@ export function ListView<T>({
 	const selection = useRowSelection<T>({
 		enabled: selectionEnabled,
 		signature: selectionSignature,
+		totalItems: pagination.totalItems,
 		clearOnDataChange: selectionConfig?.clearOnDataChange,
 		onChange: selectionConfig?.onSelectionChange,
 	})
@@ -444,52 +513,19 @@ export function ListView<T>({
 					/>
 				)
 
-	// CSV export. The current page always works; "export all" is auto-detected for
-	// in-memory data, or wired via `export.fetchAll` for a server source (listkit
-	// never loops the adapter page by page).
-	const exportEnabled = !!config.export && !!resolved.table
-	const exportConfig =
-		typeof config.export === 'object' ? config.export : undefined
-	const exportFileName = exportConfig?.fileName ?? config.id
-	const isMemoryAdapter = !adapter
-	const exportAllAvailable =
-		exportEnabled &&
-		exportConfig?.allowExportAll !== false &&
-		(isMemoryAdapter || !!exportConfig?.fetchAll)
-	const [exporting, setExporting] = useState(false)
-
-	const handleExportPage = useCallback(() => {
-		exportRowsToCsv(rows, resolvedColumns, exportFileName)
-	}, [rows, resolvedColumns, exportFileName])
-
-	const handleExportAll = useCallback(async () => {
-		setExporting(true)
-		try {
-			const all = exportConfig?.fetchAll
-				? await exportConfig.fetchAll(query)
-				: (
-						await resolvedAdapter.fetch({
-							...query,
-							page: 1,
-							pageSize: Math.max(pagination.totalItems, 1),
-						})
-					).data
-			exportRowsToCsv(all, resolvedColumns, exportFileName)
-		} finally {
-			setExporting(false)
-		}
-	}, [
-		exportConfig,
-		resolvedAdapter,
-		query,
-		pagination.totalItems,
+	const exportControls = useListExport<T>({
+		config,
+		configColumns: resolved.table?.columns,
 		resolvedColumns,
-		exportFileName,
-	])
-
-	const handleExportSelected = useCallback(() => {
-		exportRowsToCsv(selection.selectedItems, resolvedColumns, exportFileName)
-	}, [selection.selectedItems, resolvedColumns, exportFileName])
+		adapter: resolvedAdapter,
+		isMemoryAdapter: !adapter,
+		query,
+		pageRows: rows,
+		selection,
+		getItemKey,
+		totalItems: pagination.totalItems,
+		labels,
+	})
 
 	const tableCompact = densityEnabled
 		? density === 'compact'
@@ -504,7 +540,8 @@ export function ListView<T>({
 	const optionsMenuAllowed = resolved.table?.optionsMenu !== false
 	const showOptionsMenu =
 		optionsMenuAllowed &&
-		(exportEnabled ||
+		(exportControls.enabled ||
+			quickDefs.length > 0 ||
 			(inTableView && densityEnabled) ||
 			(columnsAffectView && columnControlEnabled))
 	const tableControls = showOptionsMenu ? (
@@ -516,11 +553,16 @@ export function ListView<T>({
 					: undefined
 			}
 			exportControl={
-				exportEnabled
+				exportControls.enabled
 					? {
-							onExportPage: handleExportPage,
-							onExportAll: exportAllAvailable ? handleExportAll : undefined,
-							exporting,
+							onExportPage: exportControls.exportPage,
+							onExportAll: exportControls.allAvailable
+								? exportControls.exportAll
+								: undefined,
+							onConfigure: exportControls.configurable
+								? () => exportControls.openDialog('page')
+								: undefined,
+							exporting: exportControls.exporting,
 						}
 					: undefined
 			}
@@ -535,29 +577,82 @@ export function ListView<T>({
 						}
 					: undefined
 			}
+			quickFilters={
+				quickDefs.length > 0
+					? {
+							visible: quickFiltersVisible,
+							onToggle: persistQuickFilters,
+						}
+					: undefined
+			}
 		/>
 	) : undefined
 
-	useListShortcuts({
-		onFocusSearch: () => {
-			document.getElementById(searchInputId)?.focus()
-		},
-		onOpenFilters: hasFilters ? () => openFilters(false) : undefined,
-		onOpenFilterSearch: hasFilters ? () => openFilters(true) : undefined,
-		onToggleView:
+	/**
+	 * Bound by **capability**, not by current state.
+	 *
+	 * A key that appears and disappears as rows come and go is worse than one
+	 * that occasionally does nothing: the help overlay lists exactly what is
+	 * bound here, so a list that filters should always advertise `-`, whether or
+	 * not a filter happens to be applied this second. Each handler is present
+	 * whenever the feature exists and no-ops when there is nothing to act on.
+	 */
+	const shortcutHandlers: ShortcutHandlers = {
+		focusSearch: showSearch
+			? () => document.getElementById(searchInputId)?.focus()
+			: undefined,
+		openFilters: hasFilters ? openFilters : undefined,
+		clearFilters: hasFilters ? clearAllFilters : undefined,
+		removeLastFilter: hasFilters
+			? () => {
+					const last = activeFilters[activeFilters.length - 1]
+					if (last) removeFilter(last.id)
+				}
+			: undefined,
+		toggleView:
 			resolved.table && resolved.hasCards
 				? () => handleViewChange(viewType === 'table' ? 'cards' : 'table')
 				: undefined,
-		onRemoveLastFilter:
-			activeFilters.length > 0
-				? () => removeFilter(activeFilters[activeFilters.length - 1]!.id)
-				: undefined,
-	})
+		openExport: exportControls.configurable
+			? () => exportControls.openDialog('page')
+			: undefined,
+		refresh,
+		selectPage: selectionEnabled
+			? () => selection.toggleMany(pageEntries, !pageAllSelected)
+			: undefined,
+		clearSelection: selectionEnabled ? selection.clear : undefined,
+		prevPage: () => handlePageChange(Math.max(1, pagination.currentPage - 1)),
+		nextPage: () =>
+			handlePageChange(
+				Math.min(pagination.totalPages, pagination.currentPage + 1)
+			),
+		firstPage: () => handlePageChange(1),
+		lastPage: () => handlePageChange(pagination.totalPages),
+		showHelp: shortcutHelp.toggle,
+	}
+	// Capability inputs only — the same reason the handlers are gated that way:
+	// the help list must not shuffle as the data changes.
+	const boundShortcuts = useListKeyboard(shortcutHandlers, [
+		showSearch,
+		hasFilters,
+		selectionEnabled,
+		exportControls.configurable,
+		resolved.table,
+		resolved.hasCards,
+	])
 
 	return (
 		<ListRefreshProvider value={refresh}>
 			<LabelsProvider value={labels}>
-				<div className={paginationVariant === 'sticky' ? 'pb-4' : 'pb-20'}>
+				<div
+					ref={listTopRef}
+					className={cn(
+						'flex flex-col',
+						// Only a viewport-fixed bar floats over the page and needs the
+						// content to reserve room beneath it.
+						paginationVariant === 'fixed' ? 'pb-20' : 'pb-4'
+					)}
+				>
 					{(headerContent?.left ||
 						headerContent?.center ||
 						headerContent?.right) && (
@@ -600,18 +695,46 @@ export function ListView<T>({
 						actions={toolbarActions}
 						showSearch={showSearch}
 						showViewToggle={!!resolved.table && resolved.hasCards}
-						controls={tableControls}
+						controls={
+							<>
+								{tableControls}
+								{/* `fallback={null}` keeps the toolbar from reflowing while the
+								    chunk loads — the button is a 40px affordance, not content. */}
+								<Suspense fallback={null}>
+									<ShortcutHelp
+										available={boundShortcuts}
+										open={shortcutHelp.open}
+										onOpenChange={shortcutHelp.setOpen}
+									/>
+								</Suspense>
+							</>
+						}
 						customContent={toolbarContent}
-						onOpenFilters={hasFilters ? () => setFiltersOpen(true) : undefined}
+						onOpenFilters={hasFilters ? openFilters : undefined}
 						onClearFilters={hasFilters ? clearAllFilters : undefined}
 						filterCount={activeFilters.length}
 						searchInputId={showSearch ? searchInputId : undefined}
-						filterShortcutHint='Shift + F'
+						filterShortcutHint='+'
 						viewShortcutHint='Shift + V'
 					/>
 
-					{(pinnedDefs.length > 0 || activeFilters.length > 0) && (
-						<div className='mt-2 mb-3 flex flex-wrap items-center gap-2'>
+					{/* One filter row under the search box: quick pills, pinned chips
+					    and the removable chips for anything applied from the sidebar.
+					    They are one control surface, so they share a line and wrap
+					    together instead of stacking into separate-looking bars. */}
+					{(showQuickBar ||
+						pinnedDefs.length > 0 ||
+						activeFilters.length > 0) && (
+						<div className='mt-3 mb-3 flex flex-wrap items-center gap-2'>
+							{showQuickBar && (
+								<QuickFilterBar<T>
+									defs={quickDefs}
+									activeFilters={activeFilters}
+									onApply={applyFilter}
+									onRemove={removeFilter}
+									colorTheme={colorTheme}
+								/>
+							)}
 							<PinnedFilterChips
 								defs={pinnedDefs}
 								activeFilters={activeFilters}
@@ -621,10 +744,13 @@ export function ListView<T>({
 							/>
 							<ActiveFilterChips
 								sections={filterSections}
-								// Pinned filters already render their own chip; listing them
-								// twice would offer two different ways to clear one filter.
+								// Pinned chips and visible quick pills already show their own
+								// value and clear control; listing them here too would offer
+								// two different ways to clear one filter.
 								activeFilters={activeFilters.filter(
-									a => !pinnedDefs.some(def => def.id === a.id)
+									a =>
+										!pinnedDefs.some(def => def.id === a.id) &&
+										!(showQuickBar && quickDefs.some(def => def.id === a.id))
 								)}
 								onRemove={removeFilter}
 								colorTheme={colorTheme}
@@ -637,13 +763,31 @@ export function ListView<T>({
 							count={selection.selectedCount}
 							selected={selection.selectedItems}
 							selectedKeys={[...selection.selectedKeys]}
+							excludedKeys={[...selection.excludedKeys]}
+							query={query}
 							actions={selectionConfig?.actions}
 							onClear={selection.clear}
 							onExportSelected={
-								exportEnabled && selectionConfig?.showExport !== false
-									? handleExportSelected
+								exportControls.enabled && selectionConfig?.showExport !== false
+									? exportControls.exportSelected
 									: undefined
 							}
+							onConfigureExport={
+								exportControls.configurable &&
+								selectionConfig?.showExport !== false
+									? () => exportControls.openDialog('selected')
+									: undefined
+							}
+							// The escalation only makes sense once the visible page is fully
+							// picked and more rows match beyond it.
+							onSelectAllMatching={
+								selectionConfig?.allowSelectAllMatching !== false &&
+								pageAllSelected
+									? selection.selectAllMatching
+									: undefined
+							}
+							totalCount={pagination.totalItems}
+							allMatching={selection.mode === 'all-matching'}
 							colorTheme={colorTheme}
 						/>
 					)}
@@ -677,7 +821,7 @@ export function ListView<T>({
 									compact={tableCompact}
 									showHeader={resolved.table.showHeader}
 									emptyMessage={config.emptyMessage}
-									emptyState={config.renderEmpty?.()}
+									emptyState={emptyState}
 									displayMode={resolved.hasCards ? tableMode : 'show'}
 									loading={isLoading}
 									colorTheme={colorTheme}
@@ -685,6 +829,7 @@ export function ListView<T>({
 									onSort={handleSortChange}
 									skeletonRows={skeletonCount}
 									layout={resolved.table.layout}
+									minColumnWidth={resolved.table.minColumnWidth}
 									stickyHeader={resolved.table.stickyHeader}
 									maxBodyHeight={resolved.table.maxBodyHeight}
 									reorderable={reorderEnabled}
@@ -709,7 +854,7 @@ export function ListView<T>({
 									keyExtractor={getItemKey}
 									isLoading={isLoading}
 									emptyMessage={config.emptyMessage}
-									emptyState={config.renderEmpty?.()}
+									emptyState={emptyState}
 									displayMode={resolved.table ? cardsMode : 'show'}
 									gridCols={config.gridCols}
 									bare={resolved.cardSource === 'custom' && config.bareCard}
@@ -731,21 +876,64 @@ export function ListView<T>({
 						colorTheme={colorTheme}
 						className={paginationClassName}
 						variant={paginationVariant}
+						offsetLeft={paginationOffsetLeft}
+						pageSize={
+							pageSizeOptions
+								? {
+										value: pagination.itemsPerPage,
+										options: pageSizeOptions,
+										onChange: size => {
+											persistPageSize(
+												size === resolved.pageSize ? undefined : size
+											)
+											handlePageSizeChange(size)
+										},
+									}
+								: undefined
+						}
 					/>
 
-					{hasFilters && (
-						<FilterSidebar
-							open={filtersOpen}
-							onClose={() => {
-								setFiltersOpen(false)
-								setAutoFocusFilterSearch(false)
-							}}
-							sections={filterSections}
-							params={params}
-							title={config.filtersTitle}
-							colorTheme={colorTheme}
-							autoFocusSearch={autoFocusFilterSearch}
-						/>
+					{exportControls.configurable && exportControls.dialogMounted && (
+						<Suspense fallback={null}>
+							{/* lazy() erases the generic; the universe is T-typed upstream. */}
+							<ExportDialog
+								open={exportControls.dialog.dialogOpen}
+								onClose={exportControls.dialog.closeDialog}
+								fields={exportControls.universe as ExportField<unknown>[]}
+								groups={exportControls.groups}
+								scopes={exportControls.dialog.scopes}
+								counts={{
+									page: rows.length,
+									selected: selection.selectedCount,
+									total: pagination.totalItems,
+								}}
+								visibleKeys={exportControls.visibleKeys}
+								initialScope={exportControls.dialog.initialScope}
+								exporting={exportControls.exporting}
+								truncatedNote={exportControls.dialog.truncatedNote}
+								onExport={exportControls.dialog.runExport}
+								colorTheme={colorTheme}
+							/>
+						</Suspense>
+					)}
+
+					{hasFilters && filtersEverOpened && (
+						<Suspense fallback={null}>
+							<FilterSidebar
+								open={filtersOpen}
+								onClose={() => setFiltersOpen(false)}
+								sections={filterSections}
+								params={params}
+								title={config.filtersTitle}
+								colorTheme={colorTheme}
+								autoFocusSearch
+								activeFilters={activeFilters}
+								activeFirst={config.filtersActiveFirst}
+								autoCollapse={config.filtersAutoCollapse}
+								autoCollapseMinFilters={config.filtersAutoCollapseMinFilters}
+								autoCollapseMinSections={config.filtersAutoCollapseMinSections}
+							/>
+						</Suspense>
 					)}
 
 					{portals}

@@ -5,7 +5,10 @@ import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import type { ViewType } from '../types/list'
 import { cn } from '../utils/cn'
 
-type ViewToggleProps = {
+/**
+ *
+ */
+export type ViewToggleProps = {
 	view: ViewType
 	onViewChange: (view: ViewType) => void
 	className?: string

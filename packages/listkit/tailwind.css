@@ -1,7 +1,7 @@
 /*
  * Registers listkit's compiled output as a Tailwind v4 source. Consumers add
  *   @import 'tailwindcss';
- *   @import '@pibytelabs/listkit/tailwind.css';
+ *   @import 'listkit/tailwind.css';
  * instead of hand-writing an @source path into node_modules. Still JIT against
  * the consumer's own theme — this is not a precompiled stylesheet.
  */

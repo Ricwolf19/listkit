@@ -10,13 +10,13 @@ import type { ListConfig } from '../types/config'
  * @returns The same `config`, typed as `ListConfig<T>`.
  *
  * @remarks
- * Exported from both the main entry and `@pibytelabs/listkit/server`. Import it
+ * Exported from both the main entry and `listkit/server`. Import it
  * from `/server` when the config is built in a React Server Component, so the
  * module graph doesn't pull the client context.
  *
  * @example
  * ```tsx
- * import { defineListConfig } from '@pibytelabs/listkit/server'
+ * import { defineListConfig } from 'listkit/server'
  *
  * export const usersConfig = defineListConfig<User>({
  *   id: 'users',

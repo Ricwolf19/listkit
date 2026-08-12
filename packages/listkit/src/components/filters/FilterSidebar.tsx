@@ -2,16 +2,25 @@ import { Search, SlidersHorizontal, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import { useLabels } from '../../context/ListKitContext'
+import { arrangeSections } from '../../filters/arrange'
 import { useFilters } from '../../hooks/useFilters'
 import type { ListParams } from '../../hooks/useListParams'
 import { type ColorTheme, getColorTheme } from '../../theme/colorTheme'
-import type { FilterDefinition, FilterSection } from '../../types/filters'
+import type {
+	ActiveFilterValue,
+	FilterDefinition,
+	FilterSection,
+} from '../../types/filters'
 import { cn } from '../../utils/cn'
 import { foldText } from '../../utils/foldText'
 import { Button } from '../Button'
+import { ScrollArea } from '../ScrollArea'
 import { DynamicFilter } from './DynamicFilter'
 
 const ANIMATION_MS = 300
+
+/** Stable identity so the arrange memo doesn't rerun for a fresh empty array. */
+const EMPTY_ACTIVE: ActiveFilterValue[] = []
 
 /**
  * Props for {@link FilterSidebar}.
@@ -27,6 +36,19 @@ export type FilterSidebarProps<T> = {
 	colorTheme?: ColorTheme
 	/** Focus the quick-search box when the panel opens (e.g. opened via `+`). */
 	autoFocusSearch?: boolean
+	/**
+	 * The applied filters, used to float what the user is actually using to the
+	 * top of the panel. Omit to keep the declared order.
+	 */
+	activeFilters?: ActiveFilterValue[]
+	/** @see ArrangeOptions.activeFirst */
+	activeFirst?: boolean
+	/** @see ArrangeOptions.autoCollapse */
+	autoCollapse?: boolean
+	/** @see ArrangeOptions.autoCollapseMinFilters */
+	autoCollapseMinFilters?: number
+	/** @see ArrangeOptions.autoCollapseMinSections */
+	autoCollapseMinSections?: number
 }
 
 function SectionFilters<T>({
@@ -162,18 +184,41 @@ export function FilterSidebar<T>({
 	title,
 	colorTheme = 'red',
 	autoFocusSearch = false,
+	activeFilters = EMPTY_ACTIVE,
+	activeFirst,
+	autoCollapse,
+	autoCollapseMinFilters,
+	autoCollapseMinSections,
 }: FilterSidebarProps<T>) {
 	const theme = getColorTheme(colorTheme)
 	const labels = useLabels()
 	const { draft, setValue, apply, reset, clear } = useFilters(sections, params)
 
+	// Applied filters lead their section, their sections lead the panel, and
+	// long untouched sections start closed. Recomputed only when the config or
+	// the applied set changes — one pass, no per-render cost.
+	const arranged = useMemo(
+		() =>
+			arrangeSections(sections, activeFilters, {
+				activeFirst,
+				autoCollapse,
+				autoCollapseMinFilters,
+				autoCollapseMinSections,
+			}),
+		[
+			sections,
+			activeFilters,
+			activeFirst,
+			autoCollapse,
+			autoCollapseMinFilters,
+			autoCollapseMinSections,
+		]
+	)
+
 	const [search, setSearch] = useState('')
 	const searchInputRef = useRef<HTMLInputElement>(null)
 	const [collapsed, setCollapsed] = useState<Set<string>>(
-		() =>
-			new Set(
-				sections.filter(s => s.collapsible && s.defaultCollapsed).map(s => s.id)
-			)
+		() => new Set(arranged.filter(s => s.startCollapsed).map(s => s.id))
 	)
 	const toggleCollapsed = (id: string) =>
 		setCollapsed(prev => {
@@ -189,9 +234,9 @@ export function FilterSidebar<T>({
 	)
 	const query = foldText(search.trim())
 	const visibleSections = useMemo(() => {
-		if (!query) return sections
+		if (!query) return arranged
 		const matches = (text?: string) => !!text && foldText(text).includes(query)
-		return sections
+		return arranged
 			.map(s =>
 				matches(s.title)
 					? s
@@ -203,7 +248,7 @@ export function FilterSidebar<T>({
 						}
 			)
 			.filter(s => s.filters.length > 0)
-	}, [sections, query])
+	}, [arranged, query])
 
 	// Keep mounted through the exit transition, and drive enter/exit with `shown`.
 	const [mounted, setMounted] = useState(open)
@@ -356,7 +401,7 @@ export function FilterSidebar<T>({
 						handleApply()
 					}}
 				>
-					<div className='min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5'>
+					<ScrollArea className='px-6 py-5' wrapperClassName='flex-1'>
 						{totalFilters >= 6 && (
 							<div className='relative mb-4'>
 								<Search className='pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400' />
@@ -403,7 +448,7 @@ export function FilterSidebar<T>({
 								})}
 							</div>
 						)}
-					</div>
+					</ScrollArea>
 
 					{/* Footer inside form so the submit button is native */}
 					<footer className='flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]'>

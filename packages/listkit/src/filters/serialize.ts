@@ -14,6 +14,9 @@ export const filterParamKey = (id: string) => `${PREFIX}${id}`
 /** URL param that carries the active column sort, encoded as `field:dir`. */
 export const SORT_PARAM = 'sort'
 
+/** URL param carrying the user's chosen rows-per-page. */
+export const PAGE_SIZE_PARAM = 'size'
+
 export const encodeSort = (sort: SortState): string =>
 	`${sort.field}:${sort.dir}`
 
@@ -98,6 +101,13 @@ export function pinnedFilterDefs<T>(
 	defs: FilterDefinition<T>[]
 ): FilterDefinition<T>[] {
 	return defs.filter(def => def.pinned && resolvePinnedValue(def) !== undefined)
+}
+
+/** The filters surfaced as quick pills under the search box, in declaration order. */
+export function quickFilterDefs<T>(
+	defs: FilterDefinition<T>[]
+): FilterDefinition<T>[] {
+	return defs.filter(def => def.quick)
 }
 
 /** Encode active filters as a `{ paramKey: encodedValue }` patch for the store. */

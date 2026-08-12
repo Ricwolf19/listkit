@@ -37,6 +37,10 @@ export type ListLabels = {
 	searchFilters: string
 	/** Shown when the filter quick-search matches nothing. */
 	noFilterMatches: string
+	/** Placeholder for the lower bound of a `number-range` filter. */
+	rangeMin: string
+	/** Placeholder for the upper bound of a `number-range` filter. */
+	rangeMax: string
 	/** Toggle to reveal a collapsed filter section's options. */
 	showOptions: string
 	/** Toggle to hide a filter section's options. */
@@ -53,8 +57,12 @@ export type ListLabels = {
 	exportCurrentPage: string
 	/** "Export all" choice. */
 	exportAll: string
-	/** "Export selected" action in the selection bar. */
+	/** Quick "export selected" action — writes the file with the visible columns. */
 	exportSelected: string
+	/** Opens the export dialog for the selection (scope, fields, order). */
+	exportSelectedConfigure: string
+	/** Options menu: opens the export dialog. */
+	exportConfigure: string
 	/** Shown on the export button while a (server) export is in flight. */
 	exporting: string
 	/** Select-all-on-page checkbox (aria-label). */
@@ -63,6 +71,32 @@ export type ListLabels = {
 	selectRow: string
 	/** Clear-selection action in the selection bar. */
 	clearSelection: string
+	/** Close button of a dialog/panel (aria-label). */
+	close: string
+	/** Export scope: the rows on screen. */
+	exportScopePage: string
+	/** Export scope: the explicitly selected rows. */
+	exportScopeSelected: string
+	/** Export scope: every row matching the search/filters. */
+	exportScopeAll: string
+	/** Export dialog: the column-picking section heading. */
+	exportFields: string
+	/** Export dialog: filter box placeholder over the field list. */
+	filterFields: string
+	/** Export dialog: heading of the selected-order list. */
+	exportOrder: string
+	/** Move a column up in the export order (aria-label). */
+	moveUp: string
+	/** Move a column down in the export order (aria-label). */
+	moveDown: string
+	/** Post-export truncation note, e.g. `(n, t) => \`Exported ${n} of ${t} rows\``. */
+	exportTruncated: (exported: number, total: number) => string
+	/** Why "export all" is disabled: no server hook can fetch every row. */
+	exportAllUnavailable: string
+	/** Escalate the selection to every matching row, e.g. `n => \`Select all ${n} results\``. */
+	selectAllMatching: (total: number) => string
+	/** Selection-bar note while every matching row is selected. */
+	allMatchingSelected: string
 	/** Density toggle (aria-label/title). */
 	density: string
 	/** Comfortable density choice. */
@@ -71,6 +105,12 @@ export type ListLabels = {
 	densityCompact: string
 	/** Table-options menu button (aria-label/title) and heading. */
 	options: string
+	/** Header of the generated row-actions column (column manager, export list). */
+	actionsColumn: string
+	/** Options menu: heading of the quick-filter section. */
+	quickFilters: string
+	/** Options menu: toggle that shows/hides the quick-filter bar. */
+	showQuickFilters: string
 	/** Empty-state title when there are no rows. */
 	empty: string
 	/** Error message when the adapter fails. */
@@ -91,6 +131,8 @@ export type ListLabels = {
 	of: string
 	/** Pagination: "Page" prefix. */
 	page: string
+	/** Pagination: label of the rows-per-page selector. */
+	rowsPerPage: string
 	/** Pagination: first-page control (title/aria). */
 	firstPage: string
 	/** Pagination: previous-page control (title/aria). */
@@ -99,6 +141,10 @@ export type ListLabels = {
 	nextPage: string
 	/** Pagination: last-page control (title/aria). */
 	lastPage: string
+	/** Keyboard-help button (aria-label) and overlay title. */
+	shortcuts: string
+	/** One line per shortcut, keyed by its registry id, plus the group headings. */
+	shortcutLabels: Record<string, string>
 }
 
 /** English defaults for every {@link ListLabels} key. */
@@ -114,6 +160,8 @@ export const DEFAULT_LABELS: ListLabels = {
 	filtersHint: 'Adjust the filters and press Enter to apply',
 	searchFilters: 'Search filters…',
 	noFilterMatches: 'No filters match your search',
+	rangeMin: 'Min',
+	rangeMax: 'Max',
 	showOptions: 'Show options',
 	hideOptions: 'Hide options',
 	columns: 'Columns',
@@ -122,15 +170,33 @@ export const DEFAULT_LABELS: ListLabels = {
 	exportData: 'Export',
 	exportCurrentPage: 'Export current page',
 	exportAll: 'Export all',
-	exportSelected: 'Export selected',
+	exportSelected: 'Export selection',
+	exportSelectedConfigure: 'Configure export…',
+	exportConfigure: 'Configure export…',
 	exporting: 'Exporting…',
 	selectAll: 'Select all',
 	selectRow: 'Select row',
 	clearSelection: 'Clear selection',
+	close: 'Close',
+	exportScopePage: 'Current page',
+	exportScopeSelected: 'Selected rows',
+	exportScopeAll: 'All matching results',
+	exportFields: 'Columns',
+	filterFields: 'Filter columns…',
+	exportOrder: 'Column order',
+	moveUp: 'Move up',
+	moveDown: 'Move down',
+	exportTruncated: (exported, total) => `Exported ${exported} of ${total} rows`,
+	exportAllUnavailable: 'Requires a server export endpoint',
+	selectAllMatching: total => `Select all ${total} matching results`,
+	allMatchingSelected: 'All matching results are selected',
 	density: 'Density',
 	densityComfortable: 'Comfortable',
 	densityCompact: 'Compact',
 	options: 'Options',
+	actionsColumn: 'Actions',
+	quickFilters: 'Quick filters',
+	showQuickFilters: 'Show quick filters',
 	empty: 'No results',
 	error: 'Failed to load data.',
 	loading: 'Loading…',
@@ -141,10 +207,33 @@ export const DEFAULT_LABELS: ListLabels = {
 	showing: 'Showing',
 	of: 'of',
 	page: 'Page',
+	rowsPerPage: 'Rows',
 	firstPage: 'First page',
 	previousPage: 'Previous page',
 	nextPage: 'Next page',
 	lastPage: 'Last page',
+	shortcuts: 'Keyboard shortcuts',
+	shortcutLabels: {
+		search: 'Search',
+		filters: 'Filters',
+		view: 'View',
+		selection: 'Selection',
+		pagination: 'Pagination',
+		focusSearch: 'Focus the search box',
+		openFilters: 'Open filters',
+		removeLastFilter: 'Remove the last applied filter',
+		clearFilters: 'Clear all filters',
+		toggleView: 'Switch table / cards',
+		openExport: 'Configure export',
+		refresh: 'Reload the list',
+		selectPage: 'Select every row on this page',
+		clearSelection: 'Clear the selection',
+		prevPage: 'Previous page',
+		nextPage: 'Next page',
+		firstPage: 'First page',
+		lastPage: 'Last page',
+		showHelp: 'Show this help',
+	},
 }
 
 /**
@@ -164,6 +253,8 @@ export const ES_LABELS: ListLabels = {
 	filtersHint: 'Ajusta los filtros y presiona Enter para aplicar',
 	searchFilters: 'Buscar filtros…',
 	noFilterMatches: 'Ningún filtro coincide con tu búsqueda',
+	rangeMin: 'Mín',
+	rangeMax: 'Máx',
 	showOptions: 'Mostrar opciones',
 	hideOptions: 'Ocultar opciones',
 	columns: 'Columnas',
@@ -173,14 +264,33 @@ export const ES_LABELS: ListLabels = {
 	exportCurrentPage: 'Exportar página actual',
 	exportAll: 'Exportar todo',
 	exportSelected: 'Exportar selección',
+	exportSelectedConfigure: 'Configurar exportación…',
+	exportConfigure: 'Configurar exportación…',
 	exporting: 'Exportando…',
 	selectAll: 'Seleccionar todo',
 	selectRow: 'Seleccionar fila',
 	clearSelection: 'Limpiar selección',
+	close: 'Cerrar',
+	exportScopePage: 'Página actual',
+	exportScopeSelected: 'Filas seleccionadas',
+	exportScopeAll: 'Todos los resultados',
+	exportFields: 'Columnas',
+	filterFields: 'Filtrar columnas…',
+	exportOrder: 'Orden de columnas',
+	moveUp: 'Subir',
+	moveDown: 'Bajar',
+	exportTruncated: (exported, total) =>
+		`Se exportaron ${exported} de ${total} filas`,
+	exportAllUnavailable: 'Requiere un endpoint de exportación',
+	selectAllMatching: total => `Seleccionar los ${total} resultados`,
+	allMatchingSelected: 'Todos los resultados están seleccionados',
 	density: 'Densidad',
 	densityComfortable: 'Cómoda',
 	densityCompact: 'Compacta',
 	options: 'Opciones',
+	actionsColumn: 'Acciones',
+	quickFilters: 'Filtros fijos',
+	showQuickFilters: 'Mostrar filtros fijos',
 	empty: 'Sin resultados',
 	error: 'No se pudieron cargar los datos.',
 	loading: 'Cargando…',
@@ -191,10 +301,33 @@ export const ES_LABELS: ListLabels = {
 	showing: 'Mostrando',
 	of: 'de',
 	page: 'Página',
+	rowsPerPage: 'Filas',
 	firstPage: 'Primera página',
 	previousPage: 'Página anterior',
 	nextPage: 'Página siguiente',
 	lastPage: 'Última página',
+	shortcuts: 'Atajos de teclado',
+	shortcutLabels: {
+		search: 'Búsqueda',
+		filters: 'Filtros',
+		view: 'Vista',
+		selection: 'Selección',
+		pagination: 'Paginación',
+		focusSearch: 'Enfocar el buscador',
+		openFilters: 'Abrir filtros',
+		removeLastFilter: 'Quitar el último filtro aplicado',
+		clearFilters: 'Limpiar todos los filtros',
+		toggleView: 'Cambiar tabla / tarjetas',
+		openExport: 'Configurar exportación',
+		refresh: 'Recargar la lista',
+		selectPage: 'Seleccionar todas las filas de la página',
+		clearSelection: 'Limpiar la selección',
+		prevPage: 'Página anterior',
+		nextPage: 'Página siguiente',
+		firstPage: 'Primera página',
+		lastPage: 'Última página',
+		showHelp: 'Mostrar esta ayuda',
+	},
 }
 
 /**

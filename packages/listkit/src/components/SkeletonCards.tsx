@@ -1,6 +1,9 @@
 import { cn } from '../utils/cn'
 
-type SkeletonCardsProps = {
+/**
+ *
+ */
+export type SkeletonCardsProps = {
 	count?: number
 	gridCols?: string
 }

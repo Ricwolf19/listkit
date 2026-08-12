@@ -12,13 +12,13 @@
 >
 > ### 👉 **[📘 Full documentation — English](./packages/listkit/README.md)** &nbsp;·&nbsp; **[📗 Documentación completa — Español](./packages/listkit/README.es.md)**
 
-`@pibytelabs/listkit` is a React library that gives you a complete list view (toolbar, table, cards, pagination, filters) from a single declarative config. Designed to work across Next.js, Vite/React Router, and any data source (REST APIs, server actions, IndexedDB, in-memory arrays).
+`listkit` is a React library that gives you a complete list view (toolbar, table, cards, pagination, filters) from a single declarative config. Designed to work across Next.js, Vite/React Router, and any data source (REST APIs, server actions, IndexedDB, in-memory arrays).
 
 ## Project layout
 
 ```
 listkit/
-├── packages/listkit/      # the publishable package (@pibytelabs/listkit)
+├── packages/listkit/      # the publishable package (listkit)
 │   ├── src/
 │   │   ├── adapters/      # memory, fetch, serverAction, dexie
 │   │   ├── components/    # ListView, Table, Cards, Toolbar, filters/* …

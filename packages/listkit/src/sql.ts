@@ -2,7 +2,7 @@
  * Postgres-flavoured helpers (`$n` placeholders, `lower()`, `NULLS LAST`) for
  * turning listkit filter/sort values into safe SQL fragments. Opt-in and
  * minimal — compose them, don't expect a full query builder. Pair with
- * `@pibytelabs/listkit/query`.
+ * `listkit/query`.
  *
  * @packageDocumentation
  */
@@ -18,7 +18,9 @@ import {
 	type TextValue,
 } from './query'
 import type { ListQuery } from './types/data'
+import type { ExportRequest } from './types/export'
 import type { FilterSection } from './types/filters'
+import { lkError } from './utils/diagnostics'
 
 /**
  * Build a safe `ORDER BY` body from `query.sort`.
@@ -116,6 +118,35 @@ export type SqlFieldSpec =
 			/** Build a complete fragment (one or more columns). Return `null` to skip. */
 			match: (value: unknown, p: Placeholder) => string | null
 	  }
+	| {
+			/**
+			 * Filter through a to-many relation: the row matches when ANY related
+			 * row does (an `EXISTS (...)` subquery), which is how the in-memory and
+			 * Mongo engines treat an array-crossing path like `products.name`.
+			 */
+			relation: SqlRelation
+	  }
+
+/**
+ * A to-many relation reachable from the main table — the SQL counterpart of an
+ * array-of-objects path. Filtering emits `EXISTS (...)`; exporting aggregates
+ * the related values into one array cell (`array_agg`), which the shared cell
+ * renderer joins exactly like the other stacks' arrays.
+ */
+export type SqlRelation = {
+	/** Related table (optionally aliased), e.g. `'order_item i'`. */
+	table: string
+	/** Join condition back to the main table, e.g. `'i.order_id = o.id'`. */
+	on: string
+	/** Column read from the relation, e.g. `'i.product_name'`. */
+	column: string
+	/**
+	 * `ORDER BY` body for the aggregated values — keep it the array's storage
+	 * order (a position column) so cells read identically to the other stacks.
+	 * @defaultValue the relation `column`
+	 */
+	orderBy?: string
+}
 
 /**
  * Whitelist mapping each filter `id` to a trusted SQL column. Filters whose `id`
@@ -219,6 +250,13 @@ export const buildSqlFilter = (
 		let clause: string | null
 		if (typeof spec === 'object' && 'match' in spec) {
 			clause = spec.match(byId.get(filter.id), p)
+		} else if (typeof spec === 'object' && 'relation' in spec) {
+			// ANY-element semantics through the relation, like the other engines.
+			const { table, on, column } = spec.relation
+			const inner = sqlCondition(filter.type, column, byId, filter.id, p)
+			clause = inner
+				? `EXISTS (SELECT 1 FROM ${table} WHERE ${on} AND ${inner})`
+				: null
 		} else {
 			const column = typeof spec === 'string' ? spec : spec.column
 			const build = typeof spec === 'string' ? undefined : spec.build
@@ -375,4 +413,154 @@ export async function executeSqlList<T = Record<string, unknown>>(
 
 	const total = (countRes.rows[0] as { count?: number } | undefined)?.count ?? 0
 	return { data: dataRes.rows as T[], total }
+}
+
+/** Options for {@link buildSqlExport}. */
+export type SqlExportConfig = {
+	/** Main table (optionally aliased), e.g. `'orders o'`. */
+	table: string
+	/** Whitelist for advanced filters — the same map the list endpoint uses. */
+	fields: SqlFieldMap
+	/**
+	 * Whitelist: export field key → trusted SELECT expression, or a
+	 * `{ relation }` aggregated into one array cell. Keys absent here are
+	 * skipped — a request can never select an unlisted column. Each expression
+	 * is aliased with its field key, which is how the shared CSV assembler
+	 * finds it on the returned rows.
+	 */
+	exportColumns: Record<string, string | { relation: SqlRelation }>
+	/** Columns the free-text search matches against. */
+	searchColumns?: string[]
+	/** Sort whitelist: sort field → trusted column expression. */
+	sort?: Record<string, string>
+	/**
+	 * `ORDER BY` body when no sort is active. Include a unique column
+	 * (`'created_at DESC, id DESC'`): without a total order a long export can
+	 * duplicate or skip rows.
+	 */
+	fallbackSort: string
+	/** Unique-column suffix appended to a whitelisted sort, e.g. `', o.id'`. */
+	tiebreak: string
+	/** Column the selection keys refer to, e.g. `'o.id'`. */
+	idColumn: string
+	/** Extra equality conditions merged in (tenant, auth scope). */
+	scope?: Record<string, unknown>
+	/** Row ceiling for `all`/`selected` scopes. @defaultValue 50_000 */
+	maxRows?: number
+	/** Upper bound for `pageSize` on `scope: 'page'`. @defaultValue 100 */
+	maxPageSize?: number
+}
+
+/**
+ * Translate an `ExportRequest` into one parameterized Postgres `SELECT`: the
+ * query's filters + search + the request's key selection in `WHERE`, only the
+ * whitelisted export columns in `SELECT` (relations aggregated with
+ * `array_agg`), a total-order `ORDER BY`, and the scope's `LIMIT`.
+ *
+ * @remarks
+ * Key lists bind as a single `= ANY($n)` parameter — an `IN ($1, $2, …)` with
+ * thousands of keys overruns the driver's 65 535-parameter limit. Rows come
+ * back with each field key as its column alias; hand them to
+ * `rowsToCsvFields`, which renders them identically to every other stack.
+ *
+ * @example
+ * ```ts
+ * const request = parseExportRequest(req.body, { fields: EXPORT_KEYS })
+ * if (!request) return res.status(400).end()
+ * const { sql, params } = buildSqlExport(request, {
+ *   table: 'orders o',
+ *   fields: FIELDS,
+ *   exportColumns: {
+ *     folio: 'o.folio',
+ *     'products.name': {
+ *       relation: { table: 'order_item i', on: 'i.order_id = o.id', column: 'i.product_name', orderBy: 'i.pos' },
+ *     },
+ *   },
+ *   fallbackSort: 'o.created_at DESC, o.id DESC',
+ *   tiebreak: ', o.id',
+ *   idColumn: 'o.id',
+ * })
+ * const { rows } = await pool.query(sql, params)
+ * ```
+ */
+export const buildSqlExport = (
+	request: ExportRequest,
+	config: SqlExportConfig
+): { sql: string; params: unknown[] } => {
+	const params: unknown[] = []
+	const clauses: string[] = []
+
+	const filterWhere = buildSqlFilter(request.query, config.fields, params)
+	if (filterWhere) clauses.push(filterWhere)
+
+	const searchWhere = buildSearch(
+		request.query.search,
+		config.searchColumns ?? [],
+		params
+	)
+	if (searchWhere) clauses.push(searchWhere)
+
+	for (const [column, value] of Object.entries(config.scope ?? {})) {
+		if (value !== undefined) clauses.push(`${column} = $${params.push(value)}`)
+	}
+
+	if (request.scope === 'selected' && request.includeKeys?.length) {
+		clauses.push(
+			`${config.idColumn} = ANY($${params.push(request.includeKeys)})`
+		)
+	} else if (request.excludeKeys?.length) {
+		clauses.push(
+			`NOT (${config.idColumn} = ANY($${params.push(request.excludeKeys)}))`
+		)
+	}
+
+	const select: string[] = []
+	for (const key of request.fields) {
+		if (!Object.prototype.hasOwnProperty.call(config.exportColumns, key)) {
+			continue
+		}
+		const spec = config.exportColumns[key]!
+		// The field key doubles as the column alias the CSV assembler reads.
+		const alias = `"${key.replace(/"/g, '""')}"`
+		if (typeof spec === 'string') {
+			select.push(`${spec} AS ${alias}`)
+		} else {
+			const { table, on, column, orderBy } = spec.relation
+			select.push(
+				`(SELECT array_agg(${column} ORDER BY ${orderBy ?? column}) ` +
+					`FROM ${table} WHERE ${on}) AS ${alias}`
+			)
+		}
+	}
+	if (select.length === 0) {
+		lkError(
+			'LK1003',
+			`export request selects no known column. Declare the field keys in ` +
+				`exportColumns (got: ${request.fields.join(', ')}).`
+		)
+		select.push(`${config.idColumn} AS "__lk_id"`)
+	}
+
+	const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
+	const orderBy = buildOrderBy(
+		request.query.sort,
+		config.sort ?? {},
+		config.fallbackSort,
+		config.tiebreak
+	)
+
+	if (request.scope === 'page') {
+		const { pageSize, offset } = paginate(request.query, config.maxPageSize)
+		const sql =
+			`SELECT ${select.join(', ')} FROM ${config.table} ${where} ` +
+			`ORDER BY ${orderBy} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
+		params.push(pageSize, offset)
+		return { sql, params }
+	}
+
+	const sql =
+		`SELECT ${select.join(', ')} FROM ${config.table} ${where} ` +
+		`ORDER BY ${orderBy} LIMIT $${params.length + 1}`
+	params.push(config.maxRows ?? 50_000)
+	return { sql, params }
 }

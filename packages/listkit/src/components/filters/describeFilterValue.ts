@@ -5,6 +5,7 @@ import type {
 	TextFilterValue,
 } from '../../types/filters'
 import type { ListLabels } from '../../types/labels'
+import { formatNumber } from '../../utils/localeNumber'
 
 /**
  * A filter value as a short human phrase — the option's label rather than its
@@ -22,11 +23,11 @@ export function describeFilterValue(
 		case 'text':
 			return (value as TextFilterValue).value
 		case 'select':
-			return def.options.find(o => o.value === value)?.label ?? String(value)
+			return def.options?.find(o => o.value === value)?.label ?? String(value)
 		case 'multi-select': {
 			const vals = value as string[]
 			const optionLabels = vals.map(
-				v => def.options.find(o => o.value === v)?.label ?? v
+				v => def.options?.find(o => o.value === v)?.label ?? v
 			)
 			return optionLabels.length <= 2
 				? optionLabels.join(', ')
@@ -34,9 +35,12 @@ export function describeFilterValue(
 		}
 		case 'number-range': {
 			const { min, max } = value as NumberRangeFilterValue
-			if (min != null && max != null) return `${min} – ${max}`
-			if (min != null) return `≥ ${min}`
-			return `≤ ${max}`
+			// `formatValue` when the filter declares one, else the locale's own
+			// grouping — an unformatted bound reads as `≥ 1500000`.
+			const fmt = def.formatValue ?? ((n: number) => formatNumber(n))
+			if (min != null && max != null) return `${fmt(min)} – ${fmt(max)}`
+			if (min != null) return `≥ ${fmt(min)}`
+			return `≤ ${fmt(max as number)}`
 		}
 		case 'date-range': {
 			const { from, to } = value as DateRangeFilterValue

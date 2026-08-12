@@ -5,22 +5,18 @@
  * in-memory cache.
  *
  * Opt-in: `@tanstack/react-query` is an optional peer dependency, so this module
- * is only loaded by apps that import `@pibytelabs/listkit/react-query`. A
+ * is only loaded by apps that import `listkit/react-query`. A
  * `QueryClientProvider` must sit above the list.
  *
  * @example
  * ```tsx
- * import { useReactQueryListData } from '@pibytelabs/listkit/react-query'
+ * import { useReactQueryListData } from 'listkit/react-query'
  * <ListView config={config} adapter={adapter} useListData={useReactQueryListData} />
  * ```
  *
  * @packageDocumentation
  */
-import {
-	keepPreviousData,
-	type QueryClient,
-	useQuery,
-} from '@tanstack/react-query'
+import { hashKey, type QueryClient, useQuery } from '@tanstack/react-query'
 
 import type {
 	DataAdapter,
@@ -75,8 +71,9 @@ export const matchesListId = (keyId: unknown, listId: string): boolean =>
  * - `useListRefresh()` still works: it bumps `refreshToken`, which is part of the
  *   query key, so the list refetches.
  * - For mutations *outside* the list tree, call {@link invalidateList}.
- * - `keepPreviousData` keeps the current rows on screen while the next page or
- *   filter loads, so paging never flashes empty.
+ * - Previous rows stay on screen while the next page or filter of the SAME
+ *   list loads, so paging never flashes empty; a `listId` change drops them,
+ *   so a surviving component never shows one list's rows inside another.
  * - An SSR `seed` whose query matches the active one is used as `initialData`.
  *
  * @typeParam T - The row type.
@@ -89,26 +86,116 @@ export function useReactQueryListData<T>(
 	seed?: ListDataSeed<T>,
 	listId?: string
 ): ListResult<T> & { isLoading: boolean; error: Error | null } {
+	return useListDataWith(
+		DEFAULT_OPTIONS,
+		adapter,
+		query,
+		refreshToken,
+		staleTime,
+		seed,
+		listId
+	)
+}
+
+/** Options for {@link createReactQueryListData}. */
+export type ReactQueryListDataOptions = {
+	/**
+	 * Report `isLoading` while a *placeholder* page is on screen, so the list
+	 * shows its skeleton during the transition instead of the previous page's
+	 * rows.
+	 *
+	 * `keepPreviousData` is what stops paging from flashing empty, but it has a
+	 * cost: moving to an uncached page leaves the old rows rendered with nothing
+	 * saying so, and every page looks identical until the fetch lands. Turn this
+	 * on when a list's pages look alike; leave it off when the continuity matters
+	 * more than the signal. @defaultValue false
+	 */
+	skeletonOnPlaceholder?: boolean
+}
+
+const DEFAULT_OPTIONS: ReactQueryListDataOptions = {}
+
+function useListDataWith<T>(
+	options: ReactQueryListDataOptions,
+	adapter: DataAdapter<T>,
+	query: ListQuery,
+	refreshToken?: number,
+	staleTime?: number,
+	seed?: ListDataSeed<T>,
+	listId?: string
+): ListResult<T> & { isLoading: boolean; error: Error | null } {
 	const seedData =
 		seed && JSON.stringify(seed.query) === JSON.stringify(query)
 			? seed.data
 			: undefined
 
-	const { data, isLoading, error } = useQuery<ListResult<T>, Error>({
-		queryKey: listQueryKey(listId, query, refreshToken, adapter.key),
+	const queryKey = listQueryKey(listId, query, refreshToken, adapter.key)
+
+	const { data, isLoading, isPlaceholderData, error } = useQuery<
+		ListResult<T>,
+		Error
+	>({
+		queryKey,
 		queryFn: ({ signal }) => adapter.fetch(query, signal),
 		staleTime,
 		initialData: seedData,
-		placeholderData: keepPreviousData,
+		// `keepPreviousData`, but scoped to the SAME dataset (list id + adapter
+		// identity — slots 1 and 2 of the key). The bare helper keeps rows across
+		// ANY key change on the observer, so a component that survives a listId
+		// switch — a company picker over one mounted list, a generic list page
+		// re-parameterized by route — rendered list A's rows inside list B until
+		// B's fetch landed, with `isLoading` false the whole time. Pagination,
+		// filter, sort and refresh moves still keep their continuity: they change
+		// only the query/refresh slots.
+		placeholderData: (previousData, previousQuery) => {
+			if (!previousQuery) return undefined
+			const prev = previousQuery.queryKey as readonly unknown[]
+			return hashKey([prev[1], prev[2]]) === hashKey([queryKey[1], queryKey[2]])
+				? previousData
+				: undefined
+		},
 	})
 
 	return {
 		data: data?.data ?? [],
 		total: data?.total ?? 0,
-		isLoading,
+		...(data?.meta ? { meta: data.meta } : {}),
+		isLoading:
+			isLoading || (!!options.skeletonOnPlaceholder && isPlaceholderData),
 		error: error ?? null,
 	}
 }
+
+/**
+ * A {@link useReactQueryListData} with non-default behavior, for wiring into
+ * `<ListView useListData={…} />` (or an app-level wrapper).
+ *
+ * @example
+ * ```tsx
+ * // Module scope — it is a hook, so it must be stable across renders.
+ * const useListData = createReactQueryListData({ skeletonOnPlaceholder: true })
+ * <ListView config={config} adapter={adapter} useListData={useListData} />
+ * ```
+ */
+export const createReactQueryListData =
+	(options: ReactQueryListDataOptions = {}) =>
+	<T>(
+		adapter: DataAdapter<T>,
+		query: ListQuery,
+		refreshToken?: number,
+		staleTime?: number,
+		seed?: ListDataSeed<T>,
+		listId?: string
+	): ListResult<T> & { isLoading: boolean; error: Error | null } =>
+		useListDataWith(
+			options,
+			adapter,
+			query,
+			refreshToken,
+			staleTime,
+			seed,
+			listId
+		)
 
 /**
  * Refetch listkit lists from anywhere (e.g. a mutation `onSuccess` that runs
