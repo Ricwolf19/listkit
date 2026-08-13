@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   quality:
-    name: Lint, typecheck, build
+    name: Verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -20,18 +20,6 @@ jobs:
       - uses: ./.github/actions/setup-repo
         with:
           cache: true
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Secrets scan
-        run: pnpm exec secretlint --secretlintignore .gitignore "**/*"
-
-      - name: Build package
-        run: pnpm build
-
-      - name: Typecheck
-        run: pnpm typecheck
 
       # mongo.parity.test.ts boots a real mongod (mongodb-memory-server); cache
       # the downloaded binary so tests don't re-download ~80 MB per run.
@@ -43,20 +31,8 @@ jobs:
           restore-keys: |
             mongodb-binaries-${{ runner.os }}-
 
-      - name: Tests
-        run: pnpm test
-
-      - name: Unused code / deps (knip)
-        run: pnpm knip
-
-      - name: Architecture / circular deps (dependency-cruiser)
-        run: pnpm depcruise
-
-      - name: Bundle size budget
-        run: pnpm --filter listkit size
-
-      - name: Package publishability (publint)
-        run: pnpm --filter listkit check:publish
-
-      - name: Type emission correctness (attw)
-        run: pnpm --filter listkit check:types
+      # One step on purpose: `verify:ci` is the single definition of what green
+      # means, and .husky/pre-push runs the very same script. Spelling the
+      # checks out again here is how CI and the hook drift apart.
+      - name: Verify
+        run: pnpm verify:ci
