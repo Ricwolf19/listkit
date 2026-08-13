@@ -1670,4 +1670,4 @@ defineListConfig({ colorTheme: brand, /* … */ })
 
 ## Licencia
 
-MIT © Pibyte Labs
+MIT © Ricardo Tapia

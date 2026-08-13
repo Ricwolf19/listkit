@@ -115,6 +115,6 @@ Branching:
 
 ## License
 
-Code in this repository is licensed under the [MIT License](./LICENSE) © Ricwolf19.
+Code in this repository is licensed under the [MIT License](./LICENSE) © Ricardo Tapia.
 
 The `LICENSE` covers reusable code only. Documentation, branding (project name, logo, screenshots), and any non-code content are governed separately by the [NOTICE](./NOTICE) file and are **not** licensed for reuse under MIT.

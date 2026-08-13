@@ -14,7 +14,7 @@
 		"nextjs"
 	],
 	"license": "MIT",
-	"author": "Ricwolf19 <rhtc19@gmail.com>",
+	"author": "Ricardo Tapia <rhtc19@gmail.com>",
 	"engines": {
 		"node": ">=18"
 	},

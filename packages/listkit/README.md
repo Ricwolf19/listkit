@@ -1725,4 +1725,4 @@ for the full key list.
 
 ## License
 
-MIT © Pibyte Labs
+MIT © Ricardo Tapia
