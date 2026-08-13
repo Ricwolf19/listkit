@@ -132,6 +132,10 @@ Releases are automated with **release-please** (config in `release-please-config
 
 So the only manual step is **merging the release PR**. Never run version-bump, tag, or publish commands by hand. (There is no `development` branch and no changesets — older docs referencing those are stale.)
 
+**The release tag is the baseline, not `.release-please-manifest.json`.** release-please reads the current version from the manifest but decides the _bump_ from the commits since the last tag it finds on the remote. If that tag is missing, it walks the whole history, picks up breaking changes that shipped long ago and proposes a major. That is what turned a 4.3.0 into a 5.0.0 here: the remote had no tags at all, so the `feat(config)!` commit from the 3.x line counted again. After any history surgery — a sync from another repo, a force push, a fresh remote — check `git ls-remote --tags origin` and push a tag matching the manifest version before letting release-please run.
+
+Publishing goes through npm **trusted publishing** (OIDC), so no `NPM_TOKEN` is involved and provenance is attached automatically. It needs npm >= 11.5.1 on the runner, which is why the workflow upgrades npm before publishing.
+
 ---
 
 ## 8. Invariants (do not break without flagging)
