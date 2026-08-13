@@ -1,6 +1,6 @@
 {
 	"name": "listkit",
-	"version": "4.2.1",
+	"version": "5.0.0",
 	"description": "Standardized list views for React — table/cards, search, pagination, advanced filters.",
 	"keywords": [
 		"react",
