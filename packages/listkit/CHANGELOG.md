@@ -1,5 +1,12 @@
 # listkit
 
+## [4.3.0](https://github.com/Ricwolf19/listkit/compare/listkit-4.2.1...listkit-4.3.0) (2026-08-13)
+
+
+### Features
+
+* **actions:** ship row overflow, exclusive menus and section utils ([8a0837c](https://github.com/Ricwolf19/listkit/commit/8a0837ccaac054ba825208c445345d60e5032801))
+
 ## [4.2.1](https://github.com/Ricwolf19/listkit/compare/listkit-4.2.0...listkit-4.2.1) (2026-08-11)
 
 
