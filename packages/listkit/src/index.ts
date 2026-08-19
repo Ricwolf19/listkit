@@ -60,6 +60,7 @@ export {
 	type RowActionsProps,
 } from './components/RowActions'
 export {
+	type FadeTone,
 	ScrollArea,
 	type ScrollAreaProps,
 	type ScrollAxis,

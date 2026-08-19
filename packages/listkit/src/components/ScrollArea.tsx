@@ -11,6 +11,14 @@ import { cn } from '../utils/cn'
 /** Which axes a {@link ScrollArea} scrolls (and fades). */
 export type ScrollAxis = 'y' | 'x' | 'both'
 
+/**
+ * Visual treatment of a fade. `'surface'` dissolves into the white panel;
+ * `'shadow'` darkens, `'shadow-strong'` darkens harder — for edges that must
+ * announce themselves next to busy content (a pinned actions column, a
+ * checkbox rail).
+ */
+export type FadeTone = 'surface' | 'shadow' | 'shadow-strong'
+
 /** Props for {@link ScrollArea}. */
 export type ScrollAreaProps = {
 	children: ReactNode
@@ -33,14 +41,26 @@ export type ScrollAreaProps = {
 	 */
 	enabled?: boolean
 	/**
-	 * Render the left fade. Set `false` when something opaque already marks that
-	 * edge — a pinned table column casts its own shadow at the real seam, and a
-	 * fade there would wash out the pinned cells instead of the content behind
-	 * them. @defaultValue true
+	 * Render the left fade. Set `false` when something else already marks that
+	 * edge. @defaultValue true
 	 */
 	fadeLeft?: boolean
 	/** Right-edge counterpart of {@link ScrollAreaProps.fadeLeft}. @defaultValue true */
 	fadeRight?: boolean
+	/**
+	 * Push the left fade inward by this CSS length from `md` up — the width of a
+	 * pinned column stack. A fade at the container edge would paint *under* the
+	 * opaque pinned cells (they sit above it) and never be seen; moved to the
+	 * seam it stays visible over the scrolled content on every device. Below
+	 * `md`, where table pinning does not exist, the fade stays at the edge.
+	 */
+	fadeInsetLeft?: string
+	/** Right-edge counterpart of {@link ScrollAreaProps.fadeInsetLeft}. */
+	fadeInsetRight?: string
+	/**
+	 * Tone of every fade this area renders. @defaultValue 'surface'
+	 */
+	fadeTone?: FadeTone
 }
 
 /**
@@ -57,8 +77,8 @@ export type ScrollAreaProps = {
  * inside the content.
  *
  * Descendants can style off the scroll position: the wrapper is
- * `group/scroll` and carries `data-scroll-left` / `data-scroll-right`, which
- * is how a pinned table column knows to raise its seam shadow.
+ * `group/scroll` and carries `data-scroll-left` / `data-scroll-right`
+ * (`group-data-[scroll-left=true]/scroll:` in a descendant's classes).
  */
 export function ScrollArea({
 	children,
@@ -71,6 +91,9 @@ export function ScrollArea({
 	enabled = true,
 	fadeLeft = true,
 	fadeRight = true,
+	fadeInsetLeft,
+	fadeInsetRight,
+	fadeTone = 'surface',
 }: ScrollAreaProps) {
 	const innerRef = useRef<HTMLDivElement>(null)
 	const ref = scrollRef ?? innerRef
@@ -118,8 +141,13 @@ export function ScrollArea({
 
 			{vertical && (
 				<>
-					<Fade side='top' size={fadeSize} show={edges.top} />
-					<Fade side='bottom' size={fadeSize} show={edges.bottom} />
+					<Fade side='top' size={fadeSize} show={edges.top} tone={fadeTone} />
+					<Fade
+						side='bottom'
+						size={fadeSize}
+						show={edges.bottom}
+						tone={fadeTone}
+					/>
 				</>
 			)}
 			{horizontal && (
@@ -128,13 +156,15 @@ export function ScrollArea({
 						side='left'
 						size={fadeSize}
 						show={fadeLeft && edges.left}
-						tone='shadow'
+						inset={fadeInsetLeft}
+						tone={fadeTone}
 					/>
 					<Fade
 						side='right'
 						size={fadeSize}
 						show={fadeRight && edges.right}
-						tone='shadow'
+						inset={fadeInsetRight}
+						tone={fadeTone}
 					/>
 				</>
 			)}
@@ -149,39 +179,45 @@ const SIDE_CLASS = {
 	right: 'inset-y-0 right-0 bg-gradient-to-l',
 } as const
 
-/**
- * `'surface'` dissolves content into the panel behind it — right for a vertical
- * list inside a white panel. `'shadow'` darkens instead, which is what reads
- * correctly across a table: the content there does not end, it passes under
- * something, and a white wash over it looks like the data faded out.
- */
-const TONE_CLASS = {
-	surface: 'from-white to-transparent',
-	shadow: 'from-gray-950/25 to-transparent',
-} as const
+/** @see FadeTone for what each tone means and when to reach for it. */
+const TONE_CLASS: Record<FadeTone, string> = {
+	surface: 'from-white to-transparent dark:from-gray-900',
+	shadow: 'from-gray-950/40 to-transparent',
+	'shadow-strong': 'from-gray-950/60 to-transparent',
+}
 
 function Fade({
 	side,
 	size,
 	show,
-	tone = 'surface',
+	tone,
+	inset,
 }: {
 	side: keyof typeof SIDE_CLASS
 	size: number
 	show: boolean
-	tone?: keyof typeof TONE_CLASS
+	tone: FadeTone
+	/** @see ScrollAreaProps.fadeInsetLeft */
+	inset?: string
 }) {
-	const axisSize =
+	const axisSize: CSSProperties =
 		side === 'top' || side === 'bottom' ? { height: size } : { width: size }
+	// The inset travels as a CSS variable because the `md:` gate has to live in
+	// a class — an inline `left` would apply at every viewport.
+	const style: CSSProperties = inset
+		? ({ ...axisSize, '--lk-fade-inset': inset } as CSSProperties)
+		: axisSize
 	return (
 		<div
 			aria-hidden
-			style={axisSize}
+			style={style}
 			className={cn(
 				'pointer-events-none absolute z-10 transition-opacity duration-150',
 				SIDE_CLASS[side],
 				TONE_CLASS[tone],
-				show ? 'opacity-100' : 'opacity-0'
+				show ? 'opacity-100' : 'opacity-0',
+				inset && side === 'left' && 'md:left-(--lk-fade-inset)',
+				inset && side === 'right' && 'md:right-(--lk-fade-inset)'
 			)}
 		/>
 	)
