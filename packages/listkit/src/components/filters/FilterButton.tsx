@@ -46,7 +46,7 @@ export function FilterButton({
 					'inline-flex h-10 cursor-pointer items-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:outline-none active:scale-[0.98]',
 					active
 						? cn('border-transparent', theme.primaryBg, theme.primaryText)
-						: 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+						: 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
 				)}
 			>
 				<SlidersHorizontal className='h-4 w-4' />

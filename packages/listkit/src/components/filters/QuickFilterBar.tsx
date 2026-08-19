@@ -171,7 +171,7 @@ function QuickFilterPill({
 					'inline-flex items-center rounded-full border text-xs font-medium transition',
 					active
 						? cn(theme.chipBg, theme.chipBorder, theme.chipText)
-						: 'border-dashed border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50'
+						: 'border-dashed border-gray-300 bg-white text-gray-600 hover:border-gray-400 hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:border-gray-500 dark:hover:bg-gray-700'
 				)}
 			>
 				<button
@@ -203,8 +203,8 @@ function QuickFilterPill({
 
 			{open && (
 				<PopupPortal position={position} popupRef={popupRef}>
-					<div className='w-72 max-w-full rounded-xl border border-gray-200 bg-white p-3 shadow-xl'>
-						<p className='mb-2 text-xs font-semibold text-gray-700'>
+					<div className='w-72 max-w-full rounded-xl border border-gray-200 bg-white p-3 shadow-xl dark:border-gray-700 dark:bg-gray-800'>
+						<p className='mb-2 text-xs font-semibold text-gray-700 dark:text-gray-300'>
 							{def.label}
 						</p>
 						{/* The sidebar's own input: one implementation, one behavior. */}
@@ -216,7 +216,9 @@ function QuickFilterPill({
 							colorTheme={colorTheme}
 						/>
 						{def.description && (
-							<p className='mt-2 text-xs text-gray-500'>{def.description}</p>
+							<p className='mt-2 text-xs text-gray-500 dark:text-gray-400'>
+								{def.description}
+							</p>
 						)}
 					</div>
 				</PopupPortal>

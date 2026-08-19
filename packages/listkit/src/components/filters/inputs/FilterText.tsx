@@ -35,7 +35,7 @@ export function FilterText({
 				autoFocus={autoFocus}
 				className={fieldClass(theme)}
 			/>
-			<div className='inline-flex rounded-md bg-gray-100 p-0.5 text-xs'>
+			<div className='inline-flex rounded-md bg-gray-100 p-0.5 text-xs dark:bg-gray-800'>
 				{(['partial', 'exact'] as const).map(m => (
 					<button
 						key={m}
@@ -45,7 +45,7 @@ export function FilterText({
 							'cursor-pointer rounded px-2 py-1 font-medium transition-colors',
 							match === m
 								? cn(theme.primaryBg, theme.primaryText)
-								: 'text-gray-500 hover:text-gray-800'
+								: 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200'
 						)}
 					>
 						{m === 'partial' ? 'Contiene' : 'Exacto'}

@@ -149,15 +149,21 @@ export function FilterSelect({
 				className={cn(
 					fieldClass(theme),
 					'flex cursor-pointer items-center justify-between text-left',
-					open && 'border-gray-300'
+					open && 'border-gray-300 dark:border-gray-600'
 				)}
 			>
-				<span className={selected ? 'text-gray-900' : 'text-gray-400'}>
+				<span
+					className={
+						selected
+							? 'text-gray-900 dark:text-gray-100'
+							: 'text-gray-400 dark:text-gray-500'
+					}
+				>
 					{selected?.label ?? placeholder}
 				</span>
 				<ChevronDown
 					className={cn(
-						'h-4 w-4 shrink-0 text-gray-400 transition-transform',
+						'h-4 w-4 shrink-0 text-gray-400 transition-transform dark:text-gray-500',
 						open && 'rotate-180'
 					)}
 				/>
@@ -165,10 +171,10 @@ export function FilterSelect({
 
 			{open && (
 				<PopupPortal position={position} popupRef={popupRef}>
-					<div className='flex max-h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg'>
+					<div className='flex max-h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800'>
 						{searchable && (
-							<div className='relative shrink-0 border-b border-gray-100 p-2'>
-								<Search className='absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-gray-400' />
+							<div className='relative shrink-0 border-b border-gray-100 p-2 dark:border-gray-700'>
+								<Search className='absolute top-1/2 left-4 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500' />
 								<input
 									ref={searchRef}
 									value={query}
@@ -176,7 +182,7 @@ export function FilterSelect({
 									onKeyDown={onKeyDown}
 									placeholder='Buscar…'
 									autoComplete='off'
-									className='w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-8 text-sm focus:outline-none'
+									className='w-full rounded-md border border-gray-200 py-1.5 pr-3 pl-8 text-sm focus:outline-none dark:border-gray-700'
 								/>
 							</div>
 						)}
@@ -185,13 +191,13 @@ export function FilterSelect({
 								<button
 									type='button'
 									onClick={() => choose('')}
-									className='block w-full cursor-pointer px-3 py-2 text-left text-sm text-gray-400 hover:bg-gray-50'
+									className='block w-full cursor-pointer px-3 py-2 text-left text-sm text-gray-400 hover:bg-gray-50 dark:text-gray-500 dark:hover:bg-gray-700'
 								>
 									Limpiar selección
 								</button>
 							)}
 							{visible.length === 0 ? (
-								<div className='px-3 py-2 text-sm text-gray-400'>
+								<div className='px-3 py-2 text-sm text-gray-400 dark:text-gray-500'>
 									{emptyMessage}
 								</div>
 							) : (
@@ -206,14 +212,16 @@ export function FilterSelect({
 										className={cn(
 											'flex w-full cursor-pointer items-center justify-between px-3 py-2 text-left text-sm',
 											o.value === value
-												? 'font-medium text-gray-900'
-												: 'text-gray-700',
-											index === highlighted ? 'bg-gray-100' : 'hover:bg-gray-50'
+												? 'font-medium text-gray-900 dark:text-gray-100'
+												: 'text-gray-700 dark:text-gray-300',
+											index === highlighted
+												? 'bg-gray-100 dark:bg-gray-700'
+												: 'hover:bg-gray-50 dark:hover:bg-gray-700'
 										)}
 									>
 										{o.label}
 										{o.value === value && (
-											<Check className='h-4 w-4 text-gray-500' />
+											<Check className='h-4 w-4 text-gray-500 dark:text-gray-400' />
 										)}
 									</button>
 								))

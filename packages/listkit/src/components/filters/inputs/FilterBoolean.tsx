@@ -32,7 +32,7 @@ export function FilterBoolean({
 				'flex h-9 min-w-0 flex-1 cursor-pointer items-center justify-center rounded-md px-3 text-sm font-medium transition-colors',
 				value === val
 					? cn(theme.primaryBg, theme.primaryText)
-					: 'bg-gray-100 text-gray-600 hover:text-gray-900'
+					: 'bg-gray-100 text-gray-600 hover:text-gray-900 dark:bg-gray-800 dark:text-gray-400 dark:hover:text-gray-100'
 			)}
 		>
 			<span className='truncate'>{label}</span>
@@ -47,7 +47,7 @@ export function FilterBoolean({
 					type='button'
 					onClick={() => onChange(undefined)}
 					aria-label={labels.clearFilters}
-					className='cursor-pointer rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+					className='cursor-pointer rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-400'
 				>
 					<X className='h-4 w-4' />
 				</button>

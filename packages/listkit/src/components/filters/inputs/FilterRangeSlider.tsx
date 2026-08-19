@@ -89,11 +89,14 @@ export function FilterRangeSlider({
 
 	return (
 		<div className='px-1 pt-1'>
-			<div className='mb-3 flex items-center justify-between text-xs font-semibold text-gray-700'>
+			<div className='mb-3 flex items-center justify-between text-xs font-semibold text-gray-700 dark:text-gray-300'>
 				<span>{fmt(low)}</span>
 				<span>{fmt(high)}</span>
 			</div>
-			<div ref={trackRef} className='relative h-1.5 rounded-full bg-gray-200'>
+			<div
+				ref={trackRef}
+				className='relative h-1.5 rounded-full bg-gray-200 dark:bg-gray-700'
+			>
 				<div
 					className={cn('absolute h-full rounded-full', theme.primaryBg)}
 					style={{ left: `${pct(low)}%`, width: `${pct(high) - pct(low)}%` }}

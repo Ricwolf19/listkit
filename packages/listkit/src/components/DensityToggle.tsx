@@ -29,7 +29,7 @@ export function DensityToggle({ density, onChange }: DensityToggleProps) {
 			title={title}
 			aria-label={title}
 			className={cn(
-				'flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50'
+				'flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
 			)}
 		>
 			{compact ? <Rows4 className='h-4 w-4' /> : <Rows3 className='h-4 w-4' />}

@@ -19,7 +19,7 @@ export type ExportButtonProps = {
 }
 
 const triggerClass =
-	'flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50'
+	'flex h-10 items-center justify-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-2.5 text-gray-600 dark:text-gray-400 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50'
 
 /**
  * Toolbar CSV-export control. With only {@link ExportButtonProps.onExportPage}
@@ -63,7 +63,7 @@ export function ExportButton({
 	}
 
 	const item =
-		'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-gray-700 hover:bg-gray-50'
+		'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
 
 	return (
 		<div className='relative' ref={ref}>
@@ -83,7 +83,7 @@ export function ExportButton({
 			</button>
 
 			{open && !exporting && (
-				<div className='absolute right-0 z-40 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl'>
+				<div className='absolute right-0 z-40 mt-2 w-56 rounded-xl border border-gray-200 bg-white p-1.5 shadow-xl dark:border-gray-700 dark:bg-gray-800'>
 					<button
 						type='button'
 						className={item}

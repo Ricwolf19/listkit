@@ -33,7 +33,7 @@ export type TableOptionsMenuProps = {
 function Section({ title, children }: { title: string; children: ReactNode }) {
 	return (
 		<div className='px-1 py-1.5'>
-			<p className='px-1 pb-1.5 text-xs font-semibold tracking-wide text-gray-500 uppercase'>
+			<p className='px-1 pb-1.5 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400'>
 				{title}
 			</p>
 			{children}
@@ -67,7 +67,7 @@ export function TableOptionsMenu({
 
 	const exporting = exportControl?.exporting ?? false
 	const exportItem =
-		'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50'
+		'flex w-full cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-700 disabled:cursor-not-allowed disabled:opacity-50'
 
 	return (
 		<div className='relative' ref={ref}>
@@ -80,8 +80,8 @@ export function TableOptionsMenu({
 				className={cn(
 					'flex h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2.5 transition-colors',
 					open
-						? 'border-gray-300 bg-gray-100 text-gray-900'
-						: 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+						? 'border-gray-300 bg-gray-100 text-gray-900 dark:border-gray-500 dark:bg-gray-700 dark:text-gray-100'
+						: 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
 				)}
 			>
 				<Settings className='h-4 w-4' />
@@ -104,7 +104,7 @@ export function TableOptionsMenu({
 					<div
 						role='menu'
 						className={cn(
-							'z-50 border-gray-200 bg-white shadow-xl',
+							'z-50 border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800',
 							// Mobile: bottom sheet (full width, safe-area aware).
 							'fixed inset-x-0 bottom-0 rounded-t-2xl border-t p-2 pb-[max(env(safe-area-inset-bottom),1rem)]',
 							// Desktop: dropdown anchored to the button.
@@ -114,13 +114,13 @@ export function TableOptionsMenu({
 						{/* Bottom-sheet affordance + title (mobile only). */}
 						<div className='sm:hidden'>
 							<div className='mx-auto mb-2 h-1 w-9 rounded-full bg-gray-300' />
-							<p className='px-2 pb-2 text-sm font-semibold text-gray-900'>
+							<p className='px-2 pb-2 text-sm font-semibold text-gray-900 dark:text-gray-100'>
 								{labels.options}
 							</p>
 						</div>
 
 						<ScrollArea className='max-h-[70vh] sm:max-h-[70vh]'>
-							<div className='divide-y divide-gray-100'>
+							<div className='divide-y divide-gray-100 dark:divide-gray-700'>
 								{quickFilters && (
 									<Section title={labels.quickFilters}>
 										<label className={cn(exportItem, 'justify-between')}>
@@ -137,7 +137,7 @@ export function TableOptionsMenu({
 
 								{density && (
 									<Section title={labels.density}>
-										<div className='flex rounded-lg border border-gray-200 p-0.5'>
+										<div className='flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700'>
 											{(['comfortable', 'compact'] as Density[]).map(d => (
 												<button
 													key={d}
@@ -147,7 +147,7 @@ export function TableOptionsMenu({
 														'flex-1 cursor-pointer rounded-md px-2 py-1.5 text-xs font-medium transition-colors',
 														density.value === d
 															? cn(theme.primaryBg, theme.primaryText)
-															: 'text-gray-600 hover:bg-gray-100'
+															: 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700'
 													)}
 												>
 													{d === 'comfortable'
@@ -171,7 +171,7 @@ export function TableOptionsMenu({
 											}}
 										>
 											{exporting ? (
-												<Loader2 className='h-4 w-4 animate-spin text-gray-400' />
+												<Loader2 className='h-4 w-4 animate-spin text-gray-400 dark:text-gray-500' />
 											) : (
 												<FileDown className={cn('h-4 w-4', theme.accentText)} />
 											)}
@@ -205,7 +205,7 @@ export function TableOptionsMenu({
 												}}
 											>
 												{exporting ? (
-													<Loader2 className='h-4 w-4 animate-spin text-gray-400' />
+													<Loader2 className='h-4 w-4 animate-spin text-gray-400 dark:text-gray-500' />
 												) : (
 													<FileDown
 														className={cn('h-4 w-4', theme.accentText)}

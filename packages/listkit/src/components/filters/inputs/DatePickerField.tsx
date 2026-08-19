@@ -253,15 +253,22 @@ const Trigger = forwardRef<
 	TriggerProps & { onClear?: () => void }
 >(({ value, onClick, onClear, placeholder, className }, ref) => (
 	<button ref={ref} type='button' onClick={onClick} className={className}>
-		<Calendar className='h-4 w-4 shrink-0 text-gray-400' />
-		<span className={cn('truncate', value ? 'text-gray-900' : 'text-gray-400')}>
+		<Calendar className='h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500' />
+		<span
+			className={cn(
+				'truncate',
+				value
+					? 'text-gray-900 dark:text-gray-100'
+					: 'text-gray-400 dark:text-gray-500'
+			)}
+		>
 			{value || placeholder}
 		</span>
 		{value && onClear && (
 			<span
 				role='button'
 				tabIndex={0}
-				className='ml-auto inline-flex rounded-md p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
+				className='ml-auto inline-flex rounded-md p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-400'
 				onClick={e => {
 					e.stopPropagation()
 					onClear()

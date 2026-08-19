@@ -5,9 +5,7 @@ import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
 import type { ViewType } from '../types/list'
 import { cn } from '../utils/cn'
 
-/**
- *
- */
+/** Props for {@link ViewToggle}. */
 export type ViewToggleProps = {
 	view: ViewType
 	onViewChange: (view: ViewType) => void
@@ -40,7 +38,7 @@ export function ViewToggle({
 						theme.viewToggleActiveText,
 						theme.viewToggleActiveShadow
 					)
-				: 'text-gray-500 hover:text-gray-900'
+				: 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
 		)
 
 	const tableLabel = shortcutHint
@@ -53,7 +51,7 @@ export function ViewToggle({
 	return (
 		<div
 			className={cn(
-				'inline-flex h-11 items-center gap-1 rounded-xl bg-gray-100 p-1',
+				'inline-flex h-11 items-center gap-1 rounded-xl bg-gray-100 p-1 dark:bg-gray-800',
 				className
 			)}
 		>

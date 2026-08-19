@@ -121,11 +121,11 @@ export function Pagination({
 		}
 	}
 
-	const arrowBtn = 'h-9 w-9 p-2 text-gray-600'
+	const arrowBtn = 'h-9 w-9 p-2 text-gray-600 dark:text-gray-400'
 
 	const isFixed = variant === 'fixed'
 	const base =
-		'flex items-center justify-between gap-4 border-gray-200 px-4 py-3 sm:px-6'
+		'flex items-center justify-between gap-4 border-gray-200 dark:border-gray-800 px-4 py-3 sm:px-6'
 	const containerClass = cn(
 		base,
 		// `z-40` on both floating variants: the table's pinned cells carry
@@ -137,9 +137,9 @@ export function Pagination({
 		variant === 'sticky' &&
 			// Floating card in the content flow — never spans full width, so it sits
 			// above the list without overlapping a page footer or an app sidebar.
-			'sticky bottom-4 z-40 mt-5 rounded-2xl border bg-white/80 shadow-lg backdrop-blur-md',
+			'sticky bottom-4 z-40 mt-5 rounded-2xl border bg-white/80 dark:bg-gray-900/80 shadow-lg backdrop-blur-md',
 		isFixed &&
-			'fixed right-0 bottom-0 left-0 z-40 border-t bg-white/95 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm',
+			'fixed right-0 bottom-0 left-0 z-40 border-t bg-white/95 dark:bg-gray-900/95 shadow-[0_-1px_3px_rgba(0,0,0,0.04)] backdrop-blur-sm',
 		// Clears an app's fixed sidebar from `lg` up (below it those shells
 		// collapse). Reads the inset set inline, defaulting to flush-left — this
 		// is the contract that replaces every consumer's own pagination patch.
@@ -150,7 +150,7 @@ export function Pagination({
 			// The generous top margin keeps it from crowding the last row: inline
 			// sits *in* the content, so it needs the breathing room the floating
 			// variants get from being detached.
-			'mt-6 rounded-2xl border bg-white py-4',
+			'mt-6 rounded-2xl border bg-white dark:bg-gray-900 py-4',
 		className
 	)
 
@@ -175,7 +175,7 @@ export function Pagination({
 			{pageSize && (
 				// Visible on every width: a phone is exactly where a user wants
 				// fewer rows per page. Only its text label folds away.
-				<div className='flex shrink-0 items-center gap-1.5 text-xs text-gray-500'>
+				<div className='flex shrink-0 items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400'>
 					<span className='hidden whitespace-nowrap sm:inline'>
 						{labels.rowsPerPage}
 					</span>
@@ -193,41 +193,47 @@ export function Pagination({
 				</div>
 			)}
 
-			<div className='min-w-0 flex-1 truncate text-xs text-gray-600 sm:text-sm'>
+			<div className='min-w-0 flex-1 truncate text-xs text-gray-600 sm:text-sm dark:text-gray-400'>
 				{isLoading ? (
 					<span className='inline-flex items-center gap-2'>
 						<span
 							className={cn(
-								'h-3 w-3 animate-spin rounded-full border-2 border-gray-300',
+								'h-3 w-3 animate-spin rounded-full border-2 border-gray-300 dark:border-gray-600',
 								theme.paginationSpinnerBorder
 							)}
 						/>
 						<span className='hidden sm:inline'>{labels.loading}</span>
 					</span>
 				) : totalItems === 0 ? (
-					<span className='font-medium text-gray-900'>{labels.results(0)}</span>
+					<span className='font-medium text-gray-900 dark:text-gray-100'>
+						{labels.results(0)}
+					</span>
 				) : (
 					// Single line on every width. On mobile only the range shows
 					// ("1–12 of 23"); the "Page X of Y" part is hidden because the
 					// controls already render a compact "X / Y" indicator.
 					<div className='flex items-center gap-3 whitespace-nowrap'>
 						<span>
-							<span className='hidden text-gray-500 sm:inline'>
+							<span className='hidden text-gray-500 sm:inline dark:text-gray-400'>
 								{labels.showing}{' '}
 							</span>
-							<span className='font-semibold text-gray-900'>
+							<span className='font-semibold text-gray-900 dark:text-gray-100'>
 								{startItem}–{endItem}
 							</span>{' '}
-							<span className='text-gray-500'>
+							<span className='text-gray-500 dark:text-gray-400'>
 								{labels.of} {totalItems}
 							</span>
 						</span>
 						<span className='hidden text-gray-300 sm:inline'>|</span>
-						<span className='hidden text-xs text-gray-500 sm:inline sm:text-sm'>
+						<span className='hidden text-xs text-gray-500 sm:inline sm:text-sm dark:text-gray-400'>
 							{labels.page}{' '}
-							<span className='font-semibold text-gray-900'>{currentPage}</span>{' '}
+							<span className='font-semibold text-gray-900 dark:text-gray-100'>
+								{currentPage}
+							</span>{' '}
 							{labels.of}{' '}
-							<span className='font-semibold text-gray-900'>{totalPages}</span>
+							<span className='font-semibold text-gray-900 dark:text-gray-100'>
+								{totalPages}
+							</span>
 						</span>
 					</div>
 				)}
@@ -262,7 +268,7 @@ export function Pagination({
 						page === '...' ? (
 							<span
 								key={`dots-${index}`}
-								className='px-2 py-1 text-xs text-gray-400'
+								className='px-2 py-1 text-xs text-gray-400 dark:text-gray-500'
 							>
 								…
 							</span>
@@ -282,7 +288,7 @@ export function Pagination({
 												theme.primaryHover,
 												'shadow-sm'
 											)
-										: cn('text-gray-600', theme.softHoverBg)
+										: cn('text-gray-600 dark:text-gray-400', theme.softHoverBg)
 								)}
 							>
 								{page}
@@ -292,7 +298,7 @@ export function Pagination({
 				</div>
 
 				<div className='mx-2 flex items-center md:hidden'>
-					<span className='text-xs font-medium whitespace-nowrap text-gray-700'>
+					<span className='text-xs font-medium whitespace-nowrap text-gray-700 dark:text-gray-300'>
 						{currentPage} / {totalPages}
 					</span>
 				</div>

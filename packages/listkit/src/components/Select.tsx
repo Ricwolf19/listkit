@@ -63,19 +63,19 @@ export function Select({
 				disabled={disabled}
 				onClick={toggle}
 				className={cn(
-					'inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white py-1 pr-1.5 pl-2.5',
-					'text-xs font-medium text-gray-700 transition outline-none focus:ring-2',
+					'inline-flex cursor-pointer items-center gap-1 rounded-lg border border-gray-200 bg-white py-1 pr-1.5 pl-2.5 dark:border-gray-700 dark:bg-gray-800',
+					'text-xs font-medium text-gray-700 transition outline-none focus:ring-2 dark:text-gray-300',
 					'disabled:cursor-not-allowed disabled:opacity-50',
 					theme.focusBorder,
 					theme.focusRing,
-					open && 'border-gray-300',
+					open && 'border-gray-300 dark:border-gray-600',
 					className
 				)}
 			>
 				{selected?.label ?? value}
 				<ChevronDown
 					className={cn(
-						'h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform',
+						'h-3.5 w-3.5 shrink-0 text-gray-400 transition-transform dark:text-gray-500',
 						open && 'rotate-180'
 					)}
 				/>
@@ -85,7 +85,7 @@ export function Select({
 				<PopupPortal position={position} popupRef={popupRef}>
 					<ul
 						role='listbox'
-						className='overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl'
+						className='overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-xl dark:border-gray-700 dark:bg-gray-800'
 					>
 						{options.map(option => (
 							<li key={option.value}>
@@ -100,13 +100,13 @@ export function Select({
 									className={cn(
 										'flex w-full cursor-pointer items-center justify-between gap-3 px-3 py-1.5 text-left text-xs',
 										option.value === value
-											? 'font-semibold text-gray-900'
-											: 'text-gray-700 hover:bg-gray-50'
+											? 'font-semibold text-gray-900 dark:text-gray-100'
+											: 'text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
 									)}
 								>
 									{option.label}
 									{option.value === value && (
-										<Check className='h-3.5 w-3.5 text-gray-500' />
+										<Check className='h-3.5 w-3.5 text-gray-500 dark:text-gray-400' />
 									)}
 								</button>
 							</li>

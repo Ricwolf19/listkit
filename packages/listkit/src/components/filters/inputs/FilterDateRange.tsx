@@ -19,7 +19,7 @@ export function FilterDateRange({
 	return (
 		<div className='grid grid-cols-2 gap-2'>
 			<label className='space-y-1'>
-				<span className='text-xs text-gray-500'>Desde</span>
+				<span className='text-xs text-gray-500 dark:text-gray-400'>Desde</span>
 				<DatePickerField
 					value={v.from}
 					onChange={from => onChange({ ...v, from })}
@@ -30,7 +30,7 @@ export function FilterDateRange({
 				/>
 			</label>
 			<label className='space-y-1'>
-				<span className='text-xs text-gray-500'>Hasta</span>
+				<span className='text-xs text-gray-500 dark:text-gray-400'>Hasta</span>
 				<DatePickerField
 					value={v.to}
 					onChange={to => onChange({ ...v, to })}

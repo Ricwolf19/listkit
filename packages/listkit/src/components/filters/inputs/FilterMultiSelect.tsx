@@ -34,14 +34,14 @@ export function FilterMultiSelect({
 				return (
 					<label
 						key={o.value}
-						className='flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50'
+						className='flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50 dark:hover:bg-gray-700'
 					>
 						<span
 							className={cn(
 								'flex h-4 w-4 items-center justify-center rounded border',
 								checked
 									? cn(theme.primaryBg, 'border-transparent')
-									: 'border-gray-300 bg-white'
+									: 'border-gray-300 bg-white dark:border-gray-600 dark:bg-gray-800'
 							)}
 						>
 							{checked && <Check className='h-3 w-3 text-white' />}
@@ -52,7 +52,7 @@ export function FilterMultiSelect({
 							checked={checked}
 							onChange={() => toggle(o.value)}
 						/>
-						<span className='text-gray-700'>{o.label}</span>
+						<span className='text-gray-700 dark:text-gray-300'>{o.label}</span>
 					</label>
 				)
 			})}
