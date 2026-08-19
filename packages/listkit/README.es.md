@@ -721,7 +721,9 @@ blanco en modo claro). Donde quieras que el borde oscurezca en su lugar,
 Donde la tabla tiene columnas pinned, el fade no desaparece: se recorre hacia
 adentro hasta la costura entre el stack pinned y el contenido que scrollea,
 así la señal queda visible en cualquier device (un fade dejado en el borde del
-contenedor pintaría debajo de las celdas pinned opacas). La celda pinned más
+contenedor pintaría debajo de las celdas pinned opacas). Además, los fades de
+la tabla empiezan debajo del header: lavan datos que scrollean, nunca los
+títulos de columna. La celda pinned más
 externa agrega un divisor hairline en esa misma frontera. `ScrollArea` expone
 las piezas para tus propios scrollers: `fadeLeft` / `fadeRight` apagan un lado,
 `fadeInsetLeft` / `fadeInsetRight` (una longitud CSS) recorren un fade desde el

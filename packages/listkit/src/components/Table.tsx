@@ -1,5 +1,11 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
-import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
+import {
+	type CSSProperties,
+	type ReactNode,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
 
 import { useLabels } from '../context/ListKitContext'
 import { useIsNarrow } from '../hooks/useIsNarrow'
@@ -361,6 +367,26 @@ export function Table<T>({
 	// a column reorder when the drag begins on the resize handle.
 	const resizingRef = useRef(false)
 
+	// The horizontal fades must wash only the body. They span the ScrollArea's
+	// full height, and a z-index on the header is only as reliable as the
+	// nearest stacking context — so the header's measured height pushes the
+	// fades below it instead. Observed, not computed: padding, density and
+	// wrapped header text all move it.
+	const theadRef = useRef<HTMLTableSectionElement>(null)
+	const [headerHeight, setHeaderHeight] = useState(0)
+	useEffect(() => {
+		const el = theadRef.current
+		if (!el) {
+			setHeaderHeight(0)
+			return
+		}
+		const measure = () => setHeaderHeight(el.offsetHeight)
+		measure()
+		const observer = new ResizeObserver(measure)
+		observer.observe(el)
+		return () => observer.disconnect()
+	}, [showHeader])
+
 	if (displayMode === 'hide') return null
 
 	const visibility = displayVisibility(displayMode, 'table')
@@ -536,7 +562,7 @@ export function Table<T>({
 			    dividers below stay light so the eye reads bands of data, not a
 			    grid. */}
 			{showHeader && (
-				<thead className={cn('border-b', tone.headerDivider)}>
+				<thead ref={theadRef} className={cn('border-b', tone.headerDivider)}>
 					<tr>
 						{selectable && (
 							<th
@@ -844,6 +870,7 @@ export function Table<T>({
 					// opaque pinned cells and never be seen.
 					fadeInsetLeft={hasLeft ? leftInset : undefined}
 					fadeInsetRight={hasRight ? rightInset : undefined}
+					fadeInsetTop={headerHeight || undefined}
 				>
 					{tableEl}
 				</ScrollArea>
@@ -857,6 +884,7 @@ export function Table<T>({
 					wrapperClassName='rounded-xl'
 					fadeInsetLeft={hasLeft ? leftInset : undefined}
 					fadeInsetRight={hasRight ? rightInset : undefined}
+					fadeInsetTop={headerHeight || undefined}
 				>
 					{tableEl}
 				</ScrollArea>

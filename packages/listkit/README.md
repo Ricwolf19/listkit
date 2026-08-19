@@ -713,7 +713,8 @@ in light mode). Where you want the edge to darken instead, `ScrollArea` takes
 Where a table pins columns, the fade does not disappear — it shifts inward to
 the seam between the pinned stack and the scrolling content, so the affordance
 stays visible on every device (a fade left at the container edge would paint
-under the opaque pinned cells). The outermost pinned cell adds a hairline
+under the opaque pinned cells). The table's fades also start below the header
+row: they wash scrolling data, never the column titles. The outermost pinned cell adds a hairline
 divider on that same boundary. `ScrollArea` exposes the pieces for your own
 scrollers: `fadeLeft` / `fadeRight` suppress a side, `fadeInsetLeft` /
 `fadeInsetRight` (a CSS length) move a fade off the container edge from `md`

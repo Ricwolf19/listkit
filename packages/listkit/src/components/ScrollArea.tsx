@@ -58,6 +58,13 @@ export type ScrollAreaProps = {
 	/** Right-edge counterpart of {@link ScrollAreaProps.fadeInsetLeft}. */
 	fadeInsetRight?: string
 	/**
+	 * Push the horizontal fades down by this many pixels — the height of a
+	 * header row that must never be washed. The fades span the wrapper's full
+	 * height, and a z-index fix is only as reliable as the nearest stacking
+	 * context, so the geometry excludes the header instead.
+	 */
+	fadeInsetTop?: number
+	/**
 	 * Tone of every fade this area renders. @defaultValue 'surface'
 	 */
 	fadeTone?: FadeTone
@@ -93,6 +100,7 @@ export function ScrollArea({
 	fadeRight = true,
 	fadeInsetLeft,
 	fadeInsetRight,
+	fadeInsetTop,
 	fadeTone = 'surface',
 }: ScrollAreaProps) {
 	const innerRef = useRef<HTMLDivElement>(null)
@@ -157,6 +165,7 @@ export function ScrollArea({
 						size={fadeSize}
 						show={fadeLeft && edges.left}
 						inset={fadeInsetLeft}
+						insetTop={fadeInsetTop}
 						tone={fadeTone}
 					/>
 					<Fade
@@ -164,6 +173,7 @@ export function ScrollArea({
 						size={fadeSize}
 						show={fadeRight && edges.right}
 						inset={fadeInsetRight}
+						insetTop={fadeInsetTop}
 						tone={fadeTone}
 					/>
 				</>
@@ -192,6 +202,7 @@ function Fade({
 	show,
 	tone,
 	inset,
+	insetTop,
 }: {
 	side: keyof typeof SIDE_CLASS
 	size: number
@@ -199,14 +210,19 @@ function Fade({
 	tone: FadeTone
 	/** @see ScrollAreaProps.fadeInsetLeft */
 	inset?: string
+	/** @see ScrollAreaProps.fadeInsetTop */
+	insetTop?: number
 }) {
 	const axisSize: CSSProperties =
 		side === 'top' || side === 'bottom' ? { height: size } : { width: size }
-	// The inset travels as a CSS variable because the `md:` gate has to live in
-	// a class — an inline `left` would apply at every viewport.
-	const style: CSSProperties = inset
-		? ({ ...axisSize, '--lk-fade-inset': inset } as CSSProperties)
-		: axisSize
+	// The x-inset travels as a CSS variable because the `md:` gate has to live
+	// in a class — an inline `left` would apply at every viewport. `top` is
+	// inline on purpose: it must beat the class's `inset-y-0` everywhere.
+	const style: CSSProperties = {
+		...axisSize,
+		...(inset && ({ '--lk-fade-inset': inset } as CSSProperties)),
+		...(insetTop ? { top: insetTop } : undefined),
+	}
 	return (
 		<div
 			aria-hidden
