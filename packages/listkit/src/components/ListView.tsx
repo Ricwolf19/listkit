@@ -348,11 +348,18 @@ export function ListView<T>({
 						index={index}
 						actions={config.rowActions!}
 						colorTheme={colorTheme}
+						quickReveal={config.rowActionsQuickReveal}
 					/>
 				),
 			} satisfies ColumnDef<T>,
 		]
-	}, [resolved.table, config.rowActions, colorTheme, labels.actionsColumn])
+	}, [
+		resolved.table,
+		config.rowActions,
+		config.rowActionsQuickReveal,
+		colorTheme,
+		labels.actionsColumn,
+	])
 	const {
 		resolvedColumns,
 		items: columnItems,
@@ -672,12 +679,14 @@ export function ListView<T>({
 					{(config.title || config.subtitle) && (
 						<header className='mb-2'>
 							{config.title && (
-								<h1 className='text-2xl font-bold text-gray-900'>
+								<h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
 									{config.title}
 								</h1>
 							)}
 							{config.subtitle && (
-								<p className='text-sm text-gray-500'>{config.subtitle}</p>
+								<p className='text-sm text-gray-500 dark:text-gray-400'>
+									{config.subtitle}
+								</p>
 							)}
 						</header>
 					)}
@@ -795,7 +804,7 @@ export function ListView<T>({
 					{afterToolbar}
 
 					{error ? (
-						<div className='rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700'>
+						<div className='rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'>
 							{errorMessage ?? labels.error}
 						</div>
 					) : (

@@ -598,6 +598,13 @@ export type ListConfig<T> = {
 	 * ```
 	 */
 	rowActions?: RowAction<T>[]
+	/**
+	 * What reveals the quick bar of {@link ListConfig.rowActions} on
+	 * hover-capable devices: the pointer reaching the `•••` cluster
+	 * (`'trigger'`) or anywhere on the row (`'row'`).
+	 * @defaultValue 'trigger'
+	 */
+	rowActionsQuickReveal?: 'trigger' | 'row'
 	/** Table-view configuration. */
 	table?: TableConfig<T>
 	/** Imperative row actions delivered to renderers via {@link CardContext}. */
