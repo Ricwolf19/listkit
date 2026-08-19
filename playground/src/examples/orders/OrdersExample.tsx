@@ -1,12 +1,11 @@
 import {
-	type ColumnDef,
 	type DataAdapter,
 	type ExportResolver,
 	invalidateListCache,
 	ListView,
 	memoryAdapter,
 	resolveExportRows,
-	RowActions,
+	type RowAction,
 } from 'listkit'
 import { Eye, FileDown, Mail, XCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
@@ -49,9 +48,9 @@ const LEGENDS: Legend[] = [
 			'el resolver corta en 2,000 y avisa de la truncación en vez de entregar un archivo parcial en silencio.',
 	},
 	{
-		action: 'Mira la columna de acciones',
+		action: 'Pasa el cursor por el ••• de una fila',
 		expect:
-			'variant inline con las cuatro resoluciones por fila: loading, disabled con razón, danger y hidden.',
+			'todo va por rowActions: la quick bar saca Ver y Descargar, y el menú resuelve loading, disabled con razón, danger y hidden por fila.',
 	},
 	{
 		action: 'Exporta la columna Productos',
@@ -115,79 +114,63 @@ export function OrdersExample() {
 	const adapter = useMemo(() => ordersAdapter(scope), [scope])
 
 	/**
-	 * The edge-action column: `overlay` renders it as the trailing mirror of the
-	 * selection checkbox — always visible, slim, `border-l` divider, pinned right
-	 * from `md`. Four actions exercise the whole `RowActions` surface: `loading`
-	 * swaps the icon for a spinner, `disabled` returns the reason shown as the
-	 * tooltip, `danger` renders red, and the fourth folds behind `•••`
-	 * (`maxInline` defaults to 3).
+	 * Every action served through the declarative `rowActions` path — no
+	 * hand-rolled column: listkit appends its own edge-pinned `overlay` column
+	 * and renders the `•••` menu with a hover quick bar. Four actions exercise
+	 * the whole surface: `loading` swaps the icon for a spinner, `disabled`
+	 * returns the reason shown as the tooltip, `danger` renders red, `hidden`
+	 * removes the item per row, and the two `quick` ones slide out on hover.
 	 *
 	 * Lives here rather than in the config module because `loading` closes over
 	 * component state.
 	 */
-	const actionsColumn: ColumnDef<Order> = useMemo(
-		() => ({
-			key: 'actions',
-			header: 'Acciones',
-			overlay: true,
-			// 3 slots x 28px + gaps + the overlay's 16px padding.
-			width: '9.5rem',
-			exportable: false,
-			render: (order, index) => (
-				<RowActions
-					item={order}
-					index={index}
-					variant='inline'
-					actions={[
-						{
-							label: 'Ver pedido',
-							icon: <Eye size={16} />,
-							onClick: o => window.alert(`Pedido ${o.reference}`),
-						},
-						{
-							label: 'Descargar PDF',
-							icon: <FileDown size={16} />,
-							loading: o => downloadingId === o.id,
-							onClick: async o => {
-								setDownloadingId(o.id)
-								await delay(900)
-								setDownloadingId(null)
-							},
-						},
-						{
-							label: 'Reenviar confirmación',
-							icon: <Mail size={16} />,
-							disabled: o =>
-								o.status === 'Cancelado' && 'Un pedido cancelado no se reenvía',
-							onClick: o => window.alert(`Reenviado ${o.reference}`),
-						},
-						{
-							label: 'Cancelar pedido',
-							icon: <XCircle size={16} />,
-							danger: true,
-							hidden: o => o.status === 'Cancelado',
-							onClick: o => window.alert(`Cancelado ${o.reference}`),
-						},
-					]}
-				/>
-			),
-		}),
+	const rowActions: RowAction<Order>[] = useMemo(
+		() => [
+			{
+				label: 'Ver pedido',
+				icon: <Eye size={16} />,
+				quick: true,
+				onClick: o => window.alert(`Pedido ${o.reference}`),
+			},
+			{
+				label: 'Descargar PDF',
+				icon: <FileDown size={16} />,
+				quick: true,
+				loading: o => downloadingId === o.id,
+				onClick: async o => {
+					setDownloadingId(o.id)
+					await delay(900)
+					setDownloadingId(null)
+				},
+			},
+			{
+				label: 'Reenviar confirmación',
+				icon: <Mail size={16} />,
+				disabled: o =>
+					o.status === 'Cancelado' && 'Un pedido cancelado no se reenvía',
+				onClick: o => window.alert(`Reenviado ${o.reference}`),
+			},
+			{
+				label: 'Cancelar pedido',
+				icon: <XCircle size={16} />,
+				danger: true,
+				hidden: o => o.status === 'Cancelado',
+				onClick: o => window.alert(`Cancelado ${o.reference}`),
+			},
+		],
 		[downloadingId]
 	)
 
 	const config = useMemo(
 		() => ({
 			...ordersConfig,
-			table: {
-				...ordersConfig.table!,
-				columns: [...ordersConfig.table!.columns, actionsColumn],
-			},
+			rowActions,
 			export: {
 				...(typeof ordersConfig.export === 'object' ? ordersConfig.export : {}),
 				resolve: ordersResolver(scope),
 			},
 		}),
-		[scope, actionsColumn]
+		[scope, rowActions]
 	)
 
 	return (
@@ -208,7 +191,7 @@ export function OrdersExample() {
 					<button
 						type='button'
 						onClick={() => invalidateListCache('orders')}
-						className='cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50'
+						className='cursor-pointer rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
 					>
 						Invalidar cache (ambos scopes)
 					</button>

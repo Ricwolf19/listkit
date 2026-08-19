@@ -24,38 +24,42 @@ export function ProductCard(item: Product, ctx: CardContext<Product>) {
 					)}
 					<ListImage src={item.image} alt={item.name} width={44} height={44} />
 					<div className='min-w-0'>
-						<h3 className='truncate font-semibold text-gray-900'>
+						<h3 className='truncate font-semibold text-gray-900 dark:text-gray-100'>
 							{item.name}
 						</h3>
-						<p className='text-xs text-gray-500'>{item.sku}</p>
+						<p className='text-xs text-gray-500 dark:text-gray-400'>
+							{item.sku}
+						</p>
 					</div>
 				</div>
 				<div className='flex gap-1'>
 					<button
 						onClick={() => ctx.actions.onEdit?.(item)}
-						className='cursor-pointer rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700'
+						className='cursor-pointer rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300'
 						aria-label='Editar'
 					>
 						<Pencil size={14} />
 					</button>
 					<button
 						onClick={() => ctx.actions.onDelete?.(item)}
-						className='cursor-pointer rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600'
+						className='cursor-pointer rounded-md p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 dark:text-gray-500 dark:hover:bg-red-950/50 dark:hover:text-red-300'
 						aria-label='Eliminar'
 					>
 						<Trash2 size={14} />
 					</button>
 				</div>
 			</div>
-			<div className='mt-auto flex items-center justify-between pt-2 text-sm text-gray-600'>
-				<span className='rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600'>
+			<div className='mt-auto flex items-center justify-between pt-2 text-sm text-gray-600 dark:text-gray-400'>
+				<span className='rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-400'>
 					{item.category}
 				</span>
-				<span className='font-semibold text-gray-900'>
+				<span className='font-semibold text-gray-900 dark:text-gray-100'>
 					{currency(item.price)}
 				</span>
 			</div>
-			<p className='mt-1 text-xs text-gray-400'>Stock: {item.stock}</p>
+			<p className='mt-1 text-xs text-gray-400 dark:text-gray-500'>
+				Stock: {item.stock}
+			</p>
 		</>
 	)
 }

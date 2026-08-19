@@ -195,7 +195,7 @@ export function HelloListKit() {
 				headerContent={{
 					left: <Metric label='Catálogo' value={PRODUCTS.length} />,
 					right: (
-						<span className='rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700'>
+						<span className='rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300'>
 							header slot
 						</span>
 					),
@@ -231,7 +231,7 @@ function RefreshBadge() {
 	return (
 		<button
 			onClick={() => refresh()}
-			className='inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50'
+			className='inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700'
 		>
 			<RefreshCw size={14} />
 			Refrescar lista
@@ -241,9 +241,11 @@ function RefreshBadge() {
 
 function Metric({ label, value }: { label: string; value: number }) {
 	return (
-		<span className='inline-flex items-baseline gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm shadow-sm ring-1 ring-gray-100'>
-			<span className='font-bold text-gray-900'>{value}</span>
-			<span className='text-gray-500'>{label}</span>
+		<span className='inline-flex items-baseline gap-1.5 rounded-lg bg-white px-3 py-1.5 text-sm shadow-sm ring-1 ring-gray-100 dark:bg-gray-900 dark:ring-gray-800'>
+			<span className='font-bold text-gray-900 dark:text-gray-100'>
+				{value}
+			</span>
+			<span className='text-gray-500 dark:text-gray-400'>{label}</span>
 		</span>
 	)
 }

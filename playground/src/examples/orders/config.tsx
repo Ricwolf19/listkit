@@ -28,15 +28,8 @@ export const ordersConfig = defineListConfig<Order>({
 	getItemKey: order => order.id,
 	selection: true,
 
-	rowActions: [
-		{ label: 'Ver pedido', onClick: o => alert(`Abrir ${o.reference}`) },
-		{
-			label: 'Cancelar',
-			danger: true,
-			onClick: o => alert(`Cancelar ${o.reference}`),
-			disabled: o => o.status === 'Cancelado' && 'Ya está cancelado',
-		},
-	],
+	// `rowActions` is added by `OrdersExample`, not here: its `loading` state
+	// closes over component state, which a module constant cannot express.
 
 	filtersTitle: 'Filtrar pedidos',
 	filters: [
@@ -128,9 +121,9 @@ export const ordersConfig = defineListConfig<Order>({
 			{ key: 'shipping.trackingCode', header: 'Guía' },
 			{ key: 'shipping.carrier', header: 'Paquetería' },
 			{ key: 'channel', header: 'Canal', defaultHidden: true },
-			// The actions column is appended by `OrdersExample`: its `loading`
-			// state closes over component state, so it cannot live in a module
-			// constant. `overlay: true` there is the edge-action showcase.
+			// No hand-rolled actions column: every action is served through
+			// `rowActions` (see `OrdersExample`), which appends its own
+			// edge-pinned `overlay` column.
 		],
 	},
 

@@ -133,7 +133,7 @@ export function ThemingExample() {
 			legends={LEGENDS}
 			controls={
 				<>
-					<div className='inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm'>
+					<div className='inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800'>
 						{THEMES.map(name => (
 							<button
 								key={name}
@@ -144,7 +144,7 @@ export function ThemingExample() {
 								title={name}
 								className={`h-6 w-6 cursor-pointer rounded-md transition-transform ${SWATCH[name]} ${
 									theme === name
-										? 'scale-110 ring-2 ring-gray-900 ring-offset-1'
+										? 'scale-110 ring-2 ring-gray-900 ring-offset-1 dark:ring-gray-100 dark:ring-offset-gray-800'
 										: 'opacity-60 hover:opacity-100'
 								}`}
 							/>

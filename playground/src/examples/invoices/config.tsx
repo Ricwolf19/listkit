@@ -23,11 +23,16 @@ const date = (value: string | null) =>
 		: '—'
 
 const STATUS_CLASS: Record<Invoice['status'], string> = {
-	Pagada: 'bg-green-50 text-green-700 ring-green-200',
-	Vencida: 'bg-red-50 text-red-700 ring-red-200',
-	Borrador: 'bg-gray-100 text-gray-600 ring-gray-200',
-	Enviada: 'bg-blue-50 text-blue-700 ring-blue-200',
-	Cancelada: 'bg-gray-100 text-gray-500 ring-gray-200',
+	Pagada:
+		'bg-green-50 text-green-700 ring-green-200 dark:bg-green-950/50 dark:text-green-300 dark:ring-green-900',
+	Vencida:
+		'bg-red-50 text-red-700 ring-red-200 dark:bg-red-950/50 dark:text-red-300 dark:ring-red-900',
+	Borrador:
+		'bg-gray-100 text-gray-600 ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700',
+	Enviada:
+		'bg-blue-50 text-blue-700 ring-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:ring-blue-900',
+	Cancelada:
+		'bg-gray-100 text-gray-500 ring-gray-200 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-700',
 }
 
 const StatusBadge = ({ status }: { status: Invoice['status'] }) => (
@@ -110,7 +115,7 @@ export const invoicesConfig = defineListConfig<Invoice>({
 				sortable: true,
 				width: '150px',
 				render: i => (
-					<span className='font-semibold text-gray-900 tabular-nums'>
+					<span className='font-semibold text-gray-900 tabular-nums dark:text-gray-100'>
 						{formatMoney(i.total, i.currency)}
 					</span>
 				),
@@ -132,7 +137,9 @@ export const invoicesConfig = defineListConfig<Invoice>({
 				sticky: 'left',
 				width: '140px',
 				render: i => (
-					<span className='font-medium text-gray-900'>{i.number}</span>
+					<span className='font-medium text-gray-900 dark:text-gray-100'>
+						{i.number}
+					</span>
 				),
 			},
 			{
