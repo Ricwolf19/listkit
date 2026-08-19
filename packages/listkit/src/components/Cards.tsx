@@ -7,9 +7,7 @@ import { Card } from './Card'
 import { EmptyState } from './EmptyState'
 import { SkeletonCards } from './SkeletonCards'
 
-/**
- *
- */
+/** Props for {@link Cards}. */
 export type CardsProps<T> = {
 	data: T[]
 	renderCard: (item: T, index: number) => ReactNode
@@ -21,6 +19,11 @@ export type CardsProps<T> = {
 	displayMode?: DisplayMode
 	gridCols?: string
 	className?: string
+	/**
+	 * Extra classes for each default `Card` wrapper — how surface tones reach
+	 * the cards. Ignored when `bare`.
+	 */
+	cardClassName?: string
 	onCardClick?: (item: T, index: number) => void
 	/** Skip the default `<Card>` wrapper and render `renderCard` output directly. */
 	bare?: boolean
@@ -47,6 +50,7 @@ export function Cards<T>({
 	displayMode = 'auto',
 	gridCols = 'sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
 	className,
+	cardClassName,
 	onCardClick,
 	bare = false,
 	skeletonCount,
@@ -91,6 +95,7 @@ export function Cards<T>({
 					) : (
 						<Card
 							key={keyExtractor(item, index)}
+							className={cardClassName}
 							onClick={onCardClick ? () => onCardClick(item, index) : undefined}
 						>
 							{renderCard(item, index)}

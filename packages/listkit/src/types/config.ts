@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { EmptyStateProps } from '../components/EmptyState'
 import type { RowAction } from '../components/RowActions'
 import type { ColorTheme } from '../theme/colorTheme'
+import type { BuiltInSurfaceTone, SurfaceTones } from '../theme/surfaceTones'
 import type { ListQuery, SortState } from './data'
 import type {
 	ExportDateFormat,
@@ -465,6 +466,14 @@ export type ListConfig<T> = {
 	pageSize?: number
 	/** Per-list theme; overrides the {@link ListKitProvider} default. */
 	colorTheme?: ColorTheme
+	/**
+	 * Neutral chrome of the table and the default cards — surfaces, header,
+	 * dividers, row hover/selected. A built-in preset (`'gray'`, `'slate'`,
+	 * `'zinc'`, `'contrast'`) or a full {@link SurfaceTones} object. Accents
+	 * (buttons, chips, focus rings) stay on {@link ListConfig.colorTheme} —
+	 * the two axes compose. @defaultValue 'gray'
+	 */
+	tones?: BuiltInSurfaceTone | SurfaceTones
 	/**
 	 * Per-list UI string overrides (the language of the displayed content).
 	 * Merged over the {@link ListKitProvider} `labels` and the English defaults.

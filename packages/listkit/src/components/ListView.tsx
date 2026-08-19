@@ -35,6 +35,7 @@ import { useListState } from '../hooks/useListState'
 import { useRowSelection } from '../hooks/useRowSelection'
 import { useShortcutHelp } from '../hooks/useShortcutHelp'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
+import { getSurfaceTones } from '../theme/surfaceTones'
 import type { ColumnStorage } from '../types/columns'
 import type {
 	CardContext,
@@ -834,6 +835,7 @@ export function ListView<T>({
 									displayMode={resolved.hasCards ? tableMode : 'show'}
 									loading={isLoading}
 									colorTheme={colorTheme}
+									tones={config.tones}
 									sort={sort}
 									onSort={handleSortChange}
 									skeletonRows={skeletonCount}
@@ -866,6 +868,14 @@ export function ListView<T>({
 									emptyState={emptyState}
 									displayMode={resolved.table ? cardsMode : 'show'}
 									gridCols={config.gridCols}
+									// Only when set: the Card default chrome already matches the
+									// 'gray' preset, and an unconditional override would fight a
+									// consumer's own className.
+									cardClassName={
+										config.tones
+											? getSurfaceTones(config.tones).container
+											: undefined
+									}
 									bare={resolved.cardSource === 'custom' && config.bareCard}
 									skeletonCount={skeletonCount}
 								/>

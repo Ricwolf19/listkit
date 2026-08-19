@@ -175,6 +175,12 @@ export {
 	getColorTheme,
 	type ThemeClasses,
 } from './theme/colorTheme'
+export {
+	type BuiltInSurfaceTone,
+	DEFAULT_SURFACE_TONE,
+	getSurfaceTones,
+	type SurfaceTones,
+} from './theme/surfaceTones'
 
 // CSV export helpers
 export { downloadCsv, exportRowsToCsv, rowsToCsv } from './utils/exportCsv'

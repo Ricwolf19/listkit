@@ -4,6 +4,11 @@ import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
 import { useLabels } from '../context/ListKitContext'
 import { useIsNarrow } from '../hooks/useIsNarrow'
 import { type ColorTheme } from '../theme/colorTheme'
+import {
+	type BuiltInSurfaceTone,
+	getSurfaceTones,
+	type SurfaceTones,
+} from '../theme/surfaceTones'
 import type { ColumnDef } from '../types/config'
 import type { SortState } from '../types/data'
 import type { DisplayMode } from '../types/list'
@@ -30,6 +35,11 @@ export type TableProps<T> = {
 	showHeader?: boolean
 	className?: string
 	colorTheme?: ColorTheme
+	/**
+	 * Neutral chrome — surfaces, header, dividers, row states. A preset name or
+	 * a full {@link SurfaceTones} object. @defaultValue 'gray'
+	 */
+	tones?: BuiltInSurfaceTone | SurfaceTones
 	/** Active column sort, used to render the header indicator. */
 	sort?: SortState
 	/** Called with a column's sort field when a sortable header is clicked. */
@@ -222,6 +232,8 @@ function stickyMap<T>(
  *
  * @see AGENTS.md section 8, invariant 14 — why, and what breaks above the ceiling.
  */
+// `Z_PINNED_CELL` is also every header cell's layer: a static th has no
+// stacking level, so the edge fades (z-10) washed the header text.
 const Z_PINNED_CELL = 'z-20'
 const Z_HEADER = 'z-30'
 const Z_PINNED_HEADER = 'z-40'
@@ -321,6 +333,7 @@ export function Table<T>({
 	showHeader = true,
 	className,
 	colorTheme = 'red',
+	tones,
 	sort,
 	onSort,
 	skeletonRows = 6,
@@ -341,6 +354,7 @@ export function Table<T>({
 }: TableProps<T>) {
 	const labels = useLabels()
 	const isNarrow = useIsNarrow()
+	const tone = getSurfaceTones(tones)
 	const [dragKey, setDragKey] = useState<string | null>(null)
 	const rafRef = useRef(0)
 	// Set while a resize is in progress so a draggable header doesn't also start
@@ -500,7 +514,8 @@ export function Table<T>({
 			// near-equal widths and ignores them. So fixed → `w-full` (width: 100%);
 			// auto keeps `min-w-full` so content can still widen the table for scroll.
 			className={cn(
-				'divide-y divide-gray-100 dark:divide-gray-800',
+				'divide-y',
+				tone.divider,
 				tableLayout === 'fixed' ? 'w-full' : 'min-w-full'
 			)}
 			// Inline (not a Tailwind class) so it is deterministic regardless of the
@@ -521,13 +536,16 @@ export function Table<T>({
 			    dividers below stay light so the eye reads bands of data, not a
 			    grid. */}
 			{showHeader && (
-				<thead className='border-b border-gray-300 dark:border-gray-600'>
+				<thead className={cn('border-b', tone.headerDivider)}>
 					<tr>
 						{selectable && (
 							<th
 								scope='col'
 								className={cn(
-									'w-12 border-r border-gray-200 bg-gray-50 px-3 dark:border-gray-800 dark:bg-gray-800',
+									// `relative` so the z applies below `md` too (static
+									// otherwise) — the edge fades must never wash the header.
+									'relative w-12 border-r border-gray-200 px-3 dark:border-gray-800',
+									tone.headerBg,
 									compact ? 'py-2.5' : 'py-3.5',
 									thSticky,
 									cn('md:sticky md:left-0', Z_PINNED_HEADER)
@@ -555,7 +573,12 @@ export function Table<T>({
 							// An overlay column reserves no space, so a label would sit
 							// over the column beside it.
 							const label = col.overlay ? null : (
-								<span className='block truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-600 uppercase dark:text-gray-400'>
+								<span
+									className={cn(
+										'block truncate text-xs font-semibold tracking-wide whitespace-nowrap uppercase',
+										tone.headerText
+									)}
+								>
 									{col.header}
 								</span>
 							)
@@ -596,7 +619,12 @@ export function Table<T>({
 												: undefined
 									}
 									className={cn(
-										'relative bg-gray-50 dark:bg-gray-800',
+										// The z keeps the header above the edge fades (`z-10`)
+										// even when nothing pins — a static th has no layer and
+										// the fade washed the header text.
+										'relative',
+										Z_PINNED_CELL,
+										tone.headerBg,
 										compact ? 'px-4 py-2.5' : 'px-6 py-3.5',
 										alignClass(col.align),
 										// Mirror of the selection header on the other edge.
@@ -607,7 +635,7 @@ export function Table<T>({
 										// header row and the pinned body cells below it.
 										stickyCell(
 											sticky.get(col.key),
-											'bg-gray-50 dark:bg-gray-800',
+											tone.headerBg,
 											Z_PINNED_HEADER
 										).className,
 										reorderable && 'cursor-grab active:cursor-grabbing',
@@ -670,7 +698,7 @@ export function Table<T>({
 				</thead>
 			)}
 
-			<tbody className='divide-y divide-gray-100 dark:divide-gray-800'>
+			<tbody className={cn('divide-y', tone.divider)}>
 				{data.length > 0 ? (
 					data.map((item, i) => {
 						const rowKey = keyExtractor ? keyExtractor(item, i) : i
@@ -681,11 +709,12 @@ export function Table<T>({
 								className={cn(
 									// Opaque at every state, hover included — a pinned cell
 									// inherits this. @see AGENTS.md section 8, invariant 15.
-									'bg-white transition-colors hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800',
+									'transition-colors',
+									tone.rowBg,
+									tone.rowHover,
 									// A step darker than hover, so a selected row stays
 									// distinguishable from the one under the cursor.
-									selected &&
-										'bg-gray-100 hover:bg-gray-100 dark:bg-gray-700 dark:hover:bg-gray-700',
+									selected && tone.rowSelected,
 									rowClassName?.(item, i)
 								)}
 							>
@@ -807,7 +836,7 @@ export function Table<T>({
 				// scroll is contained here so a wide table never spills off-page.
 				<ScrollArea
 					axis='both'
-					className='rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900'
+					className={cn('rounded-xl border', tone.container)}
 					wrapperClassName='rounded-xl'
 					style={{ maxHeight: maxBodyHeight ?? '70vh' }}
 					// A pinned edge shifts its fade inward to the seam (from `md`, where
@@ -824,7 +853,7 @@ export function Table<T>({
 				// breaks truncation/resize for long, unbreakable cell text.
 				<ScrollArea
 					axis='x'
-					className='rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-800 dark:bg-gray-900'
+					className={cn('rounded-xl border', tone.container)}
 					wrapperClassName='rounded-xl'
 					fadeInsetLeft={hasLeft ? leftInset : undefined}
 					fadeInsetRight={hasRight ? rightInset : undefined}
