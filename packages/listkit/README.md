@@ -1676,6 +1676,38 @@ const brand: ThemeClasses = {
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
 
+#### Table & card tones
+
+`colorTheme` drives the accents; `tones` drives the neutral chrome — the
+table's header, dividers, row hover/selected states, and the panel around the
+table and the default cards. Pick a built-in preset (`'gray'` is the default,
+`'contrast'` inverts the header) or pass a full `SurfaceTones` object of
+Tailwind classes. The two axes compose: `colorTheme: 'teal', tones: 'slate'`.
+
+```tsx
+// preset: 'gray' | 'slate' | 'zinc' | 'contrast'
+defineListConfig({ tones: 'slate' /* … */ })
+
+// custom — keep every background opaque: pinned cells inherit the row's
+defineListConfig({
+	tones: {
+		container: 'border-indigo-100 bg-white shadow-sm',
+		headerBg: 'bg-indigo-50',
+		headerText: 'text-indigo-700',
+		headerDivider: 'border-indigo-200',
+		rowBg: 'bg-white',
+		rowHover: 'hover:bg-indigo-50',
+		rowSelected: 'bg-indigo-100 hover:bg-indigo-100',
+		divider: 'divide-indigo-100',
+	},
+	/* … */
+})
+```
+
+The `Table` primitive takes the same value as a `tones` prop for standalone
+use, and `getSurfaceTones` resolves a preset name if you need the classes
+yourself.
+
 #### Dark mode
 
 Every component ships additive `dark:` variants keyed on a `.dark` class on an
