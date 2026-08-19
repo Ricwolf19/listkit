@@ -606,6 +606,26 @@ acción que un operador usa en cada fila. Es un atajo, no el único camino: la
 acción sigue apareciendo en el menú `•••`, así que en touch — donde el hover no
 existe — no se pierde nada, solo vive un tap más adentro.
 
+La barra perdona por diseño: sigue interactiva durante un breve periodo de
+gracia después de que el cursor sale, así apuntar cruzando el hueco entre el
+`•••` y un botón nunca pierde el objetivo; se oculta en cuanto una de sus
+acciones corre, así una acción que abre un diálogo no deja la barra flotando; y
+revelar la barra de una fila despide la de la anterior al instante, así barrer
+la columna no deja estela.
+
+Por defecto la barra se revela cuando el cursor llega al grupo del `•••`. Pon
+`rowActionsQuickReveal: 'row'` en la config (o `quickReveal='row'` en un
+`RowActions` propio) para revelarla desde cualquier punto de la fila — un paso
+menos de puntería:
+
+```tsx
+defineListConfig({ rowActions, rowActionsQuickReveal: 'row' /* … */ })
+```
+
+Tanto el menú `•••` de fila como el overflow del toolbar siguen el patrón de
+teclado de menú de WAI-ARIA: ArrowUp/ArrowDown recorren los items (con wrap),
+Home/End saltan a los extremos, Escape cierra.
+
 **Menú agrupado.** Dale un `group` a las acciones y el menú `•••` las agrupa
 bajo ese título, separadas por divisores — el menú seccionado estilo Stripe.
 Las acciones sin grupo van primero, sin título; los grupos siguen en orden de
@@ -694,17 +714,20 @@ export y el scroll horizontal de la tabla — difumina sus bordes recortados,
 para que el contenido más allá del corte se anuncie en vez de leerse como el
 final de la lista. `ScrollArea` y `useScrollFade` se exportan para tus paneles.
 
-Los fades horizontales oscurecen en vez de blanquear: en una tabla el contenido
-no termina en el borde, pasa por debajo de algo, y un lavado blanco se lee como
-que el dato mismo se desvanece.
+Todo fade se disuelve contra la superficie por defecto (el tono `'surface'`,
+blanco en modo claro). Donde quieras que el borde oscurezca en su lugar,
+`ScrollArea` acepta `fadeTone='shadow' | 'shadow-strong'`.
 
-Donde la tabla tiene columnas pinned, ese lado no lleva fade: la columna pinned
-más externa proyecta la costura ella misma, y sólo mientras hay contenido
-scrolleado detrás. La sombra va sobre la celda real, así que queda exacta en el
-límite aunque redimensiones, reordenes u ocultes una columna. `ScrollArea`
-expone las piezas para tus propios scrollers: `fadeLeft` / `fadeRight` apagan un
-lado, y el wrapper es un `group/scroll` con `data-scroll-left` /
-`data-scroll-right` para que los descendientes estilen según el scroll.
+Donde la tabla tiene columnas pinned, el fade no desaparece: se recorre hacia
+adentro hasta la costura entre el stack pinned y el contenido que scrollea,
+así la señal queda visible en cualquier device (un fade dejado en el borde del
+contenedor pintaría debajo de las celdas pinned opacas). La celda pinned más
+externa agrega un divisor hairline en esa misma frontera. `ScrollArea` expone
+las piezas para tus propios scrollers: `fadeLeft` / `fadeRight` apagan un lado,
+`fadeInsetLeft` / `fadeInsetRight` (una longitud CSS) recorren un fade desde el
+borde del contenedor a partir de `md`, y el wrapper es un `group/scroll` con
+`data-scroll-left` / `data-scroll-right` para que los descendientes estilen
+según el scroll.
 
 Los diálogos toman un `height` fijo, así su contenido scrollea en lugar de que
 el diálogo cambie de tamaño bajo el cursor mientras el usuario filtra.
@@ -1647,6 +1670,23 @@ const brand: ThemeClasses = {
 }
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
+
+#### Dark mode
+
+Cada componente trae variantes `dark:` aditivas, activadas por una clase
+`.dark` en un ancestro (normalmente `<html>`) — no por `prefers-color-scheme` —
+para que tu app controle el toggle. Con Tailwind v4, registra la variante una
+vez en tu CSS:
+
+```css
+@custom-variant dark (&:where(.dark, .dark *));
+```
+
+Haz `document.documentElement.classList.toggle('dark')` y toda lista — tabla,
+tarjetas, menús, filtros, diálogos, skeletons — lo sigue. Las paletas
+integradas traen acentos dark; un `ThemeClasses` propio puede agregar sus
+clases `dark:` dentro de cada campo. El render claro no cambia cuando la clase
+no está.
 
 ---
 

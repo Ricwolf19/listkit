@@ -599,6 +599,26 @@ on every row. It is a shortcut, not the only path: the action still appears in
 the `•••` menu, so on touch — where hover does not exist — nothing is lost, it
 just lives one tap deeper.
 
+The bar is forgiving by design: it stays interactive through a short grace
+period after the pointer leaves, so aiming across the gap between the `•••`
+and a button never loses the target; it hides the moment one of its actions
+runs, so an action that opens a dialog does not leave the bar floating; and
+revealing one row's bar dismisses the previous row's instantly, so sweeping
+down the column leaves no trail.
+
+By default the bar reveals when the pointer reaches the `•••` cluster. Set
+`rowActionsQuickReveal: 'row'` in the config (or `quickReveal='row'` on a
+hand-rolled `RowActions`) to reveal it from anywhere on the row — one less
+aiming step:
+
+```tsx
+defineListConfig({ rowActions, rowActionsQuickReveal: 'row' /* … */ })
+```
+
+Both the row `•••` menu and the toolbar overflow follow the WAI-ARIA menu
+keyboard pattern: ArrowUp/ArrowDown move through the items (wrapping), Home/End
+jump to the extremes, Escape closes.
+
 **Grouped menu.** Give actions a `group` and the `•••` menu clusters them under
 that title, separated by dividers — the Stripe-style sectioned menu. Ungrouped
 actions render first, untitled; groups follow in first-appearance order. The
@@ -686,16 +706,18 @@ horizontal scroll — fades its clipped edges, so content past the fold
 announces itself instead of reading as the end of the list. `ScrollArea` and
 `useScrollFade` are exported for your own panels.
 
-Horizontal fades darken rather than whiten: across a table the content does not
-end at the edge, it passes under something, and a white wash reads as the data
-itself fading out.
+Every fade dissolves into the surface by default (the `'surface'` tone, white
+in light mode). Where you want the edge to darken instead, `ScrollArea` takes
+`fadeTone='shadow' | 'shadow-strong'`.
 
-Where a table pins columns, that edge gets no fade at all — the outermost
-pinned column casts the seam shadow itself, raised only while content is
-scrolled behind it. The shadow rides the real cell, so it stays exactly on the
-boundary through a resize, a reorder or a hidden column. `ScrollArea` exposes
-the pieces for your own scrollers: `fadeLeft` / `fadeRight` suppress a side,
-and the wrapper is a `group/scroll` carrying `data-scroll-left` /
+Where a table pins columns, the fade does not disappear — it shifts inward to
+the seam between the pinned stack and the scrolling content, so the affordance
+stays visible on every device (a fade left at the container edge would paint
+under the opaque pinned cells). The outermost pinned cell adds a hairline
+divider on that same boundary. `ScrollArea` exposes the pieces for your own
+scrollers: `fadeLeft` / `fadeRight` suppress a side, `fadeInsetLeft` /
+`fadeInsetRight` (a CSS length) move a fade off the container edge from `md`
+up, and the wrapper is a `group/scroll` carrying `data-scroll-left` /
 `data-scroll-right` so descendants can style off the scroll position.
 
 Dialogs take a fixed `height` so their content scrolls instead of the dialog
@@ -1653,6 +1675,22 @@ const brand: ThemeClasses = {
 }
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
+
+#### Dark mode
+
+Every component ships additive `dark:` variants keyed on a `.dark` class on an
+ancestor (usually `<html>`) — not on `prefers-color-scheme` — so your app owns
+the toggle. With Tailwind v4, register the variant once in your CSS:
+
+```css
+@custom-variant dark (&:where(.dark, .dark *));
+```
+
+Toggle `document.documentElement.classList.toggle('dark')` and every list —
+table, cards, menus, filters, dialogs, skeletons — follows. The built-in
+palettes carry dark accent variants; a custom `ThemeClasses` can append its own
+`dark:` classes inside each field. Light rendering is untouched when the class
+is absent.
 
 ### Labels (i18n)
 
