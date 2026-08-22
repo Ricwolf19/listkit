@@ -1713,11 +1713,15 @@ yourself.
 
 Every component ships additive `dark:` variants keyed on a `.dark` class on an
 ancestor (usually `<html>`) — not on `prefers-color-scheme` — so your app owns
-the toggle. With Tailwind v4, register the variant once in your CSS:
+the toggle. `listkit/tailwind.css` registers the variant for you:
 
 ```css
 @custom-variant dark (&:where(.dark, .dark *));
 ```
+
+Importing that file is enough. Without it Tailwind v4 reads `dark:` as
+`prefers-color-scheme`, and a light-only app renders its lists dark for every
+reader whose OS is — the rest of the page unchanged.
 
 Toggle `document.documentElement.classList.toggle('dark')` and every list —
 table, cards, menus, filters, dialogs, skeletons — follows. The built-in

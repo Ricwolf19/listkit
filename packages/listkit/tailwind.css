@@ -6,3 +6,15 @@
  * the consumer's own theme — this is not a precompiled stylesheet.
  */
 @source './dist/**/*.{js,mjs}';
+
+/*
+ * Dark mode is class-driven, and shipping the variant here is what makes that
+ * true for everyone: listkit's classes carry `dark:` siblings, and under
+ * Tailwind v4's default those compile to `prefers-color-scheme` — so an app with
+ * no dark mode of its own rendered every list dark the moment the reader's OS
+ * was, while the rest of the page stayed light.
+ *
+ * Redefining a variant is idempotent, so an app that already declares this one
+ * is unaffected.
+ */
+@custom-variant dark (&:where(.dark, .dark *));

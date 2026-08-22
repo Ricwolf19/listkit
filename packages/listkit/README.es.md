@@ -1708,12 +1708,16 @@ y `getSurfaceTones` resuelve un preset si necesitas las clases directamente.
 
 Cada componente trae variantes `dark:` aditivas, activadas por una clase
 `.dark` en un ancestro (normalmente `<html>`) — no por `prefers-color-scheme` —
-para que tu app controle el toggle. Con Tailwind v4, registra la variante una
-vez en tu CSS:
+para que tu app controle el toggle. `listkit/tailwind.css` registra
+la variante por ti:
 
 ```css
 @custom-variant dark (&:where(.dark, .dark *));
 ```
+
+Con importar ese archivo basta. Sin él, Tailwind v4 lee `dark:` como
+`prefers-color-scheme`, y una app sin modo oscuro renderiza sus listas en
+oscuro para todo lector cuyo SO lo esté — con el resto de la página intacta.
 
 Haz `document.documentElement.classList.toggle('dark')` y toda lista — tabla,
 tarjetas, menús, filtros, diálogos, skeletons — lo sigue. Las paletas
