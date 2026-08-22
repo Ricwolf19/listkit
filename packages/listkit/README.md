@@ -73,7 +73,7 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
 - **Custom cards** — use the built-in card chrome, or `bareCard` to drop in a fully custom card component.
 - **Refresh on mutation** — `useListRefresh()` refetches the list after a delete/edit, no full page reload.
-- **Keyboard shortcuts** — `⌘ K` focus search, `+` open filters, `Shift + V` toggle view, `-` remove the last filter, `←`/`→` previous/next page, `Shift + ←`/`Shift + →` first/last page.
+- **Keyboard shortcuts** — `⌘ K` focus search, `+` open filters, `Shift + V` toggle view, `Shift + D` toggle row density, `-` remove the last filter, `←`/`→` previous/next page, `Shift + ←`/`Shift + →` first/last page.
 - **Header slots** — drop quick metrics/badges above the title with `headerContent={{ left, center, right }}`.
 - **Column manager** — `table.columnControl` lets users hide/show and reorder columns; persisted to localStorage (or your own `ColumnStorage`).
 - **CSV export** — add a toolbar export button with `export`: current page by default; "export all" is auto-detected for in-memory `data`, or wired via `fetchAll` for a server source (no browser page-loop). Respects the visible columns and their order, with per-column `exportValue`/`exportable`.
@@ -838,6 +838,7 @@ On by default. Every shortcut is bound by **capability**, not by state: a list w
 | `-`                       | Remove the last applied filter                |
 | `Shift + C`               | Clear every filter                            |
 | `Shift + V`               | Toggle table / cards                          |
+| `Shift + D`               | Toggle compact / comfortable rows             |
 | `Shift + E`               | Open the configurable export                  |
 | `Shift + R`               | Refresh the list                              |
 | `Shift + A`               | Select the current page                       |

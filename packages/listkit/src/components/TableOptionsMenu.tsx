@@ -2,6 +2,7 @@ import { FileDown, Loader2, Settings, Table2 } from 'lucide-react'
 import { type ReactNode, useCallback, useRef, useState } from 'react'
 
 import { useLabels } from '../context/ListKitContext'
+import type { ShortcutId } from '../hooks/shortcutRegistry'
 import { useEscapeKey } from '../hooks/useEscapeKey'
 import { useOutsideClick } from '../hooks/useOutsideClick'
 import { type ColorTheme, getColorTheme } from '../theme/colorTheme'
@@ -10,6 +11,7 @@ import { cn } from '../utils/cn'
 import { Checkbox } from './Checkbox'
 import { ColumnManagerPanel, type ColumnManagerProps } from './ColumnManager'
 import { ScrollArea } from './ScrollArea'
+import { ShortcutKeys } from './ShortcutKeys'
 
 /** Props for {@link TableOptionsMenu}. */
 export type TableOptionsMenuProps = {
@@ -30,12 +32,24 @@ export type TableOptionsMenuProps = {
 	colorTheme?: ColorTheme
 }
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({
+	title,
+	shortcut,
+	children,
+}: {
+	title: string
+	/** Shown beside the heading, so the control teaches its own key. */
+	shortcut?: ShortcutId
+	children: ReactNode
+}) {
 	return (
 		<div className='px-1 py-1.5'>
-			<p className='px-1 pb-1.5 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400'>
-				{title}
-			</p>
+			<div className='flex items-center justify-between gap-2 px-1 pb-1.5'>
+				<p className='text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400'>
+					{title}
+				</p>
+				{shortcut && <ShortcutKeys id={shortcut} />}
+			</div>
 			{children}
 		</div>
 	)
@@ -136,7 +150,7 @@ export function TableOptionsMenu({
 								)}
 
 								{density && (
-									<Section title={labels.density}>
+									<Section title={labels.density} shortcut='toggleDensity'>
 										<div className='flex rounded-lg border border-gray-200 p-0.5 dark:border-gray-700'>
 											{(['comfortable', 'compact'] as Density[]).map(d => (
 												<button

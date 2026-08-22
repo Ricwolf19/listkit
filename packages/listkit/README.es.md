@@ -73,7 +73,7 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
 - **Theming** — 8 paletas integradas o tu propio tema personalizado; por lista o global.
 - **Tarjetas personalizadas** — usa el chrome de tarjeta integrado, o `bareCard` para insertar un componente de tarjeta completamente personalizado.
 - **Refrescar en mutación** — `useListRefresh()` refetchea la lista después de un delete/edit, sin recargar la página.
-- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `+` abre filtros, `Shift + V` cambia la vista, `-` quita el último filtro, `←`/`→` página anterior/siguiente, `Shift + ←`/`Shift + →` primera/última página.
+- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `+` abre filtros, `Shift + V` cambia la vista, `Shift + D` cambia la densidad, `-` quita el último filtro, `←`/`→` página anterior/siguiente, `Shift + ←`/`Shift + →` primera/última página.
 - **Slots de encabezado** — coloca métricas/badges sobre el título con `headerContent={{ left, center, right }}`.
 - **Gestor de columnas** — `table.columnControl` permite ocultar/mostrar y reordenar columnas; persiste en localStorage (o tu propio `ColumnStorage`).
 - **Exportar a CSV** — agrega un botón de exportación en el toolbar con `export`: página actual por defecto; "exportar todo" se autodetecta para `data` en memoria, o se conecta con `fetchAll` para una fuente en el servidor (sin recorrer el adaptador página por página). Respeta las columnas visibles y su orden, con `exportValue`/`exportable` por columna.
@@ -848,6 +848,7 @@ Activos por defecto. Cada atajo se enlaza por **capacidad**, no por estado: una 
 | `-`                       | Quitar el último filtro aplicado          |
 | `Shift + C`               | Limpiar todos los filtros                 |
 | `Shift + V`               | Alternar tabla / tarjetas                 |
+| `Shift + D`               | Alternar filas compactas / amplias        |
 | `Shift + E`               | Abrir la exportación configurable         |
 | `Shift + R`               | Refrescar la lista                        |
 | `Shift + A`               | Seleccionar la página actual              |

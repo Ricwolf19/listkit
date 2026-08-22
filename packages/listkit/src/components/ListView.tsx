@@ -621,6 +621,16 @@ export function ListView<T>({
 			resolved.table && resolved.hasCards
 				? () => handleViewChange(viewType === 'table' ? 'cards' : 'table')
 				: undefined,
+		// Bound whenever the list HAS density, not when the current view shows it:
+		// gating on the view would pull this row out of the help overlay every
+		// time the reader switches to cards (invariant 13). It no-ops there
+		// instead — density describes table rows, and cards have none.
+		toggleDensity: densityEnabled
+			? () => {
+					if (!inTableView) return
+					setDensity(density === 'compact' ? 'comfortable' : 'compact')
+				}
+			: undefined,
 		openExport: exportControls.configurable
 			? () => exportControls.openDialog('page')
 			: undefined,
@@ -647,6 +657,7 @@ export function ListView<T>({
 		exportControls.configurable,
 		resolved.table,
 		resolved.hasCards,
+		densityEnabled,
 	])
 
 	return (
