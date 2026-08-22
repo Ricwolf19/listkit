@@ -241,6 +241,12 @@ export type ListActions<T> = {
  * @typeParam T - The row type.
  */
 export type CardContext<T> = {
+	/**
+	 * The row's position in the current page. Hand it to the same `RowAction[]`
+	 * the table rows use — those callbacks take `(item, index)` — instead of
+	 * reimplementing the actions for cards, where the two lists drift apart.
+	 */
+	index: number
 	/** The config's {@link ListActions}. */
 	actions: ListActions<T>
 	/** The resolved color theme for this list. */

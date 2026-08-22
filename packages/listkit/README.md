@@ -1000,7 +1000,9 @@ Clicking applies `pinnedValue` (or `defaultValue`, or `true` for a boolean); cli
 
 ### Custom cards with actions and theme
 
-The `card` renderer receives the row item plus a `ctx` object with actions and the active color theme:
+The `card` renderer receives the row item plus a `ctx` object with actions, the active color theme, and
+the row's `index` — pass that index along to reuse the very same `RowAction[]` the table rows use,
+instead of writing the actions a second time for cards:
 
 ```tsx
 defineListConfig<Product>({

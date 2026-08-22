@@ -499,29 +499,41 @@ export function ListView<T>({
 		pageEntries.every(e => selection.isSelected(e.key))
 	const pageSomeSelected = pageEntries.some(e => selection.isSelected(e.key))
 
-	const cardCtx: CardContext<T> = {
+	// Split in two on purpose: what describes the list, and what describes one
+	// row. The per-row half lives behind a function so no card can be handed a
+	// stand-in index.
+	const cardCtxBase: Omit<CardContext<T>, 'index' | 'selection'> = {
 		actions: config.actions ?? {},
 		colorTheme,
+	}
+
+	// The key must be the one `pageEntries` registered for this same row, so the
+	// index has to be the real one: `getItemKey` falls back to the index when a
+	// list declares none, and a fixed index there gives every card the same key
+	// — one checkbox reporting, and toggling, all of them.
+	const cardCtxFor = (index: number): CardContext<T> => ({
+		...cardCtxBase,
+		index,
 		selection: selectionEnabled
 			? {
-					isSelected: item => selection.isSelected(getItemKey(item, 0)),
-					toggle: item => selection.toggle(item, getItemKey(item, 0)),
+					isSelected: item => selection.isSelected(getItemKey(item, index)),
+					toggle: item => selection.toggle(item, getItemKey(item, index)),
 				}
 			: undefined,
-	}
+	})
 
 	// A table without a custom card still gets one, derived from the same columns
 	// the table renders (and the same user column choices) — so every list has a
 	// cards view to switch to, on a phone or on demand.
 	const renderCard =
 		resolved.cardSource === 'custom'
-			? (item: T) => resolved.card!(item, cardCtx)
+			? (item: T, index: number) => resolved.card!(item, cardCtxFor(index))
 			: (item: T, index: number) => (
 					<AutoCard<T>
 						item={item}
 						index={index}
 						columns={resolvedColumns}
-						ctx={cardCtx}
+						ctx={cardCtxFor(index)}
 					/>
 				)
 
