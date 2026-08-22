@@ -135,7 +135,7 @@ export {
 	type SelectionEntry,
 	useRowSelection,
 } from './hooks/useRowSelection'
-export { useViewType } from './hooks/useViewType'
+export { useViewType, type ViewTypePersistence } from './hooks/useViewType'
 
 // Column preferences (custom persistence)
 export {

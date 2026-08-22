@@ -877,6 +877,8 @@ Las preferencias que describen _cómo trabaja un usuario con una lista_ persiste
 
 Un parámetro de URL siempre le gana al valor guardado, así que un enlace compartido muestra la vista de quien lo mandó, no la de quien lo recibe.
 
+La vista es la única preferencia que el dispositivo puede sobreescribir: una pantalla angosta abre en tarjetas sin importar lo guardado — una tabla no cabe — y un cambio hecho ahí no se guarda, así que revisar las columnas desde el teléfono nunca cambia cómo abre la lista en escritorio.
+
 El almacenamiento es `localStorage` por defecto y es reemplazable — respáldalo con tu tabla de configuración de usuario para llevar las preferencias entre dispositivos:
 
 ```tsx

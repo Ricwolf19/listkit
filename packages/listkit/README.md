@@ -867,6 +867,8 @@ Preferences that describe _how a user works with a list_ persist per list id, so
 
 A URL param always wins over the stored value, so a shared link shows the sender's view, not the recipient's.
 
+The view is the one preference the device can overrule: a narrow screen opens on cards whatever was stored — a table does not fit — and a toggle made there is not saved, so reaching for the columns on a phone never changes how the list opens on a desktop.
+
 Storage is `localStorage` by default and pluggable — back it with your user-settings table to carry preferences across devices:
 
 ```tsx

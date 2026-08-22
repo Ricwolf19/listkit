@@ -375,6 +375,8 @@ export function ListView<T>({
 		setPageSize: persistPageSize,
 		storedQuickFilters,
 		setQuickFilters: persistQuickFilters,
+		storedView,
+		setView: persistView,
 		reset: resetColumns,
 	} = useColumnPrefs(config.id, tableColumns, {
 		enabled: tablePrefsEnabled,
@@ -424,6 +426,8 @@ export function ListView<T>({
 		initialQuery,
 		listId: resolvedListId,
 		defaultView: resolved.defaultView,
+		storedView: tablePrefsEnabled ? storedView : undefined,
+		onViewPersist: tablePrefsEnabled ? persistView : undefined,
 		defaultSort: resolved.defaultSort,
 	})
 
