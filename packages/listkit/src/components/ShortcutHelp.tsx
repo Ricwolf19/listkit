@@ -7,8 +7,8 @@ import {
 	type ShortcutGroup,
 	SHORTCUTS,
 } from '../hooks/shortcutRegistry'
-import { cn } from '../utils/cn'
 import { Modal } from './overlays/Modal'
+import { ShortcutKeys } from './ShortcutKeys'
 
 /** Props for {@link ShortcutHelp}. */
 export type ShortcutHelpProps = {
@@ -74,19 +74,7 @@ export function ShortcutHelp({
 										<span className='min-w-0 text-gray-700 dark:text-gray-300'>
 											{labels.shortcutLabels[shortcut.id] ?? shortcut.id}
 										</span>
-										<span className='flex shrink-0 items-center gap-1'>
-											{shortcut.keys().map((key, i) => (
-												<kbd
-													key={i}
-													className={cn(
-														'rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 dark:border-gray-700 dark:bg-gray-800',
-														'font-sans text-xs font-medium text-gray-600 dark:text-gray-400'
-													)}
-												>
-													{key}
-												</kbd>
-											))}
-										</span>
+										<ShortcutKeys id={shortcut.id} />
 									</li>
 								))}
 							</ul>
