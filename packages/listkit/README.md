@@ -1294,6 +1294,8 @@ app.get('/api/companies', async (req, res) => {
 
 Each active reference filter becomes a `$in` of the matching reference ids; the search term matches `searchFields` on the main collection and (by id) `searchReferences`. A `pageSize` greater than `maxPageSize` (default 100) is treated as **export all** — served from the first row, capped at `maxExport` (default 50 000) — so it pairs with a list's export `fetchAll`. When you don't need references/populate, the lower-level `buildMongoQuery` + your own `Model.find` is still the simplest path.
 
+For rows a `find` can't express — `$unwind`ed documents, a `$lookup` join, an `$addFields` column the user filters and sorts by — `executeAggregateListkitQuery` is the sibling executor: the same options plus your `pipeline`. It reuses the very same builders, so search/filter/sort semantics are identical **including value casting**. That last part is not free: an aggregation `$match` casts nothing on its own, unlike `find`, so every `$match` is run through the model's schema first (`castFilterToSchema`, exported if you build pipelines by hand). A value the schema rejects — a malformed id from a stale bookmark — resolves to a filter no row satisfies, so the list comes back **empty rather than unfiltered**.
+
 ### Server-side rendering (`initialData`)
 
 By default the list fetches on the **client**: the server renders an empty/loading shell and rows appear after hydration. For SEO, a faster first paint, and no loading flash, fetch the **first page on the server** and hand it to `<ListView>` as `initialData` — it renders those rows in the initial HTML and **skips the client's first fetch**. Paging and filtering afterwards still run on the client.
@@ -1787,17 +1789,17 @@ for the full key list.
 
 ## Subpath Exports
 
-| Import path            | Contents                                                                                                                                                                                                  |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Import path                        | Contents                                                                                                                                                                                                  |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types                                   |
 | `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                    |
 | `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                   |
 | `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                              |
 | `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                                                         |
 | `listkit/query`        | `parseListkitQuery`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parse a request bag into a `ListQuery` and read its filters         |
-| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `textCondition`, `sqlFieldMapFromFilters` — Postgres query fragments + executor (pool injection, no driver dep)                        |
+| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `sqlPaginate`, `textCondition`, `sqlFieldMapFromFilters` — Postgres query fragments + executor (pool injection, no driver dep)         |
 | `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — MongoDB query objects (no driver) |
-| `listkit/mongoose`     | `executePaginatedListkitQuery` — runs the page query on Mongoose (optional, type-only `mongoose` peer dep)                                                                                                |
+| `listkit/mongoose`     | `executePaginatedListkitQuery`, `executeAggregateListkitQuery`, `castFilterToSchema` — runs the page query on Mongoose (optional, type-only `mongoose` peer dep)                                          |
 | `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                                                                |
 | `listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                                                           |
 

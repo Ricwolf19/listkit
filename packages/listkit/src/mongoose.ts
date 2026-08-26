@@ -313,12 +313,175 @@ export function buildAggregatePipelines(
 	return { dataPipeline, countPipeline, facetPipelines }
 }
 
+// Comparison operators whose operands carry a field VALUE the schema can cast.
+// `$regex`/`$exists`/`$mod`/… operands are not field values and pass through.
+//
+// Positive and negative are split because they part ways when a value fails to
+// cast: a positive operator asked for a value nothing can equal, so its
+// condition is unsatisfiable, while a negative one asked to exclude a value
+// nothing equals — which excludes nothing, so dropping it is the true reading.
+const POSITIVE_OPERATORS = new Set(['$eq', '$gt', '$gte', '$lt', '$lte', '$in'])
+const NEGATIVE_OPERATORS = new Set(['$ne', '$nin'])
+
+const LOGICAL_OPERATORS = new Set(['$or', '$and', '$nor'])
+
+/**
+ * The condition emitted for a filter that cannot be satisfied — matches no
+ * document. Dropping the condition instead would turn a filter the user asked
+ * for into no filter at all, handing back the whole collection.
+ */
+const NEVER_MATCHES: MongoCondition = { _id: { $in: [] } }
+
+const isPlainObject = (v: unknown): v is Record<string, unknown> =>
+	typeof v === 'object' &&
+	v !== null &&
+	!Array.isArray(v) &&
+	!(v instanceof Date) &&
+	!(v instanceof RegExp)
+
+/** Recursive worker for {@link castFilterToSchema}; `null` = unsatisfiable. */
+function castCondition(
+	model: AnyModel,
+	filter: MongoCondition
+): MongoCondition | null {
+	const castValue = (path: string, value: unknown): unknown => {
+		const schemaType = (
+			model.schema as unknown as {
+				path(p: string): { cast(v: unknown): unknown } | undefined
+			}
+		).path(path)
+		if (!schemaType) return value
+		return schemaType.cast(value)
+	}
+
+	const out: MongoCondition = {}
+	for (const [key, value] of Object.entries(filter)) {
+		if (LOGICAL_OPERATORS.has(key) && Array.isArray(value)) {
+			const branches = value.map(sub =>
+				isPlainObject(sub) ? castCondition(model, sub) : sub
+			)
+			// A conjunction is only as satisfiable as its weakest branch.
+			if (key === '$and') {
+				if (branches.some(branch => branch === null)) return null
+				out[key] = branches
+				continue
+			}
+			// `$or`/`$nor`: an unsatisfiable branch drops out. Mongo rejects an
+			// empty array, so a fully-dropped `$or` is itself unsatisfiable, while a
+			// fully-dropped `$nor` has nothing left to exclude and disappears.
+			const kept = branches.filter(branch => branch !== null)
+			if (kept.length > 0) out[key] = kept
+			else if (key === '$or') return null
+			continue
+		}
+		if (key.startsWith('$')) {
+			out[key] = value
+			continue
+		}
+		if (isPlainObject(value)) {
+			const opKeys = Object.keys(value)
+			const isOperatorObject =
+				opKeys.length > 0 && opKeys.every(k => k.startsWith('$'))
+			if (isOperatorObject) {
+				const casted: Record<string, unknown> = {}
+				for (const [op, operand] of Object.entries(value)) {
+					const positive = POSITIVE_OPERATORS.has(op)
+					if (!positive && !NEGATIVE_OPERATORS.has(op)) {
+						casted[op] = operand
+						continue
+					}
+					if (Array.isArray(operand)) {
+						const elements: unknown[] = []
+						for (const el of operand) {
+							try {
+								elements.push(castValue(key, el))
+							} catch {
+								// Malformed element — drop it, keep the rest.
+							}
+						}
+						// Nothing survived: `$in` can no longer match anything, while
+						// `$nin` is now excluding nothing.
+						if (elements.length === 0) {
+							if (positive) return null
+							continue
+						}
+						casted[op] = elements
+						continue
+					}
+					try {
+						casted[op] = castValue(key, operand)
+					} catch {
+						if (positive) return null
+					}
+				}
+				if (Object.keys(casted).length > 0) out[key] = casted
+				continue
+			}
+			// Nested plain object (exact subdocument match) — pass through.
+			out[key] = value
+			continue
+		}
+		try {
+			out[key] = castValue(key, value)
+		} catch {
+			// Nothing equals a value the schema itself rejects.
+			return null
+		}
+	}
+	return out
+}
+
+/**
+ * Cast a `$match` filter's values through the model's own schema, mirroring
+ * what `Model.find()` does natively and an aggregation `$match` does NOT.
+ *
+ * Without this, swapping the find-based executor for the aggregate one turns
+ * every ObjectId/Date/Number filter fed with wire strings into a silent
+ * zero-row filter — the same `MongoFieldMap` behaves differently between the
+ * two server executors.
+ *
+ * - Paths the schema does not know (a `$lookup`/`$addFields`-shaped field) pass
+ *   through untouched — that is what makes the pass safe on shaped rows.
+ * - `$or`/`$and`/`$nor` are descended into; other `$`-prefixed top-level keys
+ *   (`$expr`, `$text`, …) pass through.
+ * - Comparison operands are cast element-wise; `$regex`/`$exists`/… pass through.
+ * - `SchemaType.cast()` THROWS on a malformed value. Rather than 500ing the
+ *   list, the filter resolves to {@link NEVER_MATCHES} — a value the schema
+ *   rejects is one no row can hold, so the honest answer is no rows. It is
+ *   never dropped: that would widen the filter into returning everything.
+ */
+export function castFilterToSchema(
+	model: AnyModel,
+	filter: MongoCondition
+): MongoCondition {
+	return castCondition(model, filter) ?? NEVER_MATCHES
+}
+
+/** Immutably cast every `$match` stage of a pipeline through the schema. */
+const castPipelineMatches = (
+	model: AnyModel,
+	pipeline: PipelineStage[]
+): PipelineStage[] =>
+	pipeline.map(stage =>
+		isPlainObject(stage) &&
+		isPlainObject((stage as { $match?: unknown }).$match)
+			? ({
+					$match: castFilterToSchema(
+						model,
+						(stage as { $match: MongoCondition }).$match
+					),
+				} as PipelineStage)
+			: stage
+	)
+
 /**
  * Aggregation-based sibling of {@link executePaginatedListkitQuery} for lists
  * that need a pipeline the plain `find` can't express — `$unwind` rows, `$lookup`
  * joins, or computed (`$addFields`) columns the user filters/sorts by. It reuses
  * the very same `listkit/mongo` builders, so search/filter/sort
- * semantics are identical to the find-based executor.
+ * semantics are identical to the find-based executor — including value casting:
+ * every `$match` is cast through the model's schema (see
+ * {@link castFilterToSchema}), which `aggregate()` does not do on its own.
  *
  * @typeParam T - The row (shaped document) type.
  * @returns `{ data, total, facets }` — the page rows, the full match count, and
@@ -345,11 +508,18 @@ export async function executeAggregateListkitQuery<T = unknown>(
 	const { dataPipeline, countPipeline, facetPipelines } =
 		buildAggregatePipelines(options)
 
+	// `$match` casts nothing on its own (unlike `find()`); run every match
+	// through the schema so both executors agree on value semantics.
+	const castData = castPipelineMatches(model, dataPipeline)
+	const castCount = castPipelineMatches(model, countPipeline)
+
 	const facetNames = Object.keys(facetPipelines)
 	const [data, countRes, ...facetResults] = await Promise.all([
-		model.aggregate(dataPipeline).exec(),
-		model.aggregate(countPipeline).exec(),
-		...facetNames.map(name => model.aggregate(facetPipelines[name]!).exec()),
+		model.aggregate(castData).exec(),
+		model.aggregate(castCount).exec(),
+		...facetNames.map(name =>
+			model.aggregate(castPipelineMatches(model, facetPipelines[name]!)).exec()
+		),
 	])
 
 	const facets: Record<string, unknown[]> = {}

@@ -1288,6 +1288,8 @@ app.get('/api/companies', async (req, res) => {
 
 Cada filtro de referencia activo se vuelve un `$in` de los ids de referencia que coinciden; el término de búsqueda matchea `searchFields` en la colección principal y (por id) `searchReferences`. Un `pageSize` mayor que `maxPageSize` (por defecto 100) se trata como **exportar todo** — desde la primera fila, con tope `maxExport` (por defecto 50 000) — así combina con el `fetchAll` de exportación de una lista. Cuando no necesitas referencias/populate, el más bajo nivel `buildMongoQuery` + tu propio `Model.find` sigue siendo lo más simple.
 
+Para filas que un `find` no puede expresar — documentos con `$unwind`, un join con `$lookup`, una columna `$addFields` por la que el usuario filtra y ordena — `executeAggregateListkitQuery` es el executor hermano: las mismas opciones más tu `pipeline`. Reutiliza exactamente los mismos builders, así que la semántica de búsqueda/filtros/orden es idéntica **incluido el casteo de valores**. Eso último no sale gratis: un `$match` de agregación no castea por su cuenta, a diferencia de `find`, así que cada `$match` pasa antes por el schema del modelo (`castFilterToSchema`, exportado por si armas pipelines a mano). Un valor que el schema rechaza — un id malformado de un bookmark viejo — resuelve a un filtro que ninguna fila satisface, así que la lista vuelve **vacía, no sin filtrar**.
+
 ### Renderizado en servidor (`initialData`)
 
 Por defecto la lista fetchea en el **cliente**: el servidor renderiza un shell vacío/cargando y las filas aparecen después de la hidratación. Para SEO, una primera pintura más rápida y sin flash de carga, obten la **primera página en el servidor** y pásala a `<ListView>` como `initialData` — renderiza esas filas en el HTML inicial y **omite el primer fetch del cliente**. La paginación y filtrado posterior siguen ejecutándose en el cliente.
@@ -1732,17 +1734,17 @@ no está.
 
 ## Subpath Exports
 
-| Ruta de importación    | Contenido                                                                                                                                                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ruta de importación                | Contenido                                                                                                                                                                                                        |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, adapters, hooks, primitives, types                                                                                     |
 | `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                           |
 | `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                          |
 | `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                                     |
 | `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — seguro para RSC (sin React/DOM)                                                                                                                        |
 | `listkit/query`        | `parseListkitQuery`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parsear un request a `ListQuery` y leer sus filtros                        |
-| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `textCondition`, `sqlFieldMapFromFilters` — fragmentos Postgres + ejecutor (inyección de pool, sin driver)                                    |
+| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `sqlPaginate`, `textCondition`, `sqlFieldMapFromFilters` — fragmentos Postgres + ejecutor (inyección de pool, sin driver)                     |
 | `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — objetos de query de MongoDB (sin driver) |
-| `listkit/mongoose`     | `executePaginatedListkitQuery` — corre la query de página en Mongoose (peer dep `mongoose` opcional, type-only)                                                                                                  |
+| `listkit/mongoose`     | `executePaginatedListkitQuery`, `executeAggregateListkitQuery`, `castFilterToSchema` — corre la query de página en Mongoose (peer dep `mongoose` opcional, type-only)                                            |
 | `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — respalda listas con TanStack Query                                                                                                                   |
 | `listkit/tailwind.css` | Registro de fuente Tailwind v4                                                                                                                                                                                   |
 
