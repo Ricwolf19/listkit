@@ -336,8 +336,9 @@ export function FilterSidebar<T>({
 		onClose()
 	}
 
+	// z-100 is the overlay tier, shared with Modal. @see AGENTS.md invariant 12
 	return (
-		<div className='fixed inset-0 z-50 flex justify-end'>
+		<div className='fixed inset-0 z-100 flex justify-end'>
 			{/* Backdrop */}
 			<div
 				className={cn(

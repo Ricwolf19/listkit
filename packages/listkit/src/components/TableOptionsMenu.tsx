@@ -113,12 +113,15 @@ export function TableOptionsMenu({
 						aria-hidden='true'
 						tabIndex={-1}
 						onClick={() => setOpen(false)}
-						className='fixed inset-0 z-40 bg-black/30 sm:hidden'
+						className='fixed inset-0 z-100 bg-black/30 sm:hidden'
 					/>
 					<div
 						role='menu'
 						className={cn(
-							'z-50 border-gray-200 bg-white shadow-xl dark:border-gray-700 dark:bg-gray-800',
+							// Above its own scrim (`z-100`) on mobile, still under
+							// PopupPortal's `z-110` so a select opened inside wins. On
+							// desktop the scrim is hidden and this is a plain dropdown.
+							'z-101 border-gray-200 bg-white shadow-xl sm:z-50 dark:border-gray-700 dark:bg-gray-800',
 							// Mobile: bottom sheet (full width, safe-area aware).
 							'fixed inset-x-0 bottom-0 rounded-t-2xl border-t p-2 pb-[max(env(safe-area-inset-bottom),1rem)]',
 							// Desktop: dropdown anchored to the button.
