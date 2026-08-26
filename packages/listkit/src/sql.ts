@@ -271,24 +271,68 @@ export const buildSqlFilter = (
 }
 
 /**
+ * Wraps a SQL expression for search matching — applied symmetrically to each
+ * searched column *and* to the bound term's placeholder, so both sides fold the
+ * same way. The default is `lower(expr)` (case-insensitive). An app whose data
+ * carries accents passes e.g. `expr => \`unaccent(lower(${expr}))\`` so
+ * "Mexico" finds "México" (requires the `unaccent` extension).
+ */
+export type SqlSearchNormalizer = (expr: string) => string
+
+const defaultNormalizer: SqlSearchNormalizer = expr => `lower(${expr})`
+
+/**
  * Build a case-insensitive free-text `WHERE` body matching `term` across several
- * columns (`lower(col) LIKE $n OR …`), appending the single bound value to
- * `params`. Returns `''` when the term is empty or there are no columns.
+ * columns (`lower(col) LIKE lower($n) OR …`), appending the single bound value
+ * to `params`. Returns `''` when the term is empty or there are no columns.
  *
  * @param term - The search term (`query.search`).
  * @param columns - Trusted column expressions to match against.
  * @param params - Bound-params array; appended to in place.
+ * @param normalizer - Folding applied to both sides of every match.
+ *   @defaultValue `` expr => `lower(${expr})` ``
  * @returns The OR-joined search condition wrapped in parens, or `''`.
  */
 export const buildSearch = (
 	term: string | undefined,
 	columns: string[],
-	params: unknown[]
+	params: unknown[],
+	normalizer: SqlSearchNormalizer = defaultNormalizer
 ): string => {
 	const t = term?.trim()
 	if (!t || columns.length === 0) return ''
-	const ph = `$${params.push(`%${t.toLowerCase()}%`)}`
-	return `(${columns.map(c => `lower(${c}) LIKE ${ph}`).join(' OR ')})`
+	// The raw term binds once; folding happens in SQL on both sides so a custom
+	// normalizer (e.g. unaccent) applies to the term too — JS can't unaccent.
+	const rhs = normalizer(`$${params.push(`%${t}%`)}`)
+	return `(${columns.map(c => `${normalizer(c)} LIKE ${rhs}`).join(' OR ')})`
+}
+
+/**
+ * Pagination for a SQL list, honoring the "export all" wire: a request whose
+ * `pageSize` exceeds `maxPageSize` is an export asking for every matching row,
+ * and is served from row one up to `maxExport` — without `maxExport` it is
+ * clamped like any page. Mirror of `mongoPaginate` (offset instead of skip).
+ *
+ * @param query - The incoming list query.
+ * @param maxPageSize - Upper bound for a regular page. @defaultValue 100
+ * @param maxExport - Ceiling for an export-all request; omit to disable.
+ * @returns Resolved page geometry plus whether this request is an export.
+ */
+export const sqlPaginate = (
+	query: ListQuery,
+	maxPageSize = 100,
+	maxExport?: number
+): { page: number; pageSize: number; offset: number; isExport: boolean } => {
+	const page = Math.max(1, query.page)
+	const requested = Math.max(1, query.pageSize)
+
+	if (maxExport != null && requested > maxPageSize) {
+		const pageSize = Math.min(requested, maxExport)
+		return { page: 1, pageSize, offset: 0, isExport: true }
+	}
+
+	const pageSize = Math.min(requested, maxPageSize)
+	return { page, pageSize, offset: (page - 1) * pageSize, isExport: false }
 }
 
 /**
@@ -333,6 +377,11 @@ export type ExecuteSqlListConfig = {
 	columns?: string
 	/** Columns the free-text search term matches against. */
 	searchColumns?: string[]
+	/**
+	 * Folding applied to both sides of every search match.
+	 * @defaultValue `` expr => `lower(${expr})` ``
+	 */
+	searchNormalizer?: SqlSearchNormalizer
 	/** Sort whitelist: sort field → trusted column expression. */
 	sort?: Record<string, string>
 	/** `ORDER BY` body used when no/unknown sort is active (e.g. `'created_at DESC'`). */
@@ -343,6 +392,11 @@ export type ExecuteSqlListConfig = {
 	scope?: Record<string, unknown>
 	/** Upper bound for `pageSize`. @defaultValue 100 */
 	maxPageSize?: number
+	/**
+	 * Ceiling for an "export all" request (a `pageSize` past `maxPageSize`).
+	 * Omit to clamp exports to a regular page. @see {@link sqlPaginate}
+	 */
+	maxExport?: number
 }
 
 /**
@@ -379,11 +433,13 @@ export async function executeSqlList<T = Record<string, unknown>>(
 		fields,
 		columns = '*',
 		searchColumns = [],
+		searchNormalizer,
 		sort = {},
 		fallbackSort,
 		tiebreak = '',
 		scope = {},
 		maxPageSize,
+		maxExport,
 	} = config
 
 	const params: unknown[] = []
@@ -392,7 +448,12 @@ export async function executeSqlList<T = Record<string, unknown>>(
 	const filterWhere = buildSqlFilter(query, fields, params)
 	if (filterWhere) clauses.push(filterWhere)
 
-	const searchWhere = buildSearch(query.search, searchColumns, params)
+	const searchWhere = buildSearch(
+		query.search,
+		searchColumns,
+		params,
+		searchNormalizer
+	)
 	if (searchWhere) clauses.push(searchWhere)
 
 	for (const [column, value] of Object.entries(scope)) {
@@ -401,7 +462,7 @@ export async function executeSqlList<T = Record<string, unknown>>(
 
 	const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : ''
 	const orderBy = buildOrderBy(query.sort, sort, fallbackSort, tiebreak)
-	const { pageSize, offset } = paginate(query, maxPageSize)
+	const { pageSize, offset } = sqlPaginate(query, maxPageSize, maxExport)
 
 	const dataSql = `SELECT ${columns} FROM ${table} ${where} ORDER BY ${orderBy} LIMIT $${params.length + 1} OFFSET $${params.length + 2}`
 	const countSql = `SELECT COUNT(*)::int AS count FROM ${table} ${where}`
@@ -431,6 +492,12 @@ export type SqlExportConfig = {
 	exportColumns: Record<string, string | { relation: SqlRelation }>
 	/** Columns the free-text search matches against. */
 	searchColumns?: string[]
+	/**
+	 * Folding applied to both sides of every search match. Pass the same
+	 * normalizer the list uses so an export returns exactly the listed rows.
+	 * @defaultValue `` expr => `lower(${expr})` ``
+	 */
+	searchNormalizer?: SqlSearchNormalizer
 	/** Sort whitelist: sort field → trusted column expression. */
 	sort?: Record<string, string>
 	/**
@@ -496,7 +563,8 @@ export const buildSqlExport = (
 	const searchWhere = buildSearch(
 		request.query.search,
 		config.searchColumns ?? [],
-		params
+		params,
+		config.searchNormalizer
 	)
 	if (searchWhere) clauses.push(searchWhere)
 

@@ -1152,6 +1152,8 @@ app.get('/api/discounts', async (req, res) => {
 
 Las columnas vienen solo de los whitelists que controlas (sin inyección SQL) y el matching refleja el adapter en memoria. Para control total, baja a `buildSqlFilter(query, fields, params)` + `buildSearch(term, columns, params)` (ambos hacen append a tu `params` para que el numerado `$n` quede correcto) y `buildOrderBy` — el patrón manual exacto, sin el boilerplate. `sqlFieldMapFromFilters(config.filters)` deriva un field map inicial desde tu config.
 
+`executeSqlList` acepta además `searchNormalizer` — el fold que se aplica a **ambos** lados, la columna y el término bindeado, así que `` expr => `unaccent(lower(${expr}))` `` hace que "Mexico" encuentre "México" (requiere la extensión `unaccent`); el término se bindea crudo justamente para que el fold lo alcance. Y `maxExport` honra un `pageSize` gigante como exportar-todo en vez de recortarlo a una página, igual que `mongoPaginate`. Pásale el mismo `searchNormalizer` a `buildSqlExport` para que una exportación devuelva exactamente las filas que mostró la lista.
+
 ### Backend MongoDB (`listkit/mongo`)
 
 El front-end es el mismo en cualquier app de React (`fetchAdapter` → tu endpoint REST). En el servidor, traduce el `ListQuery` entrante a objetos planos de Mongo con `listkit/mongo` — **sin dependencia de `mongoose`/driver** y nunca ejecuta una query, así que funciona con Mongoose o el driver nativo. Los nombres de campo provienen solo de listas blancas que tú controlas (sin inyección NoSQL) y los valores de texto se escapan para regex.
