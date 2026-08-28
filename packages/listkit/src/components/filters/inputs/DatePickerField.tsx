@@ -24,6 +24,12 @@ export type DatePickerFieldProps = {
 
 export const parseISO = (value?: string): Date | null => {
 	if (!value) return null
+	// An absolute instant (Z or offset) parses natively — the Date renders in
+	// local time, so the picker shows the day the operator actually chose.
+	if (/(?:Z|[+-]\d{2}:?\d{2})$/.test(value)) {
+		const parsed = new Date(value)
+		return Number.isNaN(parsed.getTime()) ? null : parsed
+	}
 	const parts = value.split('T')
 	const datePart = parts[0]
 	const timePart = parts[1]

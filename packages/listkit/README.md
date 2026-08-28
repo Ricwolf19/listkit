@@ -320,6 +320,8 @@ const filters: FilterDefinition<Order>[] = [
 
 `defaultValue` uses the same shape the adapter receives for that type: `select` → `string`, `multi-select` → `string[]`, `boolean` → `boolean`, `text` → `{ value, match }`, `date-range` → `{ from?, to? }`, `number-range` → `{ min?, max? }`.
 
+A `date-range` the **picker** produces carries absolute instants (`…T06:00:00.000Z`), not bare days: the operator picks a local day, and only the client knows their timezone, so it converts before the value travels — `from` at local 00:00, `to` at local 23:59:59.999. Left as a bare `YYYY-MM-DD`, the server read it as UTC midnight and shifted the whole window for anyone west of UTC. A hand-written `YYYY-MM-DD` still works and still means the whole day: both the in-memory matcher and the Mongo builder extend a date-only `to` to end-of-day, and neither touches a value that already carries a time.
+
 Defaults seed the **initial** view only: they're applied on the first render (so the first fetch already includes them) and written to the URL, after which the user's edits/clears always win. Lists rendered with `initialData` (SSR) are left as-is — apply the defaults in your server query instead.
 
 ### Column sorting
