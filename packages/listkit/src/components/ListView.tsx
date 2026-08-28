@@ -475,6 +475,10 @@ export function ListView<T>({
 	const selectionConfig =
 		typeof config.selection === 'object' ? config.selection : undefined
 	const selectionSignature = JSON.stringify({
+		// The adapter's key IS part of the dataset identity: a scope the adapter
+		// closes over (a preset, a customerId) changes what the rows mean, and a
+		// selection — or a preselect seen-set — must not survive it.
+		adapter: adapter?.key ?? null,
 		search: params.get('search') ?? '',
 		filters: activeFilters,
 		sort: sort ?? null,
@@ -498,6 +502,65 @@ export function ListView<T>({
 		pageEntries.length > 0 &&
 		pageEntries.every(e => selection.isSelected(e.key))
 	const pageSomeSelected = pageEntries.some(e => selection.isSelected(e.key))
+
+	// The seen set is what keeps an unchecked key unchecked — see
+	// `SelectionConfig.preselectLoadedRows` for the rule. Gated on `!isLoading`
+	// so a scope change never preselects the previous scope's rows while its
+	// replacement is still in flight.
+	const preselect = !!selectionConfig?.preselectLoadedRows
+	const preselectSeen = useRef<{ sig: string; seen: Set<string | number> }>({
+		sig: selectionSignature,
+		seen: new Set(),
+	})
+	const toggleManyRows = selection.toggleMany
+	useEffect(() => {
+		if (!preselect || !selectionEnabled || isLoading) return
+		if (preselectSeen.current.sig !== selectionSignature) {
+			preselectSeen.current = { sig: selectionSignature, seen: new Set() }
+		}
+		const fresh = pageEntries.filter(
+			e => !preselectSeen.current.seen.has(e.key)
+		)
+		if (fresh.length === 0) return
+		for (const entry of fresh) preselectSeen.current.seen.add(entry.key)
+		toggleManyRows(fresh, true)
+	}, [
+		preselect,
+		selectionEnabled,
+		isLoading,
+		selectionSignature,
+		pageEntries,
+		toggleManyRows,
+	])
+
+	// Publish the live selection API to the host. Re-assigned every render on
+	// purpose — the controller is a snapshot plus stable mutators, and a ref
+	// write is cheaper than diffing what changed.
+	const controllerRef = selectionConfig?.controllerRef
+	useEffect(() => {
+		if (!controllerRef) return
+		controllerRef.current = {
+			mode: selection.mode,
+			selectedKeys: selection.selectedKeys,
+			excludedKeys: selection.excludedKeys,
+			selectedItems: selection.selectedItems,
+			selectedCount: selection.selectedCount,
+			query,
+			pageEntries,
+			isSelected: selection.isSelected,
+			toggle: selection.toggle,
+			setSelected: selection.setSelected,
+			toggleMany: selection.toggleMany,
+			selectAllMatching: selection.selectAllMatching,
+			clear: selection.clear,
+		}
+	})
+	useEffect(() => {
+		if (!controllerRef) return
+		return () => {
+			controllerRef.current = null
+		}
+	}, [controllerRef])
 
 	// Split in two on purpose: what describes the list, and what describes one
 	// row. The per-row half lives behind a function so no card can be handed a

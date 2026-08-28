@@ -369,17 +369,64 @@ export type BulkAction<T> = {
 }
 
 /**
+ * Snapshot handed to {@link SelectionConfig.onSelectionChange} alongside the
+ * rows — everything an EXTERNAL consumer needs to represent the selection,
+ * including the virtual all-matching mode that a bare `T[]` cannot express.
+ */
+export type SelectionDetails = {
+	mode: SelectionMode
+	/** Keys of the explicitly picked (seen) rows. */
+	keys: (string | number)[]
+	/** All-matching only: keys the user unchecked. */
+	excludedKeys: (string | number)[]
+	/** Resolved size — the list total minus exclusions in all-matching mode. */
+	count: number
+}
+
+/**
+ * The live selection API, published through
+ * {@link SelectionConfig.controllerRef} so UI OUTSIDE the list (a panel
+ * button, a rule engine) can read and manipulate the checked set — the
+ * selection bar stops being the only place that can act on it.
+ */
+export type SelectionController<T> = {
+	mode: SelectionMode
+	selectedKeys: ReadonlySet<string | number>
+	excludedKeys: ReadonlySet<string | number>
+	selectedItems: T[]
+	selectedCount: number
+	/** The query the selection is relative to — feeds `toSelectionDescriptor`. */
+	query: ListQuery
+	/** The current page's rows with their keys — the batch `toggleMany` takes. */
+	pageEntries: { item: T; key: string | number }[]
+	isSelected: (key: string | number) => boolean
+	toggle: (item: T, key: string | number) => void
+	setSelected: (item: T, key: string | number, selected: boolean) => void
+	toggleMany: (
+		entries: { item: T; key: string | number }[],
+		selected: boolean
+	) => void
+	selectAllMatching: () => void
+	clear: () => void
+}
+
+/**
  * Row-selection options. Set on {@link ListConfig.selection} (or pass `true`
  * for plain checkboxes). Selection is key-based, survives pagination, and clears
- * when the dataset changes (search/filter/sort/refresh).
+ * when the dataset changes (search/filter/sort/refresh/adapter scope).
  *
  * @typeParam T - The row type.
  */
 export type SelectionConfig<T> = {
 	/** Bulk actions rendered in the selection bar. */
 	actions?: BulkAction<T>[]
-	/** Called whenever the selected rows change. */
-	onSelectionChange?: (selected: T[]) => void
+	/** Called whenever the selection changes, with rows and the full snapshot. */
+	onSelectionChange?: (selected: T[], details: SelectionDetails) => void
+	/**
+	 * Receives the live {@link SelectionController} (null after unmount).
+	 * Pass a plain ref object — `useRef<SelectionController<T> | null>(null)`.
+	 */
+	controllerRef?: { current: SelectionController<T> | null }
 	/** Clear the selection when search/filters/sort/refresh change. @defaultValue true */
 	clearOnDataChange?: boolean
 	/** Show "export selected" in the selection bar when `export` is enabled. @defaultValue true */
@@ -390,6 +437,18 @@ export type SelectionConfig<T> = {
 	 * without loading them. @defaultValue true
 	 */
 	allowSelectAllMatching?: boolean
+	/**
+	 * Start every newly loaded row CHECKED (once per dataset): the scope the
+	 * user just filtered to is the selection, and unchecking is the exception.
+	 * A key the user unchecks stays unchecked — only never-seen keys
+	 * auto-select, and the seen set resets with the dataset signature.
+	 *
+	 * Pair it with an adapter whose `key` folds in every external scope (or
+	 * with `skeletonOnPlaceholder`), so a scope change surfaces as loading and
+	 * the previous scope's rows are never preselected into the new one.
+	 * @defaultValue false
+	 */
+	preselectLoadedRows?: boolean
 }
 
 /**

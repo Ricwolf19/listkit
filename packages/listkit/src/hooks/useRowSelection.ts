@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
+import type { SelectionDetails } from '../types/config'
 import {
 	emptySelection,
 	isKeySelected,
@@ -69,7 +70,7 @@ export function useRowSelection<T>(opts: {
 	signature: string
 	totalItems?: number
 	clearOnDataChange?: boolean
-	onChange?: (items: T[]) => void
+	onChange?: (items: T[], details: SelectionDetails) => void
 }): RowSelection<T> {
 	const {
 		enabled,
@@ -114,17 +115,28 @@ export function useRowSelection<T>(opts: {
 		[state.picked]
 	)
 
-	// Notify on change, skipping the initial empty state.
+	// Notify on change, skipping the initial empty state. Keyed on the whole
+	// state (not just the items): escalating to all-matching or unchecking an
+	// excluded key changes what the selection MEANS without changing the seen
+	// rows, and an external consumer needs to hear about it.
 	const onChangeRef = useRef(onChange)
 	onChangeRef.current = onChange
+	const totalRef = useRef(totalItems)
+	totalRef.current = totalItems
 	const notified = useRef(false)
 	useEffect(() => {
 		if (!notified.current) {
 			notified.current = true
 			return
 		}
-		onChangeRef.current?.(selectedItems)
-	}, [selectedItems])
+		const active = state.mode === 'all-matching' || state.picked.size > 0
+		onChangeRef.current?.(Array.from(state.picked.values()), {
+			mode: state.mode,
+			keys: [...state.picked.keys()],
+			excludedKeys: [...state.excluded],
+			count: active ? selectionCount(state, totalRef.current) : 0,
+		})
+	}, [state])
 
 	const toggle = useCallback(
 		(item: T, key: string | number) =>

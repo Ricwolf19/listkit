@@ -200,6 +200,13 @@ export {
 	exportRequestToParams,
 	parseExportRequest,
 } from './export/wire'
+export {
+	type SelectionDescriptor,
+	type SelectionDescriptorBody,
+	selectionDescriptorToBody,
+	type SelectionScope,
+	toSelectionDescriptor,
+} from './selection/wire'
 export type {
 	ExportCellValue,
 	ExportDateFormat,
@@ -228,6 +235,8 @@ export type {
 	SearchConfig,
 	SelectionActionHelpers,
 	SelectionConfig,
+	SelectionController,
+	SelectionDetails,
 	TableConfig,
 	ToolbarAction,
 } from './types/config'

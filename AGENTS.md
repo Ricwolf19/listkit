@@ -71,19 +71,19 @@ The playground resolves `listkit` to the package **source** through aliases in `
 
 Each is a separate, tree-shakeable entry. Keep them cohesive — don't leak DOM/React code into the server-safe ones (`/server`, `/query`, `/sql`, `/mongo`, `/mongoose`). `/mongoose` is server-safe too, but unlike `/mongo` it is typed against `mongoose` (an optional, type-only peer).
 
-| Import                 | Purpose                                                                      |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, hooks, primitives, types  |
-| `listkit/next`         | Next.js router adapter + `NextListView`                                      |
-| `listkit/react-router` | React Router adapter                                                         |
-| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter` |
-| `listkit/server`       | RSC-safe query builders (`buildListQuery`, `loadInitialList`) — no React/DOM |
-| `listkit/query`        | Read `ListQuery` filter values (`filtersById`, `getString`, `paginate`, …)   |
-| `listkit/sql`          | Postgres-flavoured SQL fragment helpers                                      |
-| `listkit/mongo`        | MongoDB query builders + `executeMongoList` (driver-free)                    |
-| `listkit/mongoose`     | Mongoose executors (`executePaginatedListkitQuery`, aggregate sibling)       |
-| `listkit/react-query`  | TanStack Query `useListData` + invalidation                                  |
-| `listkit/tailwind.css` | Tailwind v4 source registration (CSS import)                                 |
+| Import                             | Purpose                                                                                                             |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, hooks, primitives, types                                         |
+| `listkit/next`         | Next.js router adapter + `NextListView`                                                                             |
+| `listkit/react-router` | React Router adapter                                                                                                |
+| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                        |
+| `listkit/server`       | RSC-safe query builders (`buildListQuery`, `loadInitialList`) — no React/DOM                                        |
+| `listkit/query`        | Read `ListQuery` filter values (`filtersById`, `getString`, `paginate`, …); validate export/selection wire payloads |
+| `listkit/sql`          | Postgres-flavoured SQL fragment helpers                                                                             |
+| `listkit/mongo`        | MongoDB query builders + `executeMongoList` (driver-free)                                                           |
+| `listkit/mongoose`     | Mongoose executors (`executePaginatedListkitQuery`, aggregate sibling, `resolveSelectionFilter`)                    |
+| `listkit/react-query`  | TanStack Query `useListData` + invalidation                                                                         |
+| `listkit/tailwind.css` | Tailwind v4 source registration (CSS import)                                                                        |
 
 The exhaustive contents of each are documented in the README section **Subpath Exports**. The shapes of the data/router/filter contracts are in the README sections **Async data (server-side)**, **MongoDB backend**, and **Advanced filters**.
 
@@ -163,6 +163,7 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
 15. **A pinned cell paints with `bg-inherit`, so a row background must be opaque.** Any alpha on the row — a `hover:bg-gray-50/70`, a `rowClassName` returning `bg-amber-50/60` — lets the scrolling content show straight through the pinned column, which is the one place it must not. listkit's own row states are fully opaque; keep them that way, and document the constraint on any new hook that lets a consumer style a row.
 16. **User-facing failures get a diagnostic code, not a console dump.** `utils/diagnostics.ts` owns the ranges: `LK1xxx` throws in dev and no-ops in production (a contract the consumer broke — a duplicate export key, a field outside the whitelist), `LK2xxx` warns once per key (a value listkit had to coerce), `LK3xxx` surfaces **in the UI** (a truncated export the user must know about). Every code is documented in the README's diagnostics table; an undocumented `LK2003` in someone's console is worse than no code at all.
 17. **An aggregation `$match` is cast through the schema, and an uncastable value matches nothing.** `Model.find()` casts against the schema; `aggregate()` casts nothing, so the same `MongoFieldMap` behaved differently between the two Mongoose executors — a hex string matched via `find` and silently returned zero rows via `aggregate`. `executeAggregateListkitQuery` runs every `$match` through `castFilterToSchema` (`src/mongoose.ts`): schema-known paths cast via `SchemaType.cast()`, unknown (`$lookup`-shaped) paths pass through untouched, and `$or`/`$and`/`$nor` are descended. When a value will not cast the filter resolves to a condition no row satisfies — **never** a dropped condition, which would widen the filter into returning the whole collection. Only the negative operators (`$ne`/`$nin`) drop, because nothing equals a value the schema rejects. Enforced by `mongoose.cast.test.ts`, whose parity suite runs one fixture through both executors against a real mongod and asserts identical ids.
+18. **A wire payload that drives a MUTATION fails closed.** The selection descriptor (`src/selection/wire.ts`) is the bulk-write counterpart of the export request, and it deliberately parses **stricter** than its sibling: `parseExportRequest` falls back to reading query keys off the body's own top level (a GET carries them inline), where a missing query costs an over-broad CSV; `parseSelectionDescriptor` requires the nested `query` object and returns `null` without it, because under `scope: 'all'` an invented empty query resolves to every row the base filter allows — and that descriptor feeds `updateMany`. The same rule holds downstream: `resolveSelectionFilter` returns `null` for an empty selection so the caller no-ops rather than passing a match-everything filter to a write. Keep both halves refusing rather than defaulting, and never resolve a selection without a `baseFilter` carrying the auth scope.
 
 ---
 

@@ -5,6 +5,7 @@ import { HelloListKit } from '../examples/HelloListKit'
 import { InvoicesExample } from '../examples/invoices/InvoicesExample'
 import { OrdersExample } from '../examples/orders/OrdersExample'
 import { PrimitivesExample } from '../examples/primitives/PrimitivesExample'
+import { SelectionExample } from '../examples/selection/SelectionExample'
 import { ShowcaseExample } from '../examples/showcase/ShowcaseExample'
 import { ThemingExample } from '../examples/theming/ThemingExample'
 
@@ -70,6 +71,12 @@ export const DEMO_GROUPS: DemoGroup[] = [
 				label: 'Acciones de fila',
 				blurb: 'Quick bar al hover, menú agrupado',
 				render: ActionsExample,
+			},
+			{
+				id: 'selection',
+				label: 'Contrato de selección',
+				blurb: 'Preselección, controllerRef, descriptor',
+				render: SelectionExample,
 			},
 		],
 	},

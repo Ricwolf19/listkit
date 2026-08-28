@@ -210,6 +210,18 @@ export {
 	type ParseExportRequestOptions,
 } from './export/wire'
 
+// Selection-descriptor wire: the bulk-MUTATION counterpart of the export
+// request — build/serialize on the client, validate on the server, resolve
+// with `resolveSelectionFilter` (mongoose subpath).
+export {
+	parseSelectionDescriptor,
+	type SelectionDescriptor,
+	type SelectionDescriptorBody,
+	selectionDescriptorToBody,
+	type SelectionScope,
+	toSelectionDescriptor,
+} from './selection/wire'
+
 /**
  * Pure filter-config helpers, re-exported here so SERVER code can reach them
  * without the main entry: a config module that calls `withFilterOptions` and is

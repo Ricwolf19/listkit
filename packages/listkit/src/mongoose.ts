@@ -204,6 +204,83 @@ export async function executePaginatedListkitQuery<T = unknown>(
 	return { data: data as T[], total }
 }
 
+/** Options for {@link resolveSelectionFilter}. */
+export type ResolveSelectionFilterOptions = {
+	/** The parsed descriptor (from `parseSelectionDescriptor`). */
+	descriptor: import('./selection/wire').SelectionDescriptor
+	/** Field map for advanced filters — the SAME one the list handler uses. */
+	fields: MongoFieldMap
+	/** Filters that live on referenced models. */
+	references?: ListReference[]
+	/** Own-document fields matched against the search term. */
+	searchFields?: string[]
+	/** Referenced-model fields matched against the search term. */
+	searchReferences?: ListSearchReference[]
+	/** Match merged into everything — auth scope, tenant id, status guards. */
+	baseFilter?: Record<string, unknown>
+	/** The field the client's row keys address. @defaultValue '_id' */
+	keyField?: string
+	/** Cap for reference-resolution id lists. */
+	maxRefIds?: number
+}
+
+/**
+ * Turn a {@link import('./selection/wire').SelectionDescriptor} into the Mongo
+ * filter a bulk MUTATION should run on — `updateMany(filter, …)` — using the
+ * exact same building blocks the paginated read uses, so "what the operator
+ * saw" and "what the write touches" cannot diverge.
+ *
+ * `'selected'` targets the keys directly (plus `baseFilter`); `'all'` rebuilds
+ * the list filter from the descriptor's query and subtracts the unchecked
+ * keys. Returns `null` for an empty selection — the caller should no-op, not
+ * `updateMany({})`. Meant for `Model` queries (schema casting applies to the
+ * key `$in`/`$nin`); pipe through `castFilterToSchema` before an aggregate.
+ */
+export async function resolveSelectionFilter(
+	options: ResolveSelectionFilterOptions
+): Promise<Record<string, unknown> | null> {
+	const {
+		descriptor,
+		fields,
+		references = [],
+		searchFields = [],
+		searchReferences = [],
+		baseFilter,
+		keyField = '_id',
+		maxRefIds,
+	} = options
+
+	if (descriptor.scope === 'selected') {
+		if (!descriptor.includeKeys?.length) return null
+		return combineFilters(
+			{ [keyField]: { $in: descriptor.includeKeys } },
+			baseFilter
+		)
+	}
+
+	const [referenceFilter, searchFilter] = await Promise.all([
+		resolveReferences(descriptor.query, references.map(toReferenceSpec), {
+			maxIds: maxRefIds,
+		}),
+		buildMongoSearchWithRefs(
+			descriptor.query.search,
+			searchFields,
+			searchReferences.map(toSearchSpec),
+			{ maxIds: maxRefIds }
+		),
+	])
+
+	const filter = combineFilters(
+		buildMongoFilter(descriptor.query, fields),
+		referenceFilter,
+		searchFilter,
+		baseFilter
+	)
+	return descriptor.excludeKeys?.length
+		? combineFilters(filter, { [keyField]: { $nin: descriptor.excludeKeys } })
+		: filter
+}
+
 /** Options for {@link executeAggregateListkitQuery} / {@link buildAggregatePipelines}. */
 export type ExecuteAggregateListkitQueryOptions = {
 	/** The main Mongoose model the aggregation reads from. */

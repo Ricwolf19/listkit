@@ -761,7 +761,7 @@ defineListConfig<Product>({
 **What the selection gives you.** Selection is keyed by `getItemKey`, so each entry has an **id** (the key) and the **full row** object:
 
 - A bulk action's `onClick(selected, { selectedKeys, clear })` receives `selected` (the `T[]` rows — even ones from other pages) and `selectedKeys` (their ids from `getItemKey`). Use the ids for a `DELETE … WHERE id IN (…)` and `clear()` to reset afterwards.
-- `onSelectionChange(selected)` fires the same `T[]` whenever the set changes — drive your own bar or counter from it.
+- `onSelectionChange(selected, details)` fires whenever the set changes: `selected` is the same `T[]`, and `details` carries `mode`, `keys`, `excludedKeys` and the resolved `count` — the all-matching mode a bare array cannot express.
 - For full control, call the exported `useRowSelection` hook directly (`selectedKeys`, `selectedItems`, `isSelected`, `toggle`, `toggleMany`, `clear`).
 
 Other notes:
@@ -771,6 +771,20 @@ Other notes:
 - `clearOnDataChange: false` keeps the selection across filter/sort changes (the default clears it).
 - When `export` is enabled, the selection bar also shows **Export selected** (disable with `showExport: false`).
 - In cards view, `ctx.selection` (`isSelected`/`toggle`) lets a custom card render its own checkbox.
+
+**Driving the selection from your own UI.** `controllerRef` publishes the live selection API — `mode`, `selectedKeys`, `excludedKeys`, `selectedItems`, `selectedCount`, `query`, `pageEntries`, plus `toggle` / `setSelected` / `toggleMany` / `selectAllMatching` / `clear` — so a button outside the list can read and drive the checked set. Pass a plain ref object; listkit nulls it on unmount.
+
+```tsx
+const controllerRef = useRef<SelectionController<Invoice> | null>(null)
+
+selection: {
+	controllerRef
+}
+// anywhere else:
+controllerRef.current?.toggleMany(controllerRef.current.pageEntries, true)
+```
+
+`preselectLoadedRows: true` inverts the default: every newly loaded row arrives **checked**, so the scope the user filtered to _is_ the selection and unchecking is the exception. A key the user unchecks stays unchecked — only never-seen keys auto-select — and the seen set resets with the dataset. Pair it with an adapter whose `key` folds in every external scope, so a scope change never preselects the previous scope's rows into the new one.
 
 #### Selecting every matching result
 
@@ -800,6 +814,31 @@ onClick: async (rows, { selectedKeys, mode, query, excludedKeys, clear }) => {
 ```
 
 The server side resolves that query with the same builders the list uses — `buildMongoFilter` / `buildSqlFilter` — so the rows an action touches are exactly the rows the user saw. Export works the same way: the dialog's `all` scope hands the resolver the query and the exclusions.
+
+**Posting a selection to the server.** For a bulk _mutation_, send a `SelectionDescriptor` rather than a flat id list — the mutation counterpart of the export request. `toSelectionDescriptor` builds one from any selection snapshot (the `details` argument, a controller, or a bulk action's helpers), `selectionDescriptorToBody` serializes it for a POST, `parseSelectionDescriptor` (from `/query`) validates it server-side, and `resolveSelectionFilter` (from `/mongoose`) turns it into the filter the write runs on:
+
+```ts
+// client
+const body = selectionDescriptorToBody(
+	toSelectionDescriptor(controllerRef.current!)
+)
+await fetch('/api/invoices/archive', {
+	method: 'POST',
+	body: JSON.stringify(body),
+})
+
+// server
+const descriptor = parseSelectionDescriptor(req.body)
+if (!descriptor) return res.status(400).end()
+const filter = await resolveSelectionFilter({
+	descriptor,
+	fields: maps.main,
+	baseFilter: { tenant: req.tenant }, // auth scope — always
+})
+if (filter) await Invoice.updateMany(filter, { $set: { archived: true } })
+```
+
+Both halves fail closed. `parseSelectionDescriptor` returns `null` for anything structurally wrong — including a body with no nested `query`, which under an `'all'` scope would otherwise resolve to every row the base filter allows — and `resolveSelectionFilter` returns `null` for an empty selection, so the caller no-ops instead of handing `updateMany` a match-everything filter.
 
 Exporting that selection needs a way to reach the rows. With in-memory data or an export `resolve`, the dialog's **Selected** scope covers all 12,000; without one, it is **disabled with an explanation** rather than hidden, and the one-click "Export selected" is withheld — a file holding the loaded page while the bar reads "12,000 selected" is worse than no file.
 
@@ -1793,19 +1832,19 @@ for the full key list.
 
 ## Subpath Exports
 
-| Import path                        | Contents                                                                                                                                                                                                  |
-| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types                                   |
-| `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                    |
-| `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                   |
-| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                              |
-| `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                                                         |
-| `listkit/query`        | `parseListkitQuery`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parse a request bag into a `ListQuery` and read its filters         |
-| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `sqlPaginate`, `textCondition`, `sqlFieldMapFromFilters` — Postgres query fragments + executor (pool injection, no driver dep)         |
-| `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — MongoDB query objects (no driver) |
-| `listkit/mongoose`     | `executePaginatedListkitQuery`, `executeAggregateListkitQuery`, `castFilterToSchema` — runs the page query on Mongoose (optional, type-only `mongoose` peer dep)                                          |
-| `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                                                                |
-| `listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                                                           |
+| Import path                        | Contents                                                                                                                                                                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types                                                       |
+| `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                                        |
+| `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                                       |
+| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                                                  |
+| `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                                                                             |
+| `listkit/query`        | `parseListkitQuery`, `parseSelectionDescriptor`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parse a request bag into a `ListQuery` and read its filters |
+| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `sqlPaginate`, `textCondition`, `sqlFieldMapFromFilters` — Postgres query fragments + executor (pool injection, no driver dep)                             |
+| `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — MongoDB query objects (no driver)                     |
+| `listkit/mongoose`     | `executePaginatedListkitQuery`, `executeAggregateListkitQuery`, `castFilterToSchema`, `resolveSelectionFilter` — runs the page query on Mongoose (optional, type-only `mongoose` peer dep)                                    |
+| `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                                                                                    |
+| `listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                                                                               |
 
 ---
 
