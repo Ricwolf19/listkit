@@ -259,6 +259,14 @@ export type CardContext<T> = {
 	selection?: {
 		/** Whether this row is currently selected. */
 		isSelected: (item: T) => boolean
+		/**
+		 * Whether this row refuses selection — a locked selection
+		 * ({@link SelectionConfig.disabled}) or a row its
+		 * {@link SelectionConfig.selectableRow} gate rejects. Render the checkbox
+		 * disabled: `toggle` no-ops either way, and a control that looks live
+		 * while silently refusing is worse than one that shows it cannot.
+		 */
+		disabled?: (item: T) => boolean
 		/** Toggle this row's selection. */
 		toggle: (item: T) => void
 	}
@@ -437,6 +445,27 @@ export type SelectionConfig<T> = {
 	 * without loading them. @defaultValue true
 	 */
 	allowSelectAllMatching?: boolean
+	/**
+	 * Render the checkboxes but refuse every toggle — the column stays as a
+	 * read-only indicator. Use it when picking rows is meaningless in the
+	 * current mode: the column disappearing and reappearing moves the table
+	 * out from under the reader, and hiding it loses the state it shows.
+	 * Bulk actions, the selection bar and the selection shortcuts all go with
+	 * it. To drop the column entirely, omit `selection`.
+	 */
+	disabled?: boolean
+	/**
+	 * Per-row gate — return false and that row's checkbox is disabled. The
+	 * page-header checkbox then only covers the selectable rows, and neither
+	 * {@link SelectionConfig.preselectLoadedRows} nor the published
+	 * `SelectionController` can pick a rejected row.
+	 *
+	 * It does NOT survive "select all N matching": that selection is virtual
+	 * and resolved server-side from the query, so rows this gate would reject
+	 * are still included. Pair the two only when the gate is advisory, or set
+	 * `allowSelectAllMatching: false`.
+	 */
+	selectableRow?: (item: T, key: string | number) => boolean
 	/**
 	 * Start every newly loaded row CHECKED (once per dataset): the scope the
 	 * user just filtered to is the selection, and unchecking is the exception.

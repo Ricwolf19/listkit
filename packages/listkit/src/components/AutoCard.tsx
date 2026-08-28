@@ -39,6 +39,7 @@ export function AutoCard<T>({ item, index, columns, ctx }: AutoCardProps<T>) {
 				<div className='flex justify-end'>
 					<Checkbox
 						checked={selection.isSelected(item)}
+						disabled={selection.disabled?.(item)}
 						onChange={() => selection.toggle(item)}
 						colorTheme={ctx.colorTheme}
 						aria-label={labels.selectRow}

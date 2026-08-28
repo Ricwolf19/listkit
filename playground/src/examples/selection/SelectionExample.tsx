@@ -42,6 +42,16 @@ const LEGENDS: Legend[] = [
 			'onSelectionChange ahora entrega (rows, details): mode, keys, excludedKeys y count — el modo all-matching por fin es representable fuera de la lista.',
 	},
 	{
+		action: "Cambia el bloqueo a 'disabled'",
+		expect:
+			'la columna sigue ahí como indicador pero ningún check responde, y con ella se van la barra de selección, «exportar selección» y los atajos de selección — el manual de teclado (?) deja de listarlos.',
+	},
+	{
+		action: "Cambia a 'selectableRow'",
+		expect:
+			'sólo las facturas Pagadas aceptan check; el header de página cubre únicamente a esas, así que marcarlo no deja el resto en un estado a medias.',
+	},
+	{
 		action: 'Selecciona toda la página y escala a «todos los resultados»',
 		expect:
 			'el descriptor cambia a scope "all" con el query y las exclusiones: eso es lo que un endpoint de mutación resuelve server-side con resolveSelectionFilter, sin cap de ids.',
@@ -66,6 +76,7 @@ const COLUMNS: ColumnDef<Invoice>[] = [
  */
 export function SelectionExample() {
 	const [preselect, setPreselect] = useState<'on' | 'off'>('on')
+	const [lock, setLock] = useState<'off' | 'all' | 'row'>('off')
 	const controllerRef = useRef<SelectionController<Invoice> | null>(null)
 	const [details, setDetails] = useState<SelectionDetails | null>(null)
 
@@ -83,19 +94,25 @@ export function SelectionExample() {
 	const config = useMemo(
 		() =>
 			defineListConfig<Invoice>({
-				id: `selection-demo-${preselect}`,
+				id: `selection-demo-${preselect}-${lock}`,
 				title: 'Selección',
 				pageSize: 8,
 				search: { fields: ['number', 'status'] },
 				table: { columns: COLUMNS },
 				getItemKey: row => row.id,
 				selection: {
-					preselectLoadedRows: preselect === 'on',
+					preselectLoadedRows: preselect === 'on' && lock !== 'all',
+					disabled: lock === 'all',
+					// Solo las pagadas se pueden marcar en el modo 'row'.
+					selectableRow:
+						lock === 'row'
+							? (row: Invoice) => row.status === 'Pagada'
+							: undefined,
 					controllerRef,
 					onSelectionChange: (_rows, next) => setDetails(next),
 				},
 			}),
-		[preselect]
+		[preselect, lock]
 	)
 
 	const invert = () => {
@@ -124,6 +141,15 @@ export function SelectionExample() {
 						{ value: 'off', label: 'Preselección off' },
 					]}
 					onChange={setPreselect}
+				/>
+				<Segmented
+					value={lock}
+					options={[
+						{ value: 'off', label: 'Sin bloqueo' },
+						{ value: 'all', label: 'disabled' },
+						{ value: 'row', label: 'selectableRow' },
+					]}
+					onChange={setLock}
 				/>
 				<Hint>
 					El panel de abajo vive FUERA de la lista — todo pasa por el contrato.

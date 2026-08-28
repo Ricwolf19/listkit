@@ -474,6 +474,17 @@ export function ListView<T>({
 	const selectionEnabled = !!config.selection
 	const selectionConfig =
 		typeof config.selection === 'object' ? config.selection : undefined
+	// Read-only selection: the column stays (the state it shows is worth
+	// seeing) but nothing can toggle it, and every affordance built on picking
+	// rows — bulk bar, selected-export, the two shortcuts — goes with it.
+	const selectionLocked = !!selectionConfig?.disabled
+	const canPickRows = selectionEnabled && !selectionLocked
+	const isRowSelectable = selectionConfig?.selectableRow
+	// Every write path asks this — table, cards, shortcuts and the published
+	// controller. A lock enforced at only some call sites is as strong as the
+	// weakest one a caller happens to reach for.
+	const canPickRow = (item: T, key: string | number) =>
+		canPickRows && isRowSelectable?.(item, key) !== false
 	const selectionSignature = JSON.stringify({
 		// The adapter's key IS part of the dataset identity: a scope the adapter
 		// closes over (a preset, a customerId) changes what the rows mean, and a
@@ -498,10 +509,17 @@ export function ListView<T>({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[rows]
 	)
+	// "Select page" covers only the rows the gate allows, so a page of
+	// non-selectable rows never reads as fully selected.
+	const selectablePageEntries = isRowSelectable
+		? pageEntries.filter(e => isRowSelectable(e.item, e.key))
+		: pageEntries
 	const pageAllSelected =
-		pageEntries.length > 0 &&
-		pageEntries.every(e => selection.isSelected(e.key))
-	const pageSomeSelected = pageEntries.some(e => selection.isSelected(e.key))
+		selectablePageEntries.length > 0 &&
+		selectablePageEntries.every(e => selection.isSelected(e.key))
+	const pageSomeSelected = selectablePageEntries.some(e =>
+		selection.isSelected(e.key)
+	)
 
 	// The seen set is what keeps an unchecked key unchecked — see
 	// `SelectionConfig.preselectLoadedRows` for the rule. Gated on `!isLoading`
@@ -514,19 +532,19 @@ export function ListView<T>({
 	})
 	const toggleManyRows = selection.toggleMany
 	useEffect(() => {
-		if (!preselect || !selectionEnabled || isLoading) return
+		if (!preselect || !canPickRows || isLoading) return
 		if (preselectSeen.current.sig !== selectionSignature) {
 			preselectSeen.current = { sig: selectionSignature, seen: new Set() }
 		}
 		const fresh = pageEntries.filter(
-			e => !preselectSeen.current.seen.has(e.key)
+			e => !preselectSeen.current.seen.has(e.key) && canPickRow(e.item, e.key)
 		)
 		if (fresh.length === 0) return
 		for (const entry of fresh) preselectSeen.current.seen.add(entry.key)
 		toggleManyRows(fresh, true)
 	}, [
 		preselect,
-		selectionEnabled,
+		canPickRows,
 		isLoading,
 		selectionSignature,
 		pageEntries,
@@ -548,11 +566,24 @@ export function ListView<T>({
 			query,
 			pageEntries,
 			isSelected: selection.isSelected,
-			toggle: selection.toggle,
-			setSelected: selection.setSelected,
-			toggleMany: selection.toggleMany,
-			selectAllMatching: selection.selectAllMatching,
-			clear: selection.clear,
+			toggle: (item, key) => {
+				if (canPickRow(item, key)) selection.toggle(item, key)
+			},
+			setSelected: (item, key, selected) => {
+				if (canPickRow(item, key)) selection.setSelected(item, key, selected)
+			},
+			toggleMany: (entries, selected) => {
+				selection.toggleMany(
+					entries.filter(e => canPickRow(e.item, e.key)),
+					selected
+				)
+			},
+			selectAllMatching: () => {
+				if (canPickRows) selection.selectAllMatching()
+			},
+			clear: () => {
+				if (canPickRows) selection.clear()
+			},
 		}
 	})
 	useEffect(() => {
@@ -580,7 +611,12 @@ export function ListView<T>({
 		selection: selectionEnabled
 			? {
 					isSelected: item => selection.isSelected(getItemKey(item, index)),
-					toggle: item => selection.toggle(item, getItemKey(item, index)),
+					disabled: item => !canPickRow(item, getItemKey(item, index)),
+					toggle: item => {
+						const key = getItemKey(item, index)
+						if (!canPickRow(item, key)) return
+						selection.toggle(item, key)
+					},
 				}
 			: undefined,
 	})
@@ -714,10 +750,10 @@ export function ListView<T>({
 			? () => exportControls.openDialog('page')
 			: undefined,
 		refresh,
-		selectPage: selectionEnabled
-			? () => selection.toggleMany(pageEntries, !pageAllSelected)
+		selectPage: canPickRows
+			? () => selection.toggleMany(selectablePageEntries, !pageAllSelected)
 			: undefined,
-		clearSelection: selectionEnabled ? selection.clear : undefined,
+		clearSelection: canPickRows ? selection.clear : undefined,
 		prevPage: () => handlePageChange(Math.max(1, pagination.currentPage - 1)),
 		nextPage: () =>
 			handlePageChange(
@@ -732,7 +768,7 @@ export function ListView<T>({
 	const boundShortcuts = useListKeyboard(shortcutHandlers, [
 		showSearch,
 		hasFilters,
-		selectionEnabled,
+		canPickRows,
 		exportControls.configurable,
 		resolved.table,
 		resolved.hasCards,
@@ -858,7 +894,7 @@ export function ListView<T>({
 						</div>
 					)}
 
-					{selectionEnabled && (
+					{canPickRows && (
 						<SelectionBar<T>
 							count={selection.selectedCount}
 							selected={selection.selectedItems}
@@ -938,13 +974,19 @@ export function ListView<T>({
 									resizable={resizeEnabled}
 									onResizeColumn={resizeColumn}
 									selectable={selectionEnabled}
+									selectionDisabled={selectionLocked}
+									isRowSelectable={isRowSelectable}
 									isRowSelected={selection.isSelected}
-									onToggleRow={selection.toggle}
+									onToggleRow={(item, key) => {
+										if (!canPickRow(item, key)) return
+										selection.toggle(item, key)
+									}}
 									pageAllSelected={pageAllSelected}
 									pageSomeSelected={pageSomeSelected}
-									onTogglePage={checked =>
-										selection.toggleMany(pageEntries, checked)
-									}
+									onTogglePage={checked => {
+										if (!canPickRows) return
+										selection.toggleMany(selectablePageEntries, checked)
+									}}
 								/>
 							)}
 

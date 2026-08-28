@@ -782,6 +782,17 @@ Otras notas:
 - Cuando `export` está habilitado, la barra de selección también muestra **Exportar selección** (desactívalo con `showExport: false`).
 - En vista de tarjetas, `ctx.selection` (`isSelected`/`toggle`) permite que una tarjeta personalizada renderice su propio checkbox.
 
+**Bloquear o restringir los checkboxes.** `disabled: true` conserva la columna pero rechaza todo toggle, así queda como indicador de solo lectura — úsalo cuando elegir filas no tiene sentido en el modo actual, porque una columna que desaparece y vuelve mueve la tabla bajo el lector, y esconderla pierde el estado que mostraba. La barra masiva, "exportar selección" y los atajos de selección se van con ella. `selectableRow(item, key)` restringe fila por fila; el checkbox del encabezado cubre entonces solo las filas seleccionables.
+
+```tsx
+selection: {
+	disabled: mode === 'review', // indicador de solo lectura
+	selectableRow: row => row.status !== 'locked',
+}
+```
+
+Ambas compuertas se respetan en todo camino de escritura — el checkbox de fila, el del encabezado, el de la tarjeta, los atajos de teclado y el controller publicado. Lo único que `selectableRow` no alcanza es **seleccionar las N coincidentes**: esa selección es virtual y se resuelve en el servidor desde la query, así que las filas rechazadas van incluidas. Combínalos solo si la compuerta es indicativa, o pon `allowSelectAllMatching: false`.
+
 **Manejar la selección desde tu propia UI.** `controllerRef` publica la API viva de selección — `mode`, `selectedKeys`, `excludedKeys`, `selectedItems`, `selectedCount`, `query`, `pageEntries`, más `toggle` / `setSelected` / `toggleMany` / `selectAllMatching` / `clear` — así un botón fuera de la lista puede leer y manejar el conjunto marcado. Pasa un objeto ref plano; listkit lo pone en null al desmontar.
 
 ```tsx

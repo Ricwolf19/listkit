@@ -77,6 +77,10 @@ export type TableProps<T> = {
 	onResizeColumn?: (key: string, width: number) => void
 	/** Enable the leading selection checkbox column. */
 	selectable?: boolean
+	/** Render the column but refuse every toggle (read-only indicator). */
+	selectionDisabled?: boolean
+	/** Per-row gate — false disables that row's checkbox. */
+	isRowSelectable?: (item: T, key: string | number) => boolean
 	/** Whether a row key is selected. */
 	isRowSelected?: (key: string | number) => boolean
 	/** Toggle one row's selection. */
@@ -353,6 +357,8 @@ export function Table<T>({
 	onResizeColumn,
 	selectable = false,
 	isRowSelected,
+	selectionDisabled = false,
+	isRowSelectable,
 	onToggleRow,
 	pageAllSelected = false,
 	pageSomeSelected = false,
@@ -582,6 +588,7 @@ export function Table<T>({
 									<Checkbox
 										checked={pageAllSelected}
 										indeterminate={pageSomeSelected && !pageAllSelected}
+										disabled={selectionDisabled}
 										onChange={c => onTogglePage?.(c)}
 										colorTheme={colorTheme}
 										aria-label={labels.selectAll}
@@ -758,6 +765,10 @@ export function Table<T>({
 										<div className='flex items-center justify-center'>
 											<Checkbox
 												checked={selected}
+												disabled={
+													selectionDisabled ||
+													isRowSelectable?.(item, rowKey) === false
+												}
 												onChange={() => onToggleRow?.(item, rowKey, i)}
 												colorTheme={colorTheme}
 												aria-label={labels.selectRow}

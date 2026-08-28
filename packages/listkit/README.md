@@ -772,6 +772,17 @@ Other notes:
 - When `export` is enabled, the selection bar also shows **Export selected** (disable with `showExport: false`).
 - In cards view, `ctx.selection` (`isSelected`/`toggle`) lets a custom card render its own checkbox.
 
+**Locking or gating the checkboxes.** `disabled: true` keeps the column but refuses every toggle, so it reads as a read-only indicator — use it when picking rows is meaningless in the current mode, since a column that disappears and comes back moves the table under the reader, and hiding it loses the state it was showing. The bulk bar, "export selected" and the selection shortcuts go with it. `selectableRow(item, key)` gates one row at a time; the page-header checkbox then covers only the selectable rows.
+
+```tsx
+selection: {
+	disabled: mode === 'review', // read-only indicator
+	selectableRow: row => row.status !== 'locked',
+}
+```
+
+Both gates hold on every write path — the row checkbox, the page header, the card checkbox, the keyboard shortcuts and the published controller. The one thing `selectableRow` cannot reach is **select all N matching**: that selection is virtual and resolved server-side from the query, so rejected rows are still included. Pair the two only when the gate is advisory, or set `allowSelectAllMatching: false`.
+
 **Driving the selection from your own UI.** `controllerRef` publishes the live selection API — `mode`, `selectedKeys`, `excludedKeys`, `selectedItems`, `selectedCount`, `query`, `pageEntries`, plus `toggle` / `setSelected` / `toggleMany` / `selectAllMatching` / `clear` — so a button outside the list can read and drive the checked set. Pass a plain ref object; listkit nulls it on unmount.
 
 ```tsx
