@@ -1370,9 +1370,15 @@ export default async function OrdersPage({
 
 > Dado que la config ahora se lee en un Server Component, constrúyela con
 > `defineListConfig` desde **`listkit/server`** (no la entrada principal).
-> La entrada principal arrastra contexto de cliente (`createContext`) y haría crash
-> el render de RSC. Tanto la página del servidor como la vista de lista del cliente
-> pueden importar el mismo módulo de config cuando se define de esta manera.
+> La entrada principal, `/next`, `/react-router` y `/react-query` se publican con
+> un banner `'use client'`: todo lo que exportan es una client reference, así que
+> un módulo de config compartido que el servidor evalúa sí puede importar un
+> componente de la entrada principal — `RowActions` en el render de una card,
+> por ejemplo — y renderizarlo como JSX. Lo que no puede es _llamar_ una función
+> de ahí durante el render de RSC; `defineListConfig`, `resolveListConfig` y
+> `ListSkeleton` tienen su gemelo en `/server` justo para eso. Tanto la página
+> del servidor como la vista de lista del cliente pueden importar el mismo
+> módulo de config cuando se define de esta manera.
 
 ```tsx
 // config.ts — compartido por la página del servidor y la vista de lista del cliente

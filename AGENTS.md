@@ -63,7 +63,7 @@ listkit/
 └── playground/             # local Vite app for development & manual testing (never published)
 ```
 
-The playground resolves `listkit` to the package **source** through aliases in `playground/vite.config.ts`, so edits hot-reload with no build step. That alias is load-bearing, not a convenience: `pnpm dev` runs tsup's watcher and Vite in parallel and tsup `clean`s `dist` on start, so resolving through the package `exports` races an empty directory ("Failed to resolve entry for package"). Add any new subpath to that alias list.
+The playground resolves `listkit` to the package **source** through aliases in `playground/vite.config.ts`, so edits hot-reload with no build step. That alias is load-bearing, not a convenience: resolving through the package `exports` races whatever wipes `dist` — `pnpm build` does it before tsup runs, and the two config groups mean tsup itself no longer can — leaving the dev server on an empty directory ("Failed to resolve entry for package"). Add any new subpath to that alias list.
 
 ---
 
@@ -96,13 +96,13 @@ Requirements: **Node 22 LTS**, **pnpm 11+**.
 ```bash
 pnpm install        # install all workspace deps (also installs Husky hooks)
 pnpm dev            # run the playground (Vite) against package source
-pnpm build          # build the package (tsup → ESM + CJS + .d.ts)
+pnpm build          # clean dist, then tsup (two groups → ESM + CJS + .d.ts)
 pnpm typecheck      # type-check all workspaces
 pnpm test           # vitest (includes the mongod/pglite parity suites)
 pnpm lint           # eslint
 pnpm format         # prettier write
 pnpm fix            # prettier + eslint --fix + knip --fix
-pnpm verify         # what pre-push runs: lint + build + typecheck + test + check:subpaths
+pnpm verify         # what pre-push runs: lint + build + typecheck + test + check:subpaths + check:client-boundary
 pnpm verify:full    # everything CI runs: + format:check, knip, depcruise, size-limit, publint, attw
 ```
 
@@ -146,7 +146,7 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
 1. **Config-driven, zero business logic.** No entity names, status enums, or domain rules baked into the package. Behavior comes from `defineListConfig` and adapters only.
 2. **Plain array still works.** Passing a plain array to `<ListView data={...}>` must keep working (implicit `memoryAdapter`). Don't make adapters mandatory.
 3. **No direct router imports outside adapters.** `react-router-dom` / `next/navigation` may only be imported inside their adapter files. Everything else talks to the `RouterAdapter` contract.
-4. **Server-safe entries stay DOM-free.** `/server`, `/query`, `/sql`, `/mongo`, `/mongoose` must not import React or browser APIs — they run in RSC, route handlers, and Node backends.
+4. **Entries are split by side, and the split is published.** `/server`, `/query`, `/sql`, `/mongo`, `/mongoose` must not import React or browser APIs — they run in RSC, route handlers and Node backends. The mirror half is the client boundary: the main entry, `/next`, `/react-router` and `/react-query` ship with a `'use client'` banner (`tsup.config.ts` builds them as a separate group), so a module the server evaluates can import a component from them and render it as JSX instead of crashing on `createContext`. Two traps guard that banner — `treeshake` must stay **off** for the client group, because rollup strips module-level directives and deletes it while every unit test stays green, and `adapters` stays neutral since it imports no React and serves both sides. `pnpm check:client-boundary` (part of `verify`) asserts both halves against the built `dist`, in ESM and CJS. A new entry joins the right group and that script in the same change.
 5. **Field names come from whitelists, never user input.** The query/SQL/Mongo helpers only resolve fields through a config-controlled map (no injection / field-probing surface). Preserve this when extending them.
 6. **In-memory and server behavior match.** A filter/sort/search must behave the same whether served by `memoryAdapter` or a server adapter — the Mongo/SQL helpers deliberately mirror the in-memory matching semantics. `src/mongo.parity.test.ts` enforces it: one fixture through `itemMatchesFilters` and through `buildMongoFilter` against a real mongod, both asserted against explicit ids. Extend that suite whenever you touch matching. The same promise covers **exports**: `src/export.parity.test.ts` runs one fixture through the in-memory resolver, `buildMongoExport` against a real mongod, and `buildSqlExport` against a real Postgres (pglite), asserting **byte-identical CSV** — extend it whenever you touch export assembly, cell rendering, or a stack builder. Two scoped caveats hold: SQL **equality** still does not accent-fold (keep option values ASCII), though **search** does if you pass a `searchNormalizer` — the fold wraps both the column and the bound term, so `unaccent` reaches the search string too; and every export path requires a total-order sort (`tiebreak`).
 

@@ -1376,9 +1376,14 @@ export default async function OrdersPage({
 
 > Since the config is now read in a Server Component, build it with
 > `defineListConfig` from **`listkit/server`** (not the main entry).
-> The main entry pulls in client context (`createContext`) and would crash the
-> RSC render. Both the server page and the client list view can import the same
-> config module when it's defined this way.
+> The main entry, `/next`, `/react-router` and `/react-query` ship with a
+> `'use client'` banner: everything they export is a client reference, so a
+> shared config module the server evaluates may still import a component from
+> the main entry — `RowActions` in a card renderer, say — and render it as JSX.
+> What it may not do is _call_ a function from there during the RSC render;
+> `defineListConfig`, `resolveListConfig` and `ListSkeleton` have `/server`
+> twins for exactly that. Both the server page and the client list view can
+> import the same config module when it's defined this way.
 
 ```tsx
 // config.ts — shared by the server page and the client list view
@@ -1429,7 +1434,7 @@ Three helpers cover the wiring every SSR/Next app would otherwise hand-roll:
 ```tsx
 // app/orders/page.tsx — Server Component
 import { Suspense } from 'react'
-// Import both from /server in RSC — the main barrel pulls client context.
+// Import both from /server in RSC — the main barrel is a client boundary.
 import { ListSkeleton, loadInitialList } from 'listkit/server'
 import { ordersConfig } from './config'
 import { listOrders } from './actions'
