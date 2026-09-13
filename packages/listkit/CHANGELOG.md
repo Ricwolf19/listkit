@@ -1,5 +1,40 @@
 # listkit
 
+## [5.0.0](https://github.com/Ricwolf19/listkit/compare/listkit-4.3.0...listkit-5.0.0) (2026-09-13)
+
+
+### Features
+
+* **actions:** quick bar, groups, href, menu a11y ([cdd7ced](https://github.com/Ricwolf19/listkit/commit/cdd7cedb00cc9fcce7919c706aa9ecd7d928b35d))
+* **build:** publish a 'use client' boundary ([dbabc2a](https://github.com/Ricwolf19/listkit/commit/dbabc2a975351594c284768efb42e5ba8fcb909e))
+* **next:** add useNextHistoryRouterAdapter, a History-API adapter ([934d9a7](https://github.com/Ricwolf19/listkit/commit/934d9a711afe51651f76d494753e31a05c2dfcfa))
+* **selection:** controller, details and server wire ([7a2eaa9](https://github.com/Ricwolf19/listkit/commit/7a2eaa9ad06683a9f1c0f45d37ca1b9b1994af08))
+* **selection:** lock or gate the row checkboxes ([500dde0](https://github.com/Ricwolf19/listkit/commit/500dde02efb325c2e267c6a747fd2bcd14f6c2ab))
+* **shortcuts:** add a density toggle shortcut ([52566c1](https://github.com/Ricwolf19/listkit/commit/52566c17a3cc197d058067dacd9933df67ee453d))
+* **sql:** fold search on both sides and page exports ([1937865](https://github.com/Ricwolf19/listkit/commit/1937865252dd2936209187c646af396513bb0f67))
+* sync the public package up to the 4.7.0 upstream surface ([13cf9ba](https://github.com/Ricwolf19/listkit/commit/13cf9ba28ae8e4a7b2ab0ace0a7d986bdf89f84d))
+* **table:** keep edge fades visible when pinned ([5d25f70](https://github.com/Ricwolf19/listkit/commit/5d25f700dc879cb505245827fe46915983414118))
+* **theme:** class-driven dark mode ([a793a45](https://github.com/Ricwolf19/listkit/commit/a793a4571ed1a7e1ace84b0510f97cf3ceae1619))
+* **theme:** surface tones for table and cards ([8ee6186](https://github.com/Ricwolf19/listkit/commit/8ee6186c4c5bf38c752691c6d212252b876dd2a4))
+* **view:** remember the table/cards choice ([2873e1a](https://github.com/Ricwolf19/listkit/commit/2873e1ac802f05a763df2f9d7c7c87b075a4addb))
+
+
+### Bug Fixes
+
+* **cards:** key selection by the row's real index ([06db4a3](https://github.com/Ricwolf19/listkit/commit/06db4a38693396264ff56aeed6ef16d5586b7f40))
+* **cards:** lift hover only on clickable cards ([a550366](https://github.com/Ricwolf19/listkit/commit/a5503662b1f72bf4655498f00697baf73af2cfa4))
+* dedupe conflicted declarations and scrub internal references ([462e9fa](https://github.com/Ricwolf19/listkit/commit/462e9fa5fb6564d231b6b1955f4141e2eb22c4b8))
+* **filters:** send date ranges as absolute instants ([2503c4c](https://github.com/Ricwolf19/listkit/commit/2503c4c9042a6b34393c403c32331a2218787674))
+* **mongoose:** cast aggregate $match through the schema ([dad77c5](https://github.com/Ricwolf19/listkit/commit/dad77c5c656c54b87dfc07ca04b50cc95e461572))
+* **overlays:** keep panels above their own scrim ([bf8969d](https://github.com/Ricwolf19/listkit/commit/bf8969d52eb9d9275055abc2269db0f371a8d14d))
+* **table:** start edge fades below the header ([a33192c](https://github.com/Ricwolf19/listkit/commit/a33192c5800b7fc53451187a2653dfa760f72f74))
+* **theme:** ship the dark variant in tailwind.css ([9ed5127](https://github.com/Ricwolf19/listkit/commit/9ed5127d85dba34c2391f75979ab2e5eae48985e))
+
+
+### Miscellaneous Chores
+
+* cut the sync as 5.0.0 ([9f46aba](https://github.com/Ricwolf19/listkit/commit/9f46abad4de8ec8505649bd22dcb8812ee1e90e0))
+
 ## [4.3.0](https://github.com/Ricwolf19/listkit/compare/listkit-4.2.1...listkit-4.3.0) (2026-08-13)
 
 
