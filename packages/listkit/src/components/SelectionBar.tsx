@@ -83,7 +83,7 @@ export function SelectionBar<T>({
 	}
 
 	return (
-		<div className='mt-2 mb-3 flex flex-col gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:py-2'>
+		<div className='mt-2 mb-3 flex flex-col gap-2.5 rounded-xl border border-gray-200 bg-white px-3 py-2.5 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:py-2 dark:border-gray-800 dark:bg-gray-900'>
 			{/* Count + clear: a self-contained row on mobile (count left, clear right). */}
 			<div className='flex items-center justify-between gap-3 sm:justify-start'>
 				<span className='flex items-center gap-2.5'>
@@ -91,11 +91,11 @@ export function SelectionBar<T>({
 						className={cn('h-2 w-2 shrink-0 rounded-full', theme.primaryBg)}
 						aria-hidden='true'
 					/>
-					<span className='text-sm font-semibold text-gray-800 tabular-nums'>
+					<span className='text-sm font-semibold text-gray-800 tabular-nums dark:text-gray-200'>
 						{labels.selected(count)}
 					</span>
 					{allMatching && (
-						<span className='hidden text-xs text-gray-500 sm:inline'>
+						<span className='hidden text-xs text-gray-500 sm:inline dark:text-gray-400'>
 							{labels.allMatchingSelected}
 						</span>
 					)}
@@ -115,7 +115,7 @@ export function SelectionBar<T>({
 				<button
 					type='button'
 					onClick={onClear}
-					className='inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700'
+					className='inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200'
 				>
 					<X className='h-3.5 w-3.5' />
 					{labels.clearSelection}

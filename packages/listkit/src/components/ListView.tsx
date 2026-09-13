@@ -35,6 +35,7 @@ import { useListState } from '../hooks/useListState'
 import { useRowSelection } from '../hooks/useRowSelection'
 import { useShortcutHelp } from '../hooks/useShortcutHelp'
 import { DEFAULT_COLOR_THEME } from '../theme/colorTheme'
+import { getSurfaceTones } from '../theme/surfaceTones'
 import type { ColumnStorage } from '../types/columns'
 import type {
 	CardContext,
@@ -348,11 +349,18 @@ export function ListView<T>({
 						index={index}
 						actions={config.rowActions!}
 						colorTheme={colorTheme}
+						quickReveal={config.rowActionsQuickReveal}
 					/>
 				),
 			} satisfies ColumnDef<T>,
 		]
-	}, [resolved.table, config.rowActions, colorTheme, labels.actionsColumn])
+	}, [
+		resolved.table,
+		config.rowActions,
+		config.rowActionsQuickReveal,
+		colorTheme,
+		labels.actionsColumn,
+	])
 	const {
 		resolvedColumns,
 		items: columnItems,
@@ -367,6 +375,8 @@ export function ListView<T>({
 		setPageSize: persistPageSize,
 		storedQuickFilters,
 		setQuickFilters: persistQuickFilters,
+		storedView,
+		setView: persistView,
 		reset: resetColumns,
 	} = useColumnPrefs(config.id, tableColumns, {
 		enabled: tablePrefsEnabled,
@@ -416,6 +426,8 @@ export function ListView<T>({
 		initialQuery,
 		listId: resolvedListId,
 		defaultView: resolved.defaultView,
+		storedView: tablePrefsEnabled ? storedView : undefined,
+		onViewPersist: tablePrefsEnabled ? persistView : undefined,
 		defaultSort: resolved.defaultSort,
 	})
 
@@ -462,7 +474,22 @@ export function ListView<T>({
 	const selectionEnabled = !!config.selection
 	const selectionConfig =
 		typeof config.selection === 'object' ? config.selection : undefined
+	// Read-only selection: the column stays (the state it shows is worth
+	// seeing) but nothing can toggle it, and every affordance built on picking
+	// rows — bulk bar, selected-export, the two shortcuts — goes with it.
+	const selectionLocked = !!selectionConfig?.disabled
+	const canPickRows = selectionEnabled && !selectionLocked
+	const isRowSelectable = selectionConfig?.selectableRow
+	// Every write path asks this — table, cards, shortcuts and the published
+	// controller. A lock enforced at only some call sites is as strong as the
+	// weakest one a caller happens to reach for.
+	const canPickRow = (item: T, key: string | number) =>
+		canPickRows && isRowSelectable?.(item, key) !== false
 	const selectionSignature = JSON.stringify({
+		// The adapter's key IS part of the dataset identity: a scope the adapter
+		// closes over (a preset, a customerId) changes what the rows mean, and a
+		// selection — or a preselect seen-set — must not survive it.
+		adapter: adapter?.key ?? null,
 		search: params.get('search') ?? '',
 		filters: activeFilters,
 		sort: sort ?? null,
@@ -482,34 +509,130 @@ export function ListView<T>({
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 		[rows]
 	)
+	// "Select page" covers only the rows the gate allows, so a page of
+	// non-selectable rows never reads as fully selected.
+	const selectablePageEntries = isRowSelectable
+		? pageEntries.filter(e => isRowSelectable(e.item, e.key))
+		: pageEntries
 	const pageAllSelected =
-		pageEntries.length > 0 &&
-		pageEntries.every(e => selection.isSelected(e.key))
-	const pageSomeSelected = pageEntries.some(e => selection.isSelected(e.key))
+		selectablePageEntries.length > 0 &&
+		selectablePageEntries.every(e => selection.isSelected(e.key))
+	const pageSomeSelected = selectablePageEntries.some(e =>
+		selection.isSelected(e.key)
+	)
 
-	const cardCtx: CardContext<T> = {
+	// The seen set is what keeps an unchecked key unchecked — see
+	// `SelectionConfig.preselectLoadedRows` for the rule. Gated on `!isLoading`
+	// so a scope change never preselects the previous scope's rows while its
+	// replacement is still in flight.
+	const preselect = !!selectionConfig?.preselectLoadedRows
+	const preselectSeen = useRef<{ sig: string; seen: Set<string | number> }>({
+		sig: selectionSignature,
+		seen: new Set(),
+	})
+	const toggleManyRows = selection.toggleMany
+	useEffect(() => {
+		if (!preselect || !canPickRows || isLoading) return
+		if (preselectSeen.current.sig !== selectionSignature) {
+			preselectSeen.current = { sig: selectionSignature, seen: new Set() }
+		}
+		const fresh = pageEntries.filter(
+			e => !preselectSeen.current.seen.has(e.key) && canPickRow(e.item, e.key)
+		)
+		if (fresh.length === 0) return
+		for (const entry of fresh) preselectSeen.current.seen.add(entry.key)
+		toggleManyRows(fresh, true)
+	}, [
+		preselect,
+		canPickRows,
+		isLoading,
+		selectionSignature,
+		pageEntries,
+		toggleManyRows,
+	])
+
+	// Publish the live selection API to the host. Re-assigned every render on
+	// purpose — the controller is a snapshot plus stable mutators, and a ref
+	// write is cheaper than diffing what changed.
+	const controllerRef = selectionConfig?.controllerRef
+	useEffect(() => {
+		if (!controllerRef) return
+		controllerRef.current = {
+			mode: selection.mode,
+			selectedKeys: selection.selectedKeys,
+			excludedKeys: selection.excludedKeys,
+			selectedItems: selection.selectedItems,
+			selectedCount: selection.selectedCount,
+			query,
+			pageEntries,
+			isSelected: selection.isSelected,
+			toggle: (item, key) => {
+				if (canPickRow(item, key)) selection.toggle(item, key)
+			},
+			setSelected: (item, key, selected) => {
+				if (canPickRow(item, key)) selection.setSelected(item, key, selected)
+			},
+			toggleMany: (entries, selected) => {
+				selection.toggleMany(
+					entries.filter(e => canPickRow(e.item, e.key)),
+					selected
+				)
+			},
+			selectAllMatching: () => {
+				if (canPickRows) selection.selectAllMatching()
+			},
+			clear: () => {
+				if (canPickRows) selection.clear()
+			},
+		}
+	})
+	useEffect(() => {
+		if (!controllerRef) return
+		return () => {
+			controllerRef.current = null
+		}
+	}, [controllerRef])
+
+	// Split in two on purpose: what describes the list, and what describes one
+	// row. The per-row half lives behind a function so no card can be handed a
+	// stand-in index.
+	const cardCtxBase: Omit<CardContext<T>, 'index' | 'selection'> = {
 		actions: config.actions ?? {},
 		colorTheme,
+	}
+
+	// The key must be the one `pageEntries` registered for this same row, so the
+	// index has to be the real one: `getItemKey` falls back to the index when a
+	// list declares none, and a fixed index there gives every card the same key
+	// — one checkbox reporting, and toggling, all of them.
+	const cardCtxFor = (index: number): CardContext<T> => ({
+		...cardCtxBase,
+		index,
 		selection: selectionEnabled
 			? {
-					isSelected: item => selection.isSelected(getItemKey(item, 0)),
-					toggle: item => selection.toggle(item, getItemKey(item, 0)),
+					isSelected: item => selection.isSelected(getItemKey(item, index)),
+					disabled: item => !canPickRow(item, getItemKey(item, index)),
+					toggle: item => {
+						const key = getItemKey(item, index)
+						if (!canPickRow(item, key)) return
+						selection.toggle(item, key)
+					},
 				}
 			: undefined,
-	}
+	})
 
 	// A table without a custom card still gets one, derived from the same columns
 	// the table renders (and the same user column choices) — so every list has a
 	// cards view to switch to, on a phone or on demand.
 	const renderCard =
 		resolved.cardSource === 'custom'
-			? (item: T) => resolved.card!(item, cardCtx)
+			? (item: T, index: number) => resolved.card!(item, cardCtxFor(index))
 			: (item: T, index: number) => (
 					<AutoCard<T>
 						item={item}
 						index={index}
 						columns={resolvedColumns}
-						ctx={cardCtx}
+						ctx={cardCtxFor(index)}
 					/>
 				)
 
@@ -613,14 +736,24 @@ export function ListView<T>({
 			resolved.table && resolved.hasCards
 				? () => handleViewChange(viewType === 'table' ? 'cards' : 'table')
 				: undefined,
+		// Bound whenever the list HAS density, not when the current view shows it:
+		// gating on the view would pull this row out of the help overlay every
+		// time the reader switches to cards (invariant 13). It no-ops there
+		// instead — density describes table rows, and cards have none.
+		toggleDensity: densityEnabled
+			? () => {
+					if (!inTableView) return
+					setDensity(density === 'compact' ? 'comfortable' : 'compact')
+				}
+			: undefined,
 		openExport: exportControls.configurable
 			? () => exportControls.openDialog('page')
 			: undefined,
 		refresh,
-		selectPage: selectionEnabled
-			? () => selection.toggleMany(pageEntries, !pageAllSelected)
+		selectPage: canPickRows
+			? () => selection.toggleMany(selectablePageEntries, !pageAllSelected)
 			: undefined,
-		clearSelection: selectionEnabled ? selection.clear : undefined,
+		clearSelection: canPickRows ? selection.clear : undefined,
 		prevPage: () => handlePageChange(Math.max(1, pagination.currentPage - 1)),
 		nextPage: () =>
 			handlePageChange(
@@ -635,10 +768,11 @@ export function ListView<T>({
 	const boundShortcuts = useListKeyboard(shortcutHandlers, [
 		showSearch,
 		hasFilters,
-		selectionEnabled,
+		canPickRows,
 		exportControls.configurable,
 		resolved.table,
 		resolved.hasCards,
+		densityEnabled,
 	])
 
 	return (
@@ -672,12 +806,14 @@ export function ListView<T>({
 					{(config.title || config.subtitle) && (
 						<header className='mb-2'>
 							{config.title && (
-								<h1 className='text-2xl font-bold text-gray-900'>
+								<h1 className='text-2xl font-bold text-gray-900 dark:text-gray-100'>
 									{config.title}
 								</h1>
 							)}
 							{config.subtitle && (
-								<p className='text-sm text-gray-500'>{config.subtitle}</p>
+								<p className='text-sm text-gray-500 dark:text-gray-400'>
+									{config.subtitle}
+								</p>
 							)}
 						</header>
 					)}
@@ -758,7 +894,7 @@ export function ListView<T>({
 						</div>
 					)}
 
-					{selectionEnabled && (
+					{canPickRows && (
 						<SelectionBar<T>
 							count={selection.selectedCount}
 							selected={selection.selectedItems}
@@ -795,7 +931,7 @@ export function ListView<T>({
 					{afterToolbar}
 
 					{error ? (
-						<div className='rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700'>
+						<div className='rounded-xl border border-red-200 bg-red-50 px-6 py-12 text-center text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300'>
 							{errorMessage ?? labels.error}
 						</div>
 					) : (
@@ -825,6 +961,7 @@ export function ListView<T>({
 									displayMode={resolved.hasCards ? tableMode : 'show'}
 									loading={isLoading}
 									colorTheme={colorTheme}
+									tones={config.tones}
 									sort={sort}
 									onSort={handleSortChange}
 									skeletonRows={skeletonCount}
@@ -837,13 +974,19 @@ export function ListView<T>({
 									resizable={resizeEnabled}
 									onResizeColumn={resizeColumn}
 									selectable={selectionEnabled}
+									selectionDisabled={selectionLocked}
+									isRowSelectable={isRowSelectable}
 									isRowSelected={selection.isSelected}
-									onToggleRow={selection.toggle}
+									onToggleRow={(item, key) => {
+										if (!canPickRow(item, key)) return
+										selection.toggle(item, key)
+									}}
 									pageAllSelected={pageAllSelected}
 									pageSomeSelected={pageSomeSelected}
-									onTogglePage={checked =>
-										selection.toggleMany(pageEntries, checked)
-									}
+									onTogglePage={checked => {
+										if (!canPickRows) return
+										selection.toggleMany(selectablePageEntries, checked)
+									}}
 								/>
 							)}
 
@@ -857,6 +1000,14 @@ export function ListView<T>({
 									emptyState={emptyState}
 									displayMode={resolved.table ? cardsMode : 'show'}
 									gridCols={config.gridCols}
+									// Only when set: the Card default chrome already matches the
+									// 'gray' preset, and an unconditional override would fight a
+									// consumer's own className.
+									cardClassName={
+										config.tones
+											? getSurfaceTones(config.tones).container
+											: undefined
+									}
 									bare={resolved.cardSource === 'custom' && config.bareCard}
 									skeletonCount={skeletonCount}
 								/>

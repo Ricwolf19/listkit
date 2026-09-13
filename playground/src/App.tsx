@@ -34,7 +34,7 @@ export function App() {
 
 	return (
 		<ListKitProvider router={router} labels={ES_LABELS}>
-			<div className='min-h-screen bg-gray-50 lg:flex'>
+			<div className='min-h-screen bg-gray-50 lg:flex dark:bg-gray-950'>
 				<Sidebar
 					current={demo.id}
 					onSelect={id => {

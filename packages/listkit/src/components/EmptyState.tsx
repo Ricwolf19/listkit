@@ -41,14 +41,18 @@ export function EmptyState({
 	return (
 		<div className={cn('px-6 py-12 text-center', className)}>
 			{icon !== null && (
-				<div className='mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100'>
-					{icon ?? <Inbox className='h-10 w-10 text-gray-400' />}
+				<div className='mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800'>
+					{icon ?? (
+						<Inbox className='h-10 w-10 text-gray-400 dark:text-gray-500' />
+					)}
 				</div>
 			)}
-			<h3 className='mb-1 text-lg font-medium text-gray-900'>
+			<h3 className='mb-1 text-lg font-medium text-gray-900 dark:text-gray-100'>
 				{title ?? labels.empty}
 			</h3>
-			{message && <p className='text-sm text-gray-500'>{message}</p>}
+			{message && (
+				<p className='text-sm text-gray-500 dark:text-gray-400'>{message}</p>
+			)}
 			{action && <div className='mt-5'>{action}</div>}
 		</div>
 	)

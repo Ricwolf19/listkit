@@ -6,7 +6,7 @@ import {
 	localStorageColumns,
 } from '../types/columns'
 import type { ColumnDef } from '../types/config'
-import type { Density } from '../types/list'
+import type { Density, ViewType } from '../types/list'
 
 /** One row in the column manager UI. */
 export type ColumnPrefItem = {
@@ -58,6 +58,7 @@ function reconcile<T>(
 		density: stored.density,
 		pageSize: stored.pageSize,
 		quickFilters: stored.quickFilters,
+		view: stored.view,
 	}
 }
 
@@ -224,6 +225,7 @@ export function useColumnPrefs<T>(
 		persist({ ...prefs, pageSize: next })
 	const setQuickFilters = (visible: boolean) =>
 		persist({ ...prefs, quickFilters: visible })
+	const setView = (next: ViewType) => persist({ ...prefs, view: next })
 
 	const reset = () =>
 		persist({
@@ -232,6 +234,7 @@ export function useColumnPrefs<T>(
 			density: prefs.density,
 			pageSize: prefs.pageSize,
 			quickFilters: prefs.quickFilters,
+			view: prefs.view,
 		})
 
 	return {
@@ -248,6 +251,8 @@ export function useColumnPrefs<T>(
 		setPageSize,
 		storedQuickFilters: prefs.quickFilters,
 		setQuickFilters,
+		storedView: prefs.view,
+		setView,
 		reset,
 	}
 }

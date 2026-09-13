@@ -73,7 +73,7 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
 - **Theming** — 8 paletas integradas o tu propio tema personalizado; por lista o global.
 - **Tarjetas personalizadas** — usa el chrome de tarjeta integrado, o `bareCard` para insertar un componente de tarjeta completamente personalizado.
 - **Refrescar en mutación** — `useListRefresh()` refetchea la lista después de un delete/edit, sin recargar la página.
-- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `+` abre filtros, `Shift + V` cambia la vista, `-` quita el último filtro, `←`/`→` página anterior/siguiente, `Shift + ←`/`Shift + →` primera/última página.
+- **Atajos de teclado** — `⌘ K` enfoca búsqueda, `+` abre filtros, `Shift + V` cambia la vista, `Shift + D` cambia la densidad, `-` quita el último filtro, `←`/`→` página anterior/siguiente, `Shift + ←`/`Shift + →` primera/última página.
 - **Slots de encabezado** — coloca métricas/badges sobre el título con `headerContent={{ left, center, right }}`.
 - **Gestor de columnas** — `table.columnControl` permite ocultar/mostrar y reordenar columnas; persiste en localStorage (o tu propio `ColumnStorage`).
 - **Exportar a CSV** — agrega un botón de exportación en el toolbar con `export`: página actual por defecto; "exportar todo" se autodetecta para `data` en memoria, o se conecta con `fetchAll` para una fuente en el servidor (sin recorrer el adaptador página por página). Respeta las columnas visibles y su orden, con `exportValue`/`exportable` por columna.
@@ -319,6 +319,8 @@ const filters: FilterDefinition<Order>[] = [
 ```
 
 `defaultValue` usa la misma forma que el adaptador recibe para ese tipo: `select` → `string`, `multi-select` → `string[]`, `boolean` → `boolean`, `text` → `{ value, match }`, `date-range` → `{ from?, to? }`, `number-range` → `{ min?, max? }`.
+
+Un `date-range` que produce el **picker** lleva instantes absolutos (`…T06:00:00.000Z`), no días pelones: el operador elige un día local y solo el cliente conoce su zona horaria, así que convierte antes de que el valor viaje — `from` a las 00:00 locales, `to` a las 23:59:59.999. Dejado como `YYYY-MM-DD` pelón, el servidor lo leía como medianoche UTC y recorría toda la ventana para quien estuviera al oeste de UTC. Un `YYYY-MM-DD` escrito a mano sigue funcionando y sigue significando el día completo: tanto el matcher en memoria como el builder de Mongo extienden un `to` sin hora al fin del día, y ninguno toca un valor que ya trae hora.
 
 Los valores por defecto solo siembran la vista **inicial**: se aplican en el primer render (así el primer fetch ya los incluye) y se escriben en la URL; después, las ediciones/limpiezas del usuario siempre ganan. Las listas con `initialData` (SSR) se dejan intactas — aplica los defaults en tu query del servidor.
 
@@ -606,6 +608,26 @@ acción que un operador usa en cada fila. Es un atajo, no el único camino: la
 acción sigue apareciendo en el menú `•••`, así que en touch — donde el hover no
 existe — no se pierde nada, solo vive un tap más adentro.
 
+La barra perdona por diseño: sigue interactiva durante un breve periodo de
+gracia después de que el cursor sale, así apuntar cruzando el hueco entre el
+`•••` y un botón nunca pierde el objetivo; se oculta en cuanto una de sus
+acciones corre, así una acción que abre un diálogo no deja la barra flotando; y
+revelar la barra de una fila despide la de la anterior al instante, así barrer
+la columna no deja estela.
+
+Por defecto la barra se revela cuando el cursor llega al grupo del `•••`. Pon
+`rowActionsQuickReveal: 'row'` en la config (o `quickReveal='row'` en un
+`RowActions` propio) para revelarla desde cualquier punto de la fila — un paso
+menos de puntería:
+
+```tsx
+defineListConfig({ rowActions, rowActionsQuickReveal: 'row' /* … */ })
+```
+
+Tanto el menú `•••` de fila como el overflow del toolbar siguen el patrón de
+teclado de menú de WAI-ARIA: ArrowUp/ArrowDown recorren los items (con wrap),
+Home/End saltan a los extremos, Escape cierra.
+
 **Menú agrupado.** Dale un `group` a las acciones y el menú `•••` las agrupa
 bajo ese título, separadas por divisores — el menú seccionado estilo Stripe.
 Las acciones sin grupo van primero, sin título; los grupos siguen en orden de
@@ -694,17 +716,22 @@ export y el scroll horizontal de la tabla — difumina sus bordes recortados,
 para que el contenido más allá del corte se anuncie en vez de leerse como el
 final de la lista. `ScrollArea` y `useScrollFade` se exportan para tus paneles.
 
-Los fades horizontales oscurecen en vez de blanquear: en una tabla el contenido
-no termina en el borde, pasa por debajo de algo, y un lavado blanco se lee como
-que el dato mismo se desvanece.
+Todo fade se disuelve contra la superficie por defecto (el tono `'surface'`,
+blanco en modo claro). Donde quieras que el borde oscurezca en su lugar,
+`ScrollArea` acepta `fadeTone='shadow' | 'shadow-strong'`.
 
-Donde la tabla tiene columnas pinned, ese lado no lleva fade: la columna pinned
-más externa proyecta la costura ella misma, y sólo mientras hay contenido
-scrolleado detrás. La sombra va sobre la celda real, así que queda exacta en el
-límite aunque redimensiones, reordenes u ocultes una columna. `ScrollArea`
-expone las piezas para tus propios scrollers: `fadeLeft` / `fadeRight` apagan un
-lado, y el wrapper es un `group/scroll` con `data-scroll-left` /
-`data-scroll-right` para que los descendientes estilen según el scroll.
+Donde la tabla tiene columnas pinned, el fade no desaparece: se recorre hacia
+adentro hasta la costura entre el stack pinned y el contenido que scrollea,
+así la señal queda visible en cualquier device (un fade dejado en el borde del
+contenedor pintaría debajo de las celdas pinned opacas). Además, los fades de
+la tabla empiezan debajo del header: lavan datos que scrollean, nunca los
+títulos de columna. La celda pinned más
+externa agrega un divisor hairline en esa misma frontera. `ScrollArea` expone
+las piezas para tus propios scrollers: `fadeLeft` / `fadeRight` apagan un lado,
+`fadeInsetLeft` / `fadeInsetRight` (una longitud CSS) recorren un fade desde el
+borde del contenedor a partir de `md`, y el wrapper es un `group/scroll` con
+`data-scroll-left` / `data-scroll-right` para que los descendientes estilen
+según el scroll.
 
 Los diálogos toman un `height` fijo, así su contenido scrollea en lugar de que
 el diálogo cambie de tamaño bajo el cursor mientras el usuario filtra.
@@ -744,7 +771,7 @@ defineListConfig<Product>({
 **Qué te da la selección.** La selección se indexa por `getItemKey`, así que cada entrada tiene un **id** (la clave) y el **objeto** completo de la fila:
 
 - El `onClick(selected, { selectedKeys, clear })` de una acción masiva recibe `selected` (las filas `T[]` — incluso de otras páginas) y `selectedKeys` (sus ids de `getItemKey`). Usa los ids para un `DELETE … WHERE id IN (…)` y `clear()` para reiniciar después.
-- `onSelectionChange(selected)` emite el mismo `T[]` cuando cambia el conjunto — úsalo para tu propia barra o contador.
+- `onSelectionChange(selected, details)` se dispara cuando cambia el conjunto: `selected` es el mismo `T[]`, y `details` trae `mode`, `keys`, `excludedKeys` y el `count` resuelto — el modo all-matching que un arreglo pelón no puede expresar.
 - Para control total, usa el hook exportado `useRowSelection` directamente (`selectedKeys`, `selectedItems`, `isSelected`, `toggle`, `toggleMany`, `clear`).
 
 Otras notas:
@@ -754,6 +781,31 @@ Otras notas:
 - `clearOnDataChange: false` conserva la selección al cambiar filtros/orden (por defecto se limpia).
 - Cuando `export` está habilitado, la barra de selección también muestra **Exportar selección** (desactívalo con `showExport: false`).
 - En vista de tarjetas, `ctx.selection` (`isSelected`/`toggle`) permite que una tarjeta personalizada renderice su propio checkbox.
+
+**Bloquear o restringir los checkboxes.** `disabled: true` conserva la columna pero rechaza todo toggle, así queda como indicador de solo lectura — úsalo cuando elegir filas no tiene sentido en el modo actual, porque una columna que desaparece y vuelve mueve la tabla bajo el lector, y esconderla pierde el estado que mostraba. La barra masiva, "exportar selección" y los atajos de selección se van con ella. `selectableRow(item, key)` restringe fila por fila; el checkbox del encabezado cubre entonces solo las filas seleccionables.
+
+```tsx
+selection: {
+	disabled: mode === 'review', // indicador de solo lectura
+	selectableRow: row => row.status !== 'locked',
+}
+```
+
+Ambas compuertas se respetan en todo camino de escritura — el checkbox de fila, el del encabezado, el de la tarjeta, los atajos de teclado y el controller publicado. Lo único que `selectableRow` no alcanza es **seleccionar las N coincidentes**: esa selección es virtual y se resuelve en el servidor desde la query, así que las filas rechazadas van incluidas. Combínalos solo si la compuerta es indicativa, o pon `allowSelectAllMatching: false`.
+
+**Manejar la selección desde tu propia UI.** `controllerRef` publica la API viva de selección — `mode`, `selectedKeys`, `excludedKeys`, `selectedItems`, `selectedCount`, `query`, `pageEntries`, más `toggle` / `setSelected` / `toggleMany` / `selectAllMatching` / `clear` — así un botón fuera de la lista puede leer y manejar el conjunto marcado. Pasa un objeto ref plano; listkit lo pone en null al desmontar.
+
+```tsx
+const controllerRef = useRef<SelectionController<Invoice> | null>(null)
+
+selection: {
+	controllerRef
+}
+// en cualquier otro lado:
+controllerRef.current?.toggleMany(controllerRef.current.pageEntries, true)
+```
+
+`preselectLoadedRows: true` invierte el default: cada fila recién cargada llega **marcada**, así que el alcance al que filtró el usuario _es_ la selección y desmarcar es la excepción. Una clave que el usuario desmarca sigue desmarcada — solo se automarcan las nunca vistas — y el conjunto de vistas se reinicia con el dataset. Combínalo con un adapter cuyo `key` incluya todo alcance externo, para que un cambio de alcance nunca premarque las filas del anterior en el nuevo.
 
 #### Seleccionar todos los resultados
 
@@ -783,6 +835,31 @@ onClick: async (rows, { selectedKeys, mode, query, excludedKeys, clear }) => {
 ```
 
 El backend resuelve esa query con los mismos builders que usa la lista — `buildMongoFilter` / `buildSqlFilter` — así que las filas que toca la acción son exactamente las que vio el usuario. La exportación funciona igual: el alcance `all` del modal le entrega al resolver la query y las exclusiones.
+
+**Mandar una selección al servidor.** Para una _mutación_ masiva, manda un `SelectionDescriptor` en vez de una lista plana de ids — la contraparte de mutación del request de exportación. `toSelectionDescriptor` lo arma desde cualquier snapshot de selección (el argumento `details`, un controller, o los helpers de una acción masiva), `selectionDescriptorToBody` lo serializa para un POST, `parseSelectionDescriptor` (desde `/query`) lo valida en el servidor, y `resolveSelectionFilter` (desde `/mongoose`) lo convierte en el filtro sobre el que corre la escritura:
+
+```ts
+// cliente
+const body = selectionDescriptorToBody(
+	toSelectionDescriptor(controllerRef.current!)
+)
+await fetch('/api/invoices/archive', {
+	method: 'POST',
+	body: JSON.stringify(body),
+})
+
+// servidor
+const descriptor = parseSelectionDescriptor(req.body)
+if (!descriptor) return res.status(400).end()
+const filter = await resolveSelectionFilter({
+	descriptor,
+	fields: maps.main,
+	baseFilter: { tenant: req.tenant }, // alcance de auth — siempre
+})
+if (filter) await Invoice.updateMany(filter, { $set: { archived: true } })
+```
+
+Las dos mitades fallan cerrado. `parseSelectionDescriptor` devuelve `null` ante cualquier cosa mal formada — incluido un body sin `query` anidada, que bajo el alcance `'all'` resolvería a todas las filas que permita el base filter — y `resolveSelectionFilter` devuelve `null` para una selección vacía, así que quien llama no hace nada en vez de entregarle a `updateMany` un filtro que matchea todo.
 
 Exportar esa selección necesita una forma de alcanzar las filas. Con datos in-memory o un `resolve` de exportación, el alcance **Selección** del modal cubre los 12,000; sin eso, queda **deshabilitado con una explicación** en vez de escondido, y el "Exportar selección" de un clic se retira — un archivo con la página cargada mientras la barra dice "12,000 seleccionados" es peor que ningún archivo.
 
@@ -823,6 +900,7 @@ Activos por defecto. Cada atajo se enlaza por **capacidad**, no por estado: una 
 | `-`                       | Quitar el último filtro aplicado          |
 | `Shift + C`               | Limpiar todos los filtros                 |
 | `Shift + V`               | Alternar tabla / tarjetas                 |
+| `Shift + D`               | Alternar filas compactas / amplias        |
 | `Shift + E`               | Abrir la exportación configurable         |
 | `Shift + R`               | Refrescar la lista                        |
 | `Shift + A`               | Seleccionar la página actual              |
@@ -850,6 +928,8 @@ Las preferencias que describen _cómo trabaja un usuario con una lista_ persiste
 | Barra de filtros rápidos | Menú de opciones             |
 
 Un parámetro de URL siempre le gana al valor guardado, así que un enlace compartido muestra la vista de quien lo mandó, no la de quien lo recibe.
+
+La vista es la única preferencia que el dispositivo puede sobreescribir: una pantalla angosta abre en tarjetas sin importar lo guardado — una tabla no cabe — y un cambio hecho ahí no se guarda, así que revisar las columnas desde el teléfono nunca cambia cómo abre la lista en escritorio.
 
 El almacenamiento es `localStorage` por defecto y es reemplazable — respáldalo con tu tabla de configuración de usuario para llevar las preferencias entre dispositivos:
 
@@ -1124,6 +1204,8 @@ app.get('/api/discounts', async (req, res) => {
 
 Las columnas vienen solo de los whitelists que controlas (sin inyección SQL) y el matching refleja el adapter en memoria. Para control total, baja a `buildSqlFilter(query, fields, params)` + `buildSearch(term, columns, params)` (ambos hacen append a tu `params` para que el numerado `$n` quede correcto) y `buildOrderBy` — el patrón manual exacto, sin el boilerplate. `sqlFieldMapFromFilters(config.filters)` deriva un field map inicial desde tu config.
 
+`executeSqlList` acepta además `searchNormalizer` — el fold que se aplica a **ambos** lados, la columna y el término bindeado, así que `` expr => `unaccent(lower(${expr}))` `` hace que "Mexico" encuentre "México" (requiere la extensión `unaccent`); el término se bindea crudo justamente para que el fold lo alcance. Y `maxExport` honra un `pageSize` gigante como exportar-todo en vez de recortarlo a una página, igual que `mongoPaginate`. Pásale el mismo `searchNormalizer` a `buildSqlExport` para que una exportación devuelva exactamente las filas que mostró la lista.
+
 ### Backend MongoDB (`listkit/mongo`)
 
 El front-end es el mismo en cualquier app de React (`fetchAdapter` → tu endpoint REST). En el servidor, traduce el `ListQuery` entrante a objetos planos de Mongo con `listkit/mongo` — **sin dependencia de `mongoose`/driver** y nunca ejecuta una query, así que funciona con Mongoose o el driver nativo. Los nombres de campo provienen solo de listas blancas que tú controlas (sin inyección NoSQL) y los valores de texto se escapan para regex.
@@ -1260,6 +1342,8 @@ app.get('/api/companies', async (req, res) => {
 
 Cada filtro de referencia activo se vuelve un `$in` de los ids de referencia que coinciden; el término de búsqueda matchea `searchFields` en la colección principal y (por id) `searchReferences`. Un `pageSize` mayor que `maxPageSize` (por defecto 100) se trata como **exportar todo** — desde la primera fila, con tope `maxExport` (por defecto 50 000) — así combina con el `fetchAll` de exportación de una lista. Cuando no necesitas referencias/populate, el más bajo nivel `buildMongoQuery` + tu propio `Model.find` sigue siendo lo más simple.
 
+Para filas que un `find` no puede expresar — documentos con `$unwind`, un join con `$lookup`, una columna `$addFields` por la que el usuario filtra y ordena — `executeAggregateListkitQuery` es el executor hermano: las mismas opciones más tu `pipeline`. Reutiliza exactamente los mismos builders, así que la semántica de búsqueda/filtros/orden es idéntica **incluido el casteo de valores**. Eso último no sale gratis: un `$match` de agregación no castea por su cuenta, a diferencia de `find`, así que cada `$match` pasa antes por el schema del modelo (`castFilterToSchema`, exportado por si armas pipelines a mano). Un valor que el schema rechaza — un id malformado de un bookmark viejo — resuelve a un filtro que ninguna fila satisface, así que la lista vuelve **vacía, no sin filtrar**.
+
 ### Renderizado en servidor (`initialData`)
 
 Por defecto la lista fetchea en el **cliente**: el servidor renderiza un shell vacío/cargando y las filas aparecen después de la hidratación. Para SEO, una primera pintura más rápida y sin flash de carga, obten la **primera página en el servidor** y pásala a `<ListView>` como `initialData` — renderiza esas filas en el HTML inicial y **omite el primer fetch del cliente**. La paginación y filtrado posterior siguen ejecutándose en el cliente.
@@ -1286,9 +1370,15 @@ export default async function OrdersPage({
 
 > Dado que la config ahora se lee en un Server Component, constrúyela con
 > `defineListConfig` desde **`listkit/server`** (no la entrada principal).
-> La entrada principal arrastra contexto de cliente (`createContext`) y haría crash
-> el render de RSC. Tanto la página del servidor como la vista de lista del cliente
-> pueden importar el mismo módulo de config cuando se define de esta manera.
+> La entrada principal, `/next`, `/react-router` y `/react-query` se publican con
+> un banner `'use client'`: todo lo que exportan es una client reference, así que
+> un módulo de config compartido que el servidor evalúa sí puede importar un
+> componente de la entrada principal — `RowActions` en el render de una card,
+> por ejemplo — y renderizarlo como JSX. Lo que no puede es _llamar_ una función
+> de ahí durante el render de RSC; `defineListConfig`, `resolveListConfig` y
+> `ListSkeleton` tienen su gemelo en `/server` justo para eso. Tanto la página
+> del servidor como la vista de lista del cliente pueden importar el mismo
+> módulo de config cuando se define de esta manera.
 
 ```tsx
 // config.ts — compartido por la página del servidor y la vista de lista del cliente
@@ -1332,6 +1422,7 @@ La misma server action (`listOrders`) alimenta tanto la primera página del serv
 Tres helpers cubren el cableado que toda app SSR/Next debería hacer manualmente:
 
 - **`NextListView`** (`listkit/next`) — `<ListView>` pre-cableado con el adaptador de App Router, así que búsqueda/página/filtros/sort se sincronizan con la URL. Sin `ListKitProvider` + `useNextRouterAdapter` manuales. Pasa `theme` aquí, o ponlo una vez en un `<ListKitProvider theme={…}>` raíz y `NextListView` lo hereda (un provider hereda cualquier prop que no pases).
+- **`useNextHistoryRouterAdapter`** (`listkit/next`) — el adaptador de App Router que escribe con `history.replaceState` en lugar de `router.replace`. Un `router.replace` sobre la página actual es una navegación same-page, y Next vuelve a pedir el segmento RSC de la página en cada una — cada filtro, tecla de búsqueda o cambio de página re-renderiza la página del servidor y remonta la lista (flash de skeleton, scroll perdido). Next mantiene `useSearchParams` sincronizado con la History API, así que la lista sigue consultando por su adaptador; solo desaparece el viaje al servidor. También es el adaptador para una lista montada bajo una URL que carga más que sus propios params (el `/items/{id}` de un overlay de detalle), donde una navegación del router renderizaría esa ruta encima de la lista viva. Pásalo a `ListKitProvider`; `NextListView` conserva `useNextRouterAdapter`.
 - **`loadInitialList(config, searchParams, fetcher)`** (`listkit/server`) — envuelve `buildListQuery` + el fetch de primera página y degrada a un fetch del cliente en caso de error. Retorna `{ initialData, initialQuery }`.
 - **`ListSkeleton`** (`listkit`) — un fallback de `<Suspense>` listo para usar (barra de toolbar + tabla esqueleto) para el patrón de SSR streaming.
 
@@ -1648,23 +1739,75 @@ const brand: ThemeClasses = {
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
 
+#### Tones de tabla y cards
+
+`colorTheme` maneja los acentos; `tones` maneja el chrome neutro — header de
+la tabla, divisores, hover/selección de filas y el panel alrededor de la tabla
+y de las cards default. Elige un preset integrado (`'gray'` es el default,
+`'contrast'` invierte el header) o pasa un objeto `SurfaceTones` completo de
+clases Tailwind. Los dos ejes componen: `colorTheme: 'teal', tones: 'slate'`.
+
+```tsx
+// preset: 'gray' | 'slate' | 'zinc' | 'contrast'
+defineListConfig({ tones: 'slate' /* … */ })
+
+// custom — todo background opaco: las celdas pinned heredan el de la fila
+defineListConfig({
+	tones: {
+		container: 'border-indigo-100 bg-white shadow-sm',
+		headerBg: 'bg-indigo-50',
+		headerText: 'text-indigo-700',
+		headerDivider: 'border-indigo-200',
+		rowBg: 'bg-white',
+		rowHover: 'hover:bg-indigo-50',
+		rowSelected: 'bg-indigo-100 hover:bg-indigo-100',
+		divider: 'divide-indigo-100',
+	},
+	/* … */
+})
+```
+
+La primitiva `Table` acepta el mismo valor como prop `tones` para uso suelto,
+y `getSurfaceTones` resuelve un preset si necesitas las clases directamente.
+
+#### Dark mode
+
+Cada componente trae variantes `dark:` aditivas, activadas por una clase
+`.dark` en un ancestro (normalmente `<html>`) — no por `prefers-color-scheme` —
+para que tu app controle el toggle. `listkit/tailwind.css` registra
+la variante por ti:
+
+```css
+@custom-variant dark (&:where(.dark, .dark *));
+```
+
+Con importar ese archivo basta. Sin él, Tailwind v4 lee `dark:` como
+`prefers-color-scheme`, y una app sin modo oscuro renderiza sus listas en
+oscuro para todo lector cuyo SO lo esté — con el resto de la página intacta.
+
+Haz `document.documentElement.classList.toggle('dark')` y toda lista — tabla,
+tarjetas, menús, filtros, diálogos, skeletons — lo sigue. Las paletas
+integradas traen acentos dark; un `ThemeClasses` propio puede agregar sus
+clases `dark:` dentro de cada campo. El render claro no cambia cuando la clase
+no está.
+
 ---
 
 ## Subpath Exports
 
-| Ruta de importación    | Contenido                                                                                                                                                                                                        |
-| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, adapters, hooks, primitives, types                                                                                     |
-| `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                           |
-| `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                          |
-| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                                     |
-| `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — seguro para RSC (sin React/DOM)                                                                                                                        |
-| `listkit/query`        | `parseListkitQuery`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parsear un request a `ListQuery` y leer sus filtros                        |
-| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `textCondition`, `sqlFieldMapFromFilters` — fragmentos Postgres + ejecutor (inyección de pool, sin driver)                                    |
-| `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — objetos de query de MongoDB (sin driver) |
-| `listkit/mongoose`     | `executePaginatedListkitQuery` — corre la query de página en Mongoose (peer dep `mongoose` opcional, type-only)                                                                                                  |
-| `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — respalda listas con TanStack Query                                                                                                                   |
-| `listkit/tailwind.css` | Registro de fuente Tailwind v4                                                                                                                                                                                   |
+| Ruta de importación                | Contenido                                                                                                                                                                                                             |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, adapters, hooks, primitives, types                                                                                          |
+| `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                                |
+| `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                               |
+| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                                          |
+| `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig` — seguro para RSC (sin React/DOM)                                                                                                                             |
+| `listkit/query`        | `parseListkitQuery`, `parseSelectionDescriptor`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parsear un request a `ListQuery` y leer sus filtros |
+| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `sqlPaginate`, `textCondition`, `sqlFieldMapFromFilters` — fragmentos Postgres + ejecutor (inyección de pool, sin driver)                          |
+| `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — objetos de query de MongoDB (sin driver)      |
+| `listkit/mongoose`     | `executePaginatedListkitQuery`, `executeAggregateListkitQuery`, `castFilterToSchema`, `resolveSelectionFilter` — corre la query de página en Mongoose (peer dep `mongoose` opcional, type-only)                       |
+| `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — respalda listas con TanStack Query                                                                                                                        |
+| `listkit/tailwind.css` | Registro de fuente Tailwind v4                                                                                                                                                                                        |
 
 ---
 

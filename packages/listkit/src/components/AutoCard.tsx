@@ -39,6 +39,7 @@ export function AutoCard<T>({ item, index, columns, ctx }: AutoCardProps<T>) {
 				<div className='flex justify-end'>
 					<Checkbox
 						checked={selection.isSelected(item)}
+						disabled={selection.disabled?.(item)}
 						onChange={() => selection.toggle(item)}
 						colorTheme={ctx.colorTheme}
 						aria-label={labels.selectRow}
@@ -62,14 +63,14 @@ export function AutoCard<T>({ item, index, columns, ctx }: AutoCardProps<T>) {
 				return (
 					<div
 						key={col.key}
-						className='flex min-w-0 items-baseline justify-between gap-3 border-b border-gray-100 pb-2 last:border-0 last:pb-0'
+						className='flex min-w-0 items-baseline justify-between gap-3 border-b border-gray-100 pb-2 last:border-0 last:pb-0 dark:border-gray-800'
 					>
-						<span className='shrink-0 text-xs font-medium tracking-wide text-gray-500 uppercase'>
+						<span className='shrink-0 text-xs font-medium tracking-wide text-gray-500 uppercase dark:text-gray-400'>
 							{label}
 						</span>
 						<span
 							className={cn(
-								'min-w-0 text-right text-sm break-words text-gray-900',
+								'min-w-0 text-right text-sm break-words text-gray-900 dark:text-gray-100',
 								col.align === 'left' && 'text-left'
 							)}
 						>

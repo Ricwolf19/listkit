@@ -15,6 +15,7 @@ export type ShortcutId =
 	| 'clearFilters'
 	| 'removeLastFilter'
 	| 'toggleView'
+	| 'toggleDensity'
 	| 'openExport'
 	| 'refresh'
 	| 'selectPage'
@@ -87,6 +88,12 @@ export const SHORTCUTS: ShortcutDef[] = [
 		group: 'view',
 		keys: () => ['Shift', 'V'],
 		match: shift('v'),
+	},
+	{
+		id: 'toggleDensity',
+		group: 'view',
+		keys: () => ['Shift', 'D'],
+		match: shift('d'),
 	},
 	{
 		id: 'openExport',

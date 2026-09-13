@@ -1,9 +1,20 @@
 import { ArrowDown, ArrowUp, ChevronsUpDown } from 'lucide-react'
-import { type CSSProperties, type ReactNode, useRef, useState } from 'react'
+import {
+	type CSSProperties,
+	type ReactNode,
+	useEffect,
+	useRef,
+	useState,
+} from 'react'
 
 import { useLabels } from '../context/ListKitContext'
 import { useIsNarrow } from '../hooks/useIsNarrow'
 import { type ColorTheme } from '../theme/colorTheme'
+import {
+	type BuiltInSurfaceTone,
+	getSurfaceTones,
+	type SurfaceTones,
+} from '../theme/surfaceTones'
 import type { ColumnDef } from '../types/config'
 import type { SortState } from '../types/data'
 import type { DisplayMode } from '../types/list'
@@ -30,6 +41,11 @@ export type TableProps<T> = {
 	showHeader?: boolean
 	className?: string
 	colorTheme?: ColorTheme
+	/**
+	 * Neutral chrome — surfaces, header, dividers, row states. A preset name or
+	 * a full {@link SurfaceTones} object. @defaultValue 'gray'
+	 */
+	tones?: BuiltInSurfaceTone | SurfaceTones
 	/** Active column sort, used to render the header indicator. */
 	sort?: SortState
 	/** Called with a column's sort field when a sortable header is clicked. */
@@ -61,6 +77,10 @@ export type TableProps<T> = {
 	onResizeColumn?: (key: string, width: number) => void
 	/** Enable the leading selection checkbox column. */
 	selectable?: boolean
+	/** Render the column but refuse every toggle (read-only indicator). */
+	selectionDisabled?: boolean
+	/** Per-row gate — false disables that row's checkbox. */
+	isRowSelectable?: (item: T, key: string | number) => boolean
 	/** Whether a row key is selected. */
 	isRowSelected?: (key: string | number) => boolean
 	/** Toggle one row's selection. */
@@ -166,11 +186,15 @@ function stickyMap<T>(
 ): {
 	map: Map<string, StickyInfo>
 	/**
-	 * Whether that edge has any pinned column — such an edge suppresses the
-	 * ScrollArea's fade and marks the seam via {@link SEAM_CLASS} instead.
+	 * Whether that edge has any pinned column — such an edge shifts the
+	 * ScrollArea's fade inward (by `leftInset`/`rightInset`) to the seam the
+	 * {@link SEAM_CLASS} hairline marks.
 	 */
 	hasLeft: boolean
 	hasRight: boolean
+	/** Total declared width of that edge's pinned stack (a `calc()` length). */
+	leftInset: string
+	rightInset: string
 } {
 	const map = new Map<string, StickyInfo>()
 	const pinnable = (col: ColumnDef<T>, side: 'left' | 'right') =>
@@ -200,7 +224,15 @@ function stickyMap<T>(
 	if (lastRight) map.get(lastRight)!.edge = true
 
 	// The checkbox seeds `left`, so selection alone already pins that edge.
-	return { map, hasLeft: left.length > 0, hasRight: right.length > 0 }
+	// The insets are what the ScrollArea offsets its fades by, so the fade
+	// starts at the seam instead of dying under the opaque pinned cells.
+	return {
+		map,
+		hasLeft: left.length > 0,
+		hasRight: right.length > 0,
+		leftInset: sumLengths(left),
+		rightInset: sumLengths(right),
+	}
 }
 
 /**
@@ -208,38 +240,33 @@ function stickyMap<T>(
  * anything relative to each other. Floor is the `ScrollArea` fades at `z-10`;
  * `z-40` is the ceiling, shared with the pagination bar.
  *
- * @see AGENT.md section 8, invariant 14 — why, and what breaks above the ceiling.
+ * @see AGENTS.md section 8, invariant 14 — why, and what breaks above the ceiling.
  */
+// `Z_PINNED_CELL` is also every header cell's layer: a static th has no
+// stacking level, so the edge fades (z-10) washed the header text.
 const Z_PINNED_CELL = 'z-20'
 const Z_HEADER = 'z-30'
 const Z_PINNED_HEADER = 'z-40'
 
 /**
- * Classes + inset that pin a cell, plus the shadow marking the scroll seam.
+ * The seam a pinned column leaves: a hairline divider toward the scrolling
+ * content. Just the divider — the "more content underneath" affordance is the
+ * ScrollArea's surface fade, offset to this same boundary via `fadeInset*`.
+ */
+const SEAM_CLASS = {
+	left: 'md:shadow-[1px_0_0_0_rgb(209,213,219)] dark:md:shadow-[1px_0_0_0_rgb(55,65,81)]',
+	right:
+		'md:shadow-[-1px_0_0_0_rgb(209,213,219)] dark:md:shadow-[-1px_0_0_0_rgb(55,65,81)]',
+} as const
+
+/**
+ * Classes + inset that pin a cell, plus the seam on the outermost column.
  *
  * Pins from `md` up only — pinning spends its columns' width on every row, and
  * on a phone that is a fifth of the screen. A media prefix rather than
  * `useIsNarrow` so the switch costs no re-render and holds during SSR, spelled
  * out at each use because Tailwind only emits classes it can literally see.
  */
-/**
- * The seam a pinned column leaves: a hairline divider at rest, a dark shadow
- * while content is scrolled underneath (`group-data-scroll-*`, published by
- * the enclosing `ScrollArea`). It rides the pinned cell itself so it stays
- * exactly on the boundary through a resize, reorder or hidden column — an
- * inset computed from declared widths drifts.
- */
-const SEAM_CLASS = {
-	left: cn(
-		'md:shadow-[1px_0_0_0_rgb(229,231,235)]',
-		'md:group-data-[scroll-left=true]/scroll:shadow-[1px_0_0_0_rgb(148,163,184),20px_0_28px_-4px_rgb(2_6_23/0.55)]'
-	),
-	right: cn(
-		'md:shadow-[-1px_0_0_0_rgb(229,231,235)]',
-		'md:group-data-[scroll-right=true]/scroll:shadow-[-1px_0_0_0_rgb(148,163,184),-20px_0_28px_-4px_rgb(2_6_23/0.55)]'
-	),
-} as const
-
 function stickyCell(
 	info: StickyInfo | undefined,
 	background: string,
@@ -298,6 +325,7 @@ export function Table<T>({
 	showHeader = true,
 	className,
 	colorTheme = 'red',
+	tones,
 	sort,
 	onSort,
 	skeletonRows = 6,
@@ -311,6 +339,8 @@ export function Table<T>({
 	onResizeColumn,
 	selectable = false,
 	isRowSelected,
+	selectionDisabled = false,
+	isRowSelectable,
 	onToggleRow,
 	pageAllSelected = false,
 	pageSomeSelected = false,
@@ -318,11 +348,32 @@ export function Table<T>({
 }: TableProps<T>) {
 	const labels = useLabels()
 	const isNarrow = useIsNarrow()
+	const tone = getSurfaceTones(tones)
 	const [dragKey, setDragKey] = useState<string | null>(null)
 	const rafRef = useRef(0)
 	// Set while a resize is in progress so a draggable header doesn't also start
 	// a column reorder when the drag begins on the resize handle.
 	const resizingRef = useRef(false)
+
+	// The horizontal fades must wash only the body. They span the ScrollArea's
+	// full height, and a z-index on the header is only as reliable as the
+	// nearest stacking context — so the header's measured height pushes the
+	// fades below it instead. Observed, not computed: padding, density and
+	// wrapped header text all move it.
+	const theadRef = useRef<HTMLTableSectionElement>(null)
+	const [headerHeight, setHeaderHeight] = useState(0)
+	useEffect(() => {
+		const el = theadRef.current
+		if (!el) {
+			setHeaderHeight(0)
+			return
+		}
+		const measure = () => setHeaderHeight(el.offsetHeight)
+		measure()
+		const observer = new ResizeObserver(measure)
+		observer.observe(el)
+		return () => observer.disconnect()
+	}, [showHeader])
 
 	if (displayMode === 'hide') return null
 
@@ -406,6 +457,8 @@ export function Table<T>({
 		map: sticky,
 		hasLeft,
 		hasRight,
+		leftInset,
+		rightInset,
 	} = stickyMap(visibleColumns, selectable)
 	// The header sticks to the top of the table's bounded scroll area (a wrapper
 	// with overflow + max-height). Horizontal scroll stays contained in the same
@@ -475,7 +528,8 @@ export function Table<T>({
 			// near-equal widths and ignores them. So fixed → `w-full` (width: 100%);
 			// auto keeps `min-w-full` so content can still widen the table for scroll.
 			className={cn(
-				'divide-y divide-gray-100',
+				'divide-y',
+				tone.divider,
 				tableLayout === 'fixed' ? 'w-full' : 'min-w-full'
 			)}
 			// Inline (not a Tailwind class) so it is deterministic regardless of the
@@ -496,13 +550,16 @@ export function Table<T>({
 			    dividers below stay light so the eye reads bands of data, not a
 			    grid. */}
 			{showHeader && (
-				<thead className='border-b border-gray-300'>
+				<thead ref={theadRef} className={cn('border-b', tone.headerDivider)}>
 					<tr>
 						{selectable && (
 							<th
 								scope='col'
 								className={cn(
-									'w-12 border-r border-gray-200 bg-gray-50 px-3',
+									// `relative` so the z applies below `md` too (static
+									// otherwise) — the edge fades must never wash the header.
+									'relative w-12 border-r border-gray-200 px-3 dark:border-gray-800',
+									tone.headerBg,
 									compact ? 'py-2.5' : 'py-3.5',
 									thSticky,
 									cn('md:sticky md:left-0', Z_PINNED_HEADER)
@@ -513,6 +570,7 @@ export function Table<T>({
 									<Checkbox
 										checked={pageAllSelected}
 										indeterminate={pageSomeSelected && !pageAllSelected}
+										disabled={selectionDisabled}
 										onChange={c => onTogglePage?.(c)}
 										colorTheme={colorTheme}
 										aria-label={labels.selectAll}
@@ -530,7 +588,12 @@ export function Table<T>({
 							// An overlay column reserves no space, so a label would sit
 							// over the column beside it.
 							const label = col.overlay ? null : (
-								<span className='block truncate text-xs font-semibold tracking-wide whitespace-nowrap text-gray-600 uppercase'>
+								<span
+									className={cn(
+										'block truncate text-xs font-semibold tracking-wide whitespace-nowrap uppercase',
+										tone.headerText
+									)}
+								>
 									{col.header}
 								</span>
 							)
@@ -571,17 +634,23 @@ export function Table<T>({
 												: undefined
 									}
 									className={cn(
-										'relative bg-gray-50',
+										// The z keeps the header above the edge fades (`z-10`)
+										// even when nothing pins — a static th has no layer and
+										// the fade washed the header text.
+										'relative',
+										Z_PINNED_CELL,
+										tone.headerBg,
 										compact ? 'px-4 py-2.5' : 'px-6 py-3.5',
 										alignClass(col.align),
 										// Mirror of the selection header on the other edge.
-										col.overlay && 'border-l border-gray-200 px-2',
+										col.overlay &&
+											'border-l border-gray-200 px-2 dark:border-gray-800',
 										thSticky,
 										// A pinned header cell must out-rank both the sticky
 										// header row and the pinned body cells below it.
 										stickyCell(
 											sticky.get(col.key),
-											'bg-gray-50',
+											tone.headerBg,
 											Z_PINNED_HEADER
 										).className,
 										reorderable && 'cursor-grab active:cursor-grabbing',
@@ -598,17 +667,17 @@ export function Table<T>({
 											type='button'
 											onClick={() => onSort!(sortField)}
 											className={cn(
-												'inline-flex w-full cursor-pointer items-center gap-1.5 select-none hover:text-gray-700',
+												'inline-flex w-full cursor-pointer items-center gap-1.5 select-none hover:text-gray-700 dark:hover:text-gray-200',
 												col.align === 'right' && 'justify-end',
 												col.align === 'center' && 'justify-center'
 											)}
 										>
 											{label}
-											<span className='shrink-0 text-gray-400'>
+											<span className='shrink-0 text-gray-400 dark:text-gray-500'>
 												{activeDir === 'asc' ? (
-													<ArrowUp className='h-3.5 w-3.5 text-gray-700' />
+													<ArrowUp className='h-3.5 w-3.5 text-gray-700 dark:text-gray-300' />
 												) : activeDir === 'desc' ? (
-													<ArrowDown className='h-3.5 w-3.5 text-gray-700' />
+													<ArrowDown className='h-3.5 w-3.5 text-gray-700 dark:text-gray-300' />
 												) : (
 													<ChevronsUpDown className='h-3.5 w-3.5 opacity-50' />
 												)}
@@ -644,7 +713,7 @@ export function Table<T>({
 				</thead>
 			)}
 
-			<tbody className='divide-y divide-gray-100'>
+			<tbody className={cn('divide-y', tone.divider)}>
 				{data.length > 0 ? (
 					data.map((item, i) => {
 						const rowKey = keyExtractor ? keyExtractor(item, i) : i
@@ -654,18 +723,20 @@ export function Table<T>({
 								key={rowKey}
 								className={cn(
 									// Opaque at every state, hover included — a pinned cell
-									// inherits this. @see AGENT.md section 8, invariant 15.
-									'bg-white transition-colors hover:bg-gray-50',
+									// inherits this. @see AGENTS.md section 8, invariant 15.
+									'transition-colors',
+									tone.rowBg,
+									tone.rowHover,
 									// A step darker than hover, so a selected row stays
 									// distinguishable from the one under the cursor.
-									selected && 'bg-gray-100 hover:bg-gray-100',
+									selected && tone.rowSelected,
 									rowClassName?.(item, i)
 								)}
 							>
 								{selectable && (
 									<td
 										className={cn(
-											'w-12 border-r border-gray-100 px-3',
+											'w-12 border-r border-gray-100 px-3 dark:border-gray-800',
 											compact ? 'py-2' : 'py-4',
 											// Pinned alongside the left-pinned columns, so the
 											// checkbox stays reachable on a scrolled row.
@@ -676,6 +747,10 @@ export function Table<T>({
 										<div className='flex items-center justify-center'>
 											<Checkbox
 												checked={selected}
+												disabled={
+													selectionDisabled ||
+													isRowSelectable?.(item, rowKey) === false
+												}
 												onChange={() => onToggleRow?.(item, rowKey, i)}
 												colorTheme={colorTheme}
 												aria-label={labels.selectRow}
@@ -730,7 +805,7 @@ export function Table<T>({
 											title={title}
 											className={cn(
 												compact ? 'px-4 py-2' : 'px-6 py-4',
-												'text-sm text-gray-700',
+												'text-sm text-gray-700 dark:text-gray-300',
 												alignClass(col.align),
 												// Cramped: keep each cell on one line so the table
 												// grows sideways (scrollable) instead of every row
@@ -742,7 +817,7 @@ export function Table<T>({
 												// "buttons plus a breath" instead of hiding 48px of
 												// `px-6` inside it.
 												col.overlay &&
-													'border-l border-gray-100 px-2 whitespace-nowrap',
+													'border-l border-gray-100 px-2 whitespace-nowrap dark:border-gray-800',
 												// Inherits the row's background so the scrolling
 												// content passes behind it, not through it.
 												stickyCell(sticky.get(col.key), 'bg-inherit').className
@@ -780,11 +855,15 @@ export function Table<T>({
 				// scroll is contained here so a wide table never spills off-page.
 				<ScrollArea
 					axis='both'
-					className='rounded-xl border border-gray-200 bg-white shadow-sm'
+					className={cn('rounded-xl border', tone.container)}
 					wrapperClassName='rounded-xl'
 					style={{ maxHeight: maxBodyHeight ?? '70vh' }}
-					fadeLeft={!hasLeft}
-					fadeRight={!hasRight}
+					// A pinned edge shifts its fade inward to the seam (from `md`, where
+					// pinning exists) — at the container edge it would paint under the
+					// opaque pinned cells and never be seen.
+					fadeInsetLeft={hasLeft ? leftInset : undefined}
+					fadeInsetRight={hasRight ? rightInset : undefined}
+					fadeInsetTop={headerHeight || undefined}
 				>
 					{tableEl}
 				</ScrollArea>
@@ -794,10 +873,11 @@ export function Table<T>({
 				// breaks truncation/resize for long, unbreakable cell text.
 				<ScrollArea
 					axis='x'
-					className='rounded-xl border border-gray-200 bg-white shadow-sm'
+					className={cn('rounded-xl border', tone.container)}
 					wrapperClassName='rounded-xl'
-					fadeLeft={!hasLeft}
-					fadeRight={!hasRight}
+					fadeInsetLeft={hasLeft ? leftInset : undefined}
+					fadeInsetRight={hasRight ? rightInset : undefined}
+					fadeInsetTop={headerHeight || undefined}
 				>
 					{tableEl}
 				</ScrollArea>

@@ -40,6 +40,10 @@ type UseListStateOptions<T> = {
 	listId?: string
 	/** Preferred desktop view when both views are configured. @defaultValue 'table' */
 	defaultView?: ViewType
+	/** The reader's remembered desktop view, from the list's pref store. */
+	storedView?: ViewType
+	/** Persists a desktop view choice back to that store. */
+	onViewPersist?: (next: ViewType) => void
 	/** Sort applied while the URL carries none. */
 	defaultSort?: SortState
 }
@@ -64,10 +68,15 @@ export function useListState<T>({
 	initialQuery,
 	listId,
 	defaultView,
+	storedView,
+	onViewPersist,
 	defaultSort,
 }: UseListStateOptions<T>) {
 	const { get, set } = params
-	const { viewType, handleViewChange } = useViewType(defaultView)
+	const { viewType, handleViewChange } = useViewType(defaultView, {
+		stored: storedView,
+		onPersist: onViewPersist,
+	})
 
 	const currentSearch = get('search') ?? ''
 	const currentPage = Math.max(1, parseInt(get('page') ?? '1', 10) || 1)

@@ -8,9 +8,7 @@ import { getSearchShortcut } from '../utils/shortcut'
 
 type Shortcut = ReturnType<typeof getSearchShortcut>
 
-/**
- *
- */
+/** Props for {@link SearchInput}. */
 export type SearchInputProps = {
 	id?: string
 	value: string
@@ -70,7 +68,7 @@ export function SearchInput({
 
 	return (
 		<div className={cn('relative', className)}>
-			<span className='pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400'>
+			<span className='pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-400 dark:text-gray-500'>
 				<Search size={16} />
 			</span>
 
@@ -84,7 +82,7 @@ export function SearchInput({
 				disabled={disabled}
 				placeholder={placeholder}
 				className={cn(
-					'block h-10 w-full rounded-lg border border-gray-200 bg-white pr-20 pl-9 text-sm text-gray-900 placeholder-gray-400 transition-all duration-150 focus:ring-1 focus:outline-none [&::-webkit-search-cancel-button]:hidden',
+					'block h-10 w-full rounded-lg border border-gray-200 bg-white pr-20 pl-9 text-sm text-gray-900 placeholder-gray-400 transition-all duration-150 focus:ring-1 focus:outline-none dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 [&::-webkit-search-cancel-button]:hidden',
 					theme.focusRing,
 					theme.focusBorder
 				)}
@@ -96,13 +94,13 @@ export function SearchInput({
 						type='button'
 						onClick={handleClear}
 						aria-label='Limpiar búsqueda'
-						className='cursor-pointer rounded-md p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
+						className='cursor-pointer rounded-md p-0.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-300'
 					>
 						<X size={14} />
 					</button>
 				)}
 				{shortcut && (
-					<kbd className='hidden rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 select-none sm:inline-block'>
+					<kbd className='hidden rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 select-none sm:inline-block dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400'>
 						{shortcut.display}
 					</kbd>
 				)}

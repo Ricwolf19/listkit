@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { EmptyStateProps } from '../components/EmptyState'
 import type { RowAction } from '../components/RowActions'
 import type { ColorTheme } from '../theme/colorTheme'
+import type { BuiltInSurfaceTone, SurfaceTones } from '../theme/surfaceTones'
 import type { ListQuery, SortState } from './data'
 import type {
 	ExportDateFormat,
@@ -240,6 +241,12 @@ export type ListActions<T> = {
  * @typeParam T - The row type.
  */
 export type CardContext<T> = {
+	/**
+	 * The row's position in the current page. Hand it to the same `RowAction[]`
+	 * the table rows use — those callbacks take `(item, index)` — instead of
+	 * reimplementing the actions for cards, where the two lists drift apart.
+	 */
+	index: number
 	/** The config's {@link ListActions}. */
 	actions: ListActions<T>
 	/** The resolved color theme for this list. */
@@ -252,6 +259,14 @@ export type CardContext<T> = {
 	selection?: {
 		/** Whether this row is currently selected. */
 		isSelected: (item: T) => boolean
+		/**
+		 * Whether this row refuses selection — a locked selection
+		 * ({@link SelectionConfig.disabled}) or a row its
+		 * {@link SelectionConfig.selectableRow} gate rejects. Render the checkbox
+		 * disabled: `toggle` no-ops either way, and a control that looks live
+		 * while silently refusing is worse than one that shows it cannot.
+		 */
+		disabled?: (item: T) => boolean
 		/** Toggle this row's selection. */
 		toggle: (item: T) => void
 	}
@@ -362,17 +377,64 @@ export type BulkAction<T> = {
 }
 
 /**
+ * Snapshot handed to {@link SelectionConfig.onSelectionChange} alongside the
+ * rows — everything an EXTERNAL consumer needs to represent the selection,
+ * including the virtual all-matching mode that a bare `T[]` cannot express.
+ */
+export type SelectionDetails = {
+	mode: SelectionMode
+	/** Keys of the explicitly picked (seen) rows. */
+	keys: (string | number)[]
+	/** All-matching only: keys the user unchecked. */
+	excludedKeys: (string | number)[]
+	/** Resolved size — the list total minus exclusions in all-matching mode. */
+	count: number
+}
+
+/**
+ * The live selection API, published through
+ * {@link SelectionConfig.controllerRef} so UI OUTSIDE the list (a panel
+ * button, a rule engine) can read and manipulate the checked set — the
+ * selection bar stops being the only place that can act on it.
+ */
+export type SelectionController<T> = {
+	mode: SelectionMode
+	selectedKeys: ReadonlySet<string | number>
+	excludedKeys: ReadonlySet<string | number>
+	selectedItems: T[]
+	selectedCount: number
+	/** The query the selection is relative to — feeds `toSelectionDescriptor`. */
+	query: ListQuery
+	/** The current page's rows with their keys — the batch `toggleMany` takes. */
+	pageEntries: { item: T; key: string | number }[]
+	isSelected: (key: string | number) => boolean
+	toggle: (item: T, key: string | number) => void
+	setSelected: (item: T, key: string | number, selected: boolean) => void
+	toggleMany: (
+		entries: { item: T; key: string | number }[],
+		selected: boolean
+	) => void
+	selectAllMatching: () => void
+	clear: () => void
+}
+
+/**
  * Row-selection options. Set on {@link ListConfig.selection} (or pass `true`
  * for plain checkboxes). Selection is key-based, survives pagination, and clears
- * when the dataset changes (search/filter/sort/refresh).
+ * when the dataset changes (search/filter/sort/refresh/adapter scope).
  *
  * @typeParam T - The row type.
  */
 export type SelectionConfig<T> = {
 	/** Bulk actions rendered in the selection bar. */
 	actions?: BulkAction<T>[]
-	/** Called whenever the selected rows change. */
-	onSelectionChange?: (selected: T[]) => void
+	/** Called whenever the selection changes, with rows and the full snapshot. */
+	onSelectionChange?: (selected: T[], details: SelectionDetails) => void
+	/**
+	 * Receives the live {@link SelectionController} (null after unmount).
+	 * Pass a plain ref object — `useRef<SelectionController<T> | null>(null)`.
+	 */
+	controllerRef?: { current: SelectionController<T> | null }
 	/** Clear the selection when search/filters/sort/refresh change. @defaultValue true */
 	clearOnDataChange?: boolean
 	/** Show "export selected" in the selection bar when `export` is enabled. @defaultValue true */
@@ -383,6 +445,39 @@ export type SelectionConfig<T> = {
 	 * without loading them. @defaultValue true
 	 */
 	allowSelectAllMatching?: boolean
+	/**
+	 * Render the checkboxes but refuse every toggle — the column stays as a
+	 * read-only indicator. Use it when picking rows is meaningless in the
+	 * current mode: the column disappearing and reappearing moves the table
+	 * out from under the reader, and hiding it loses the state it shows.
+	 * Bulk actions, the selection bar and the selection shortcuts all go with
+	 * it. To drop the column entirely, omit `selection`.
+	 */
+	disabled?: boolean
+	/**
+	 * Per-row gate — return false and that row's checkbox is disabled. The
+	 * page-header checkbox then only covers the selectable rows, and neither
+	 * {@link SelectionConfig.preselectLoadedRows} nor the published
+	 * `SelectionController` can pick a rejected row.
+	 *
+	 * It does NOT survive "select all N matching": that selection is virtual
+	 * and resolved server-side from the query, so rows this gate would reject
+	 * are still included. Pair the two only when the gate is advisory, or set
+	 * `allowSelectAllMatching: false`.
+	 */
+	selectableRow?: (item: T, key: string | number) => boolean
+	/**
+	 * Start every newly loaded row CHECKED (once per dataset): the scope the
+	 * user just filtered to is the selection, and unchecking is the exception.
+	 * A key the user unchecks stays unchecked — only never-seen keys
+	 * auto-select, and the seen set resets with the dataset signature.
+	 *
+	 * Pair it with an adapter whose `key` folds in every external scope (or
+	 * with `skeletonOnPlaceholder`), so a scope change surfaces as loading and
+	 * the previous scope's rows are never preselected into the new one.
+	 * @defaultValue false
+	 */
+	preselectLoadedRows?: boolean
 }
 
 /**
@@ -465,6 +560,14 @@ export type ListConfig<T> = {
 	pageSize?: number
 	/** Per-list theme; overrides the {@link ListKitProvider} default. */
 	colorTheme?: ColorTheme
+	/**
+	 * Neutral chrome of the table and the default cards — surfaces, header,
+	 * dividers, row hover/selected. A built-in preset (`'gray'`, `'slate'`,
+	 * `'zinc'`, `'contrast'`) or a full {@link SurfaceTones} object. Accents
+	 * (buttons, chips, focus rings) stay on {@link ListConfig.colorTheme} —
+	 * the two axes compose. @defaultValue 'gray'
+	 */
+	tones?: BuiltInSurfaceTone | SurfaceTones
 	/**
 	 * Per-list UI string overrides (the language of the displayed content).
 	 * Merged over the {@link ListKitProvider} `labels` and the English defaults.
@@ -598,6 +701,13 @@ export type ListConfig<T> = {
 	 * ```
 	 */
 	rowActions?: RowAction<T>[]
+	/**
+	 * What reveals the quick bar of {@link ListConfig.rowActions} on
+	 * hover-capable devices: the pointer reaching the `•••` cluster
+	 * (`'trigger'`) or anywhere on the row (`'row'`).
+	 * @defaultValue 'trigger'
+	 */
+	rowActionsQuickReveal?: 'trigger' | 'row'
 	/** Table-view configuration. */
 	table?: TableConfig<T>
 	/** Imperative row actions delivered to renderers via {@link CardContext}. */

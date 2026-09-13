@@ -60,6 +60,7 @@ export {
 	type RowActionsProps,
 } from './components/RowActions'
 export {
+	type FadeTone,
 	ScrollArea,
 	type ScrollAreaProps,
 	type ScrollAxis,
@@ -134,7 +135,7 @@ export {
 	type SelectionEntry,
 	useRowSelection,
 } from './hooks/useRowSelection'
-export { useViewType } from './hooks/useViewType'
+export { useViewType, type ViewTypePersistence } from './hooks/useViewType'
 
 // Column preferences (custom persistence)
 export {
@@ -174,6 +175,12 @@ export {
 	getColorTheme,
 	type ThemeClasses,
 } from './theme/colorTheme'
+export {
+	type BuiltInSurfaceTone,
+	DEFAULT_SURFACE_TONE,
+	getSurfaceTones,
+	type SurfaceTones,
+} from './theme/surfaceTones'
 
 // CSV export helpers
 export { downloadCsv, exportRowsToCsv, rowsToCsv } from './utils/exportCsv'
@@ -193,6 +200,13 @@ export {
 	exportRequestToParams,
 	parseExportRequest,
 } from './export/wire'
+export {
+	type SelectionDescriptor,
+	type SelectionDescriptorBody,
+	selectionDescriptorToBody,
+	type SelectionScope,
+	toSelectionDescriptor,
+} from './selection/wire'
 export type {
 	ExportCellValue,
 	ExportDateFormat,
@@ -221,6 +235,8 @@ export type {
 	SearchConfig,
 	SelectionActionHelpers,
 	SelectionConfig,
+	SelectionController,
+	SelectionDetails,
 	TableConfig,
 	ToolbarAction,
 } from './types/config'

@@ -7,8 +7,8 @@ import {
 	type ShortcutGroup,
 	SHORTCUTS,
 } from '../hooks/shortcutRegistry'
-import { cn } from '../utils/cn'
 import { Modal } from './overlays/Modal'
+import { ShortcutKeys } from './ShortcutKeys'
 
 /** Props for {@link ShortcutHelp}. */
 export type ShortcutHelpProps = {
@@ -47,7 +47,7 @@ export function ShortcutHelp({
 				onClick={() => onOpenChange(true)}
 				title={labels.shortcuts}
 				aria-label={labels.shortcuts}
-				className='hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 sm:inline-flex'
+				className='hidden h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-500 transition-colors hover:bg-gray-50 hover:text-gray-700 sm:inline-flex dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200'
 			>
 				<Keyboard className='h-4 w-4' />
 			</button>
@@ -62,31 +62,19 @@ export function ShortcutHelp({
 				<div className='space-y-5'>
 					{byGroup.map(({ group, items }) => (
 						<section key={group}>
-							<h3 className='mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase'>
+							<h3 className='mb-2 text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400'>
 								{groupLabel(labels.shortcutLabels, group)}
 							</h3>
-							<ul className='divide-y divide-gray-100'>
+							<ul className='divide-y divide-gray-100 dark:divide-gray-800'>
 								{items.map(shortcut => (
 									<li
 										key={shortcut.id}
 										className='flex items-center justify-between gap-4 py-2 text-sm'
 									>
-										<span className='min-w-0 text-gray-700'>
+										<span className='min-w-0 text-gray-700 dark:text-gray-300'>
 											{labels.shortcutLabels[shortcut.id] ?? shortcut.id}
 										</span>
-										<span className='flex shrink-0 items-center gap-1'>
-											{shortcut.keys().map((key, i) => (
-												<kbd
-													key={i}
-													className={cn(
-														'rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5',
-														'font-sans text-xs font-medium text-gray-600'
-													)}
-												>
-													{key}
-												</kbd>
-											))}
-										</span>
+										<ShortcutKeys id={shortcut.id} />
 									</li>
 								))}
 							</ul>

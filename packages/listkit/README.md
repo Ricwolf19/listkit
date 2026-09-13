@@ -73,7 +73,7 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
 - **Theming** — 8 built-in palettes or your own custom theme; set per-list or globally.
 - **Custom cards** — use the built-in card chrome, or `bareCard` to drop in a fully custom card component.
 - **Refresh on mutation** — `useListRefresh()` refetches the list after a delete/edit, no full page reload.
-- **Keyboard shortcuts** — `⌘ K` focus search, `+` open filters, `Shift + V` toggle view, `-` remove the last filter, `←`/`→` previous/next page, `Shift + ←`/`Shift + →` first/last page.
+- **Keyboard shortcuts** — `⌘ K` focus search, `+` open filters, `Shift + V` toggle view, `Shift + D` toggle row density, `-` remove the last filter, `←`/`→` previous/next page, `Shift + ←`/`Shift + →` first/last page.
 - **Header slots** — drop quick metrics/badges above the title with `headerContent={{ left, center, right }}`.
 - **Column manager** — `table.columnControl` lets users hide/show and reorder columns; persisted to localStorage (or your own `ColumnStorage`).
 - **CSV export** — add a toolbar export button with `export`: current page by default; "export all" is auto-detected for in-memory `data`, or wired via `fetchAll` for a server source (no browser page-loop). Respects the visible columns and their order, with per-column `exportValue`/`exportable`.
@@ -319,6 +319,8 @@ const filters: FilterDefinition<Order>[] = [
 ```
 
 `defaultValue` uses the same shape the adapter receives for that type: `select` → `string`, `multi-select` → `string[]`, `boolean` → `boolean`, `text` → `{ value, match }`, `date-range` → `{ from?, to? }`, `number-range` → `{ min?, max? }`.
+
+A `date-range` the **picker** produces carries absolute instants (`…T06:00:00.000Z`), not bare days: the operator picks a local day, and only the client knows their timezone, so it converts before the value travels — `from` at local 00:00, `to` at local 23:59:59.999. Left as a bare `YYYY-MM-DD`, the server read it as UTC midnight and shifted the whole window for anyone west of UTC. A hand-written `YYYY-MM-DD` still works and still means the whole day: both the in-memory matcher and the Mongo builder extend a date-only `to` to end-of-day, and neither touches a value that already carries a time.
 
 Defaults seed the **initial** view only: they're applied on the first render (so the first fetch already includes them) and written to the URL, after which the user's edits/clears always win. Lists rendered with `initialData` (SSR) are left as-is — apply the defaults in your server query instead.
 
@@ -599,6 +601,26 @@ on every row. It is a shortcut, not the only path: the action still appears in
 the `•••` menu, so on touch — where hover does not exist — nothing is lost, it
 just lives one tap deeper.
 
+The bar is forgiving by design: it stays interactive through a short grace
+period after the pointer leaves, so aiming across the gap between the `•••`
+and a button never loses the target; it hides the moment one of its actions
+runs, so an action that opens a dialog does not leave the bar floating; and
+revealing one row's bar dismisses the previous row's instantly, so sweeping
+down the column leaves no trail.
+
+By default the bar reveals when the pointer reaches the `•••` cluster. Set
+`rowActionsQuickReveal: 'row'` in the config (or `quickReveal='row'` on a
+hand-rolled `RowActions`) to reveal it from anywhere on the row — one less
+aiming step:
+
+```tsx
+defineListConfig({ rowActions, rowActionsQuickReveal: 'row' /* … */ })
+```
+
+Both the row `•••` menu and the toolbar overflow follow the WAI-ARIA menu
+keyboard pattern: ArrowUp/ArrowDown move through the items (wrapping), Home/End
+jump to the extremes, Escape closes.
+
 **Grouped menu.** Give actions a `group` and the `•••` menu clusters them under
 that title, separated by dividers — the Stripe-style sectioned menu. Ungrouped
 actions render first, untitled; groups follow in first-appearance order. The
@@ -686,16 +708,19 @@ horizontal scroll — fades its clipped edges, so content past the fold
 announces itself instead of reading as the end of the list. `ScrollArea` and
 `useScrollFade` are exported for your own panels.
 
-Horizontal fades darken rather than whiten: across a table the content does not
-end at the edge, it passes under something, and a white wash reads as the data
-itself fading out.
+Every fade dissolves into the surface by default (the `'surface'` tone, white
+in light mode). Where you want the edge to darken instead, `ScrollArea` takes
+`fadeTone='shadow' | 'shadow-strong'`.
 
-Where a table pins columns, that edge gets no fade at all — the outermost
-pinned column casts the seam shadow itself, raised only while content is
-scrolled behind it. The shadow rides the real cell, so it stays exactly on the
-boundary through a resize, a reorder or a hidden column. `ScrollArea` exposes
-the pieces for your own scrollers: `fadeLeft` / `fadeRight` suppress a side,
-and the wrapper is a `group/scroll` carrying `data-scroll-left` /
+Where a table pins columns, the fade does not disappear — it shifts inward to
+the seam between the pinned stack and the scrolling content, so the affordance
+stays visible on every device (a fade left at the container edge would paint
+under the opaque pinned cells). The table's fades also start below the header
+row: they wash scrolling data, never the column titles. The outermost pinned cell adds a hairline
+divider on that same boundary. `ScrollArea` exposes the pieces for your own
+scrollers: `fadeLeft` / `fadeRight` suppress a side, `fadeInsetLeft` /
+`fadeInsetRight` (a CSS length) move a fade off the container edge from `md`
+up, and the wrapper is a `group/scroll` carrying `data-scroll-left` /
 `data-scroll-right` so descendants can style off the scroll position.
 
 Dialogs take a fixed `height` so their content scrolls instead of the dialog
@@ -736,7 +761,7 @@ defineListConfig<Product>({
 **What the selection gives you.** Selection is keyed by `getItemKey`, so each entry has an **id** (the key) and the **full row** object:
 
 - A bulk action's `onClick(selected, { selectedKeys, clear })` receives `selected` (the `T[]` rows — even ones from other pages) and `selectedKeys` (their ids from `getItemKey`). Use the ids for a `DELETE … WHERE id IN (…)` and `clear()` to reset afterwards.
-- `onSelectionChange(selected)` fires the same `T[]` whenever the set changes — drive your own bar or counter from it.
+- `onSelectionChange(selected, details)` fires whenever the set changes: `selected` is the same `T[]`, and `details` carries `mode`, `keys`, `excludedKeys` and the resolved `count` — the all-matching mode a bare array cannot express.
 - For full control, call the exported `useRowSelection` hook directly (`selectedKeys`, `selectedItems`, `isSelected`, `toggle`, `toggleMany`, `clear`).
 
 Other notes:
@@ -746,6 +771,31 @@ Other notes:
 - `clearOnDataChange: false` keeps the selection across filter/sort changes (the default clears it).
 - When `export` is enabled, the selection bar also shows **Export selected** (disable with `showExport: false`).
 - In cards view, `ctx.selection` (`isSelected`/`toggle`) lets a custom card render its own checkbox.
+
+**Locking or gating the checkboxes.** `disabled: true` keeps the column but refuses every toggle, so it reads as a read-only indicator — use it when picking rows is meaningless in the current mode, since a column that disappears and comes back moves the table under the reader, and hiding it loses the state it was showing. The bulk bar, "export selected" and the selection shortcuts go with it. `selectableRow(item, key)` gates one row at a time; the page-header checkbox then covers only the selectable rows.
+
+```tsx
+selection: {
+	disabled: mode === 'review', // read-only indicator
+	selectableRow: row => row.status !== 'locked',
+}
+```
+
+Both gates hold on every write path — the row checkbox, the page header, the card checkbox, the keyboard shortcuts and the published controller. The one thing `selectableRow` cannot reach is **select all N matching**: that selection is virtual and resolved server-side from the query, so rejected rows are still included. Pair the two only when the gate is advisory, or set `allowSelectAllMatching: false`.
+
+**Driving the selection from your own UI.** `controllerRef` publishes the live selection API — `mode`, `selectedKeys`, `excludedKeys`, `selectedItems`, `selectedCount`, `query`, `pageEntries`, plus `toggle` / `setSelected` / `toggleMany` / `selectAllMatching` / `clear` — so a button outside the list can read and drive the checked set. Pass a plain ref object; listkit nulls it on unmount.
+
+```tsx
+const controllerRef = useRef<SelectionController<Invoice> | null>(null)
+
+selection: {
+	controllerRef
+}
+// anywhere else:
+controllerRef.current?.toggleMany(controllerRef.current.pageEntries, true)
+```
+
+`preselectLoadedRows: true` inverts the default: every newly loaded row arrives **checked**, so the scope the user filtered to _is_ the selection and unchecking is the exception. A key the user unchecks stays unchecked — only never-seen keys auto-select — and the seen set resets with the dataset. Pair it with an adapter whose `key` folds in every external scope, so a scope change never preselects the previous scope's rows into the new one.
 
 #### Selecting every matching result
 
@@ -775,6 +825,31 @@ onClick: async (rows, { selectedKeys, mode, query, excludedKeys, clear }) => {
 ```
 
 The server side resolves that query with the same builders the list uses — `buildMongoFilter` / `buildSqlFilter` — so the rows an action touches are exactly the rows the user saw. Export works the same way: the dialog's `all` scope hands the resolver the query and the exclusions.
+
+**Posting a selection to the server.** For a bulk _mutation_, send a `SelectionDescriptor` rather than a flat id list — the mutation counterpart of the export request. `toSelectionDescriptor` builds one from any selection snapshot (the `details` argument, a controller, or a bulk action's helpers), `selectionDescriptorToBody` serializes it for a POST, `parseSelectionDescriptor` (from `/query`) validates it server-side, and `resolveSelectionFilter` (from `/mongoose`) turns it into the filter the write runs on:
+
+```ts
+// client
+const body = selectionDescriptorToBody(
+	toSelectionDescriptor(controllerRef.current!)
+)
+await fetch('/api/invoices/archive', {
+	method: 'POST',
+	body: JSON.stringify(body),
+})
+
+// server
+const descriptor = parseSelectionDescriptor(req.body)
+if (!descriptor) return res.status(400).end()
+const filter = await resolveSelectionFilter({
+	descriptor,
+	fields: maps.main,
+	baseFilter: { tenant: req.tenant }, // auth scope — always
+})
+if (filter) await Invoice.updateMany(filter, { $set: { archived: true } })
+```
+
+Both halves fail closed. `parseSelectionDescriptor` returns `null` for anything structurally wrong — including a body with no nested `query`, which under an `'all'` scope would otherwise resolve to every row the base filter allows — and `resolveSelectionFilter` returns `null` for an empty selection, so the caller no-ops instead of handing `updateMany` a match-everything filter.
 
 Exporting that selection needs a way to reach the rows. With in-memory data or an export `resolve`, the dialog's **Selected** scope covers all 12,000; without one, it is **disabled with an explanation** rather than hidden, and the one-click "Export selected" is withheld — a file holding the loaded page while the bar reads "12,000 selected" is worse than no file.
 
@@ -815,6 +890,7 @@ On by default. Every shortcut is bound by **capability**, not by state: a list w
 | `-`                       | Remove the last applied filter                |
 | `Shift + C`               | Clear every filter                            |
 | `Shift + V`               | Toggle table / cards                          |
+| `Shift + D`               | Toggle compact / comfortable rows             |
 | `Shift + E`               | Open the configurable export                  |
 | `Shift + R`               | Refresh the list                              |
 | `Shift + A`               | Select the current page                       |
@@ -842,6 +918,8 @@ Preferences that describe _how a user works with a list_ persist per list id, so
 | Quick-filter bar   | Options menu                |
 
 A URL param always wins over the stored value, so a shared link shows the sender's view, not the recipient's.
+
+The view is the one preference the device can overrule: a narrow screen opens on cards whatever was stored — a table does not fit — and a toggle made there is not saved, so reaching for the columns on a phone never changes how the list opens on a desktop.
 
 Storage is `localStorage` by default and pluggable — back it with your user-settings table to carry preferences across devices:
 
@@ -974,7 +1052,9 @@ Clicking applies `pinnedValue` (or `defaultValue`, or `true` for a boolean); cli
 
 ### Custom cards with actions and theme
 
-The `card` renderer receives the row item plus a `ctx` object with actions and the active color theme:
+The `card` renderer receives the row item plus a `ctx` object with actions, the active color theme, and
+the row's `index` — pass that index along to reuse the very same `RowAction[]` the table rows use,
+instead of writing the actions a second time for cards:
 
 ```tsx
 defineListConfig<Product>({
@@ -1130,6 +1210,8 @@ app.get('/api/discounts', async (req, res) => {
 
 Columns come only from the whitelists you control (no SQL injection), and matching mirrors the in-memory adapter. For full control, drop to `buildSqlFilter(query, fields, params)` + `buildSearch(term, columns, params)` (both append to your `params` so `$n` numbering stays correct) and `buildOrderBy` — exactly the manual pattern, minus the boilerplate. `sqlFieldMapFromFilters(config.filters)` derives a starting field map from your list config.
 
+`executeSqlList` also takes `searchNormalizer` — the fold applied to **both** the column and the bound term, so `` expr => `unaccent(lower(${expr}))` `` makes "Mexico" find "México" (needs the `unaccent` extension); the term binds raw precisely so the fold can reach it. And `maxExport` honors an oversized `pageSize` as an export-all instead of clamping it to one page, mirroring `mongoPaginate`. Pass the same `searchNormalizer` to `buildSqlExport` so an export returns exactly the rows the list showed.
+
 ### MongoDB backend (`listkit/mongo`)
 
 The front-end is the same in any React app (`fetchAdapter` → your REST endpoint). On the server, translate the incoming `ListQuery` into plain Mongo objects with `listkit/mongo` — it has **no `mongoose`/driver dependency** and never runs a query, so it works with Mongoose or the native driver. Field names come only from whitelists you control (no NoSQL injection), and text values are regex-escaped.
@@ -1266,6 +1348,8 @@ app.get('/api/companies', async (req, res) => {
 
 Each active reference filter becomes a `$in` of the matching reference ids; the search term matches `searchFields` on the main collection and (by id) `searchReferences`. A `pageSize` greater than `maxPageSize` (default 100) is treated as **export all** — served from the first row, capped at `maxExport` (default 50 000) — so it pairs with a list's export `fetchAll`. When you don't need references/populate, the lower-level `buildMongoQuery` + your own `Model.find` is still the simplest path.
 
+For rows a `find` can't express — `$unwind`ed documents, a `$lookup` join, an `$addFields` column the user filters and sorts by — `executeAggregateListkitQuery` is the sibling executor: the same options plus your `pipeline`. It reuses the very same builders, so search/filter/sort semantics are identical **including value casting**. That last part is not free: an aggregation `$match` casts nothing on its own, unlike `find`, so every `$match` is run through the model's schema first (`castFilterToSchema`, exported if you build pipelines by hand). A value the schema rejects — a malformed id from a stale bookmark — resolves to a filter no row satisfies, so the list comes back **empty rather than unfiltered**.
+
 ### Server-side rendering (`initialData`)
 
 By default the list fetches on the **client**: the server renders an empty/loading shell and rows appear after hydration. For SEO, a faster first paint, and no loading flash, fetch the **first page on the server** and hand it to `<ListView>` as `initialData` — it renders those rows in the initial HTML and **skips the client's first fetch**. Paging and filtering afterwards still run on the client.
@@ -1292,9 +1376,14 @@ export default async function OrdersPage({
 
 > Since the config is now read in a Server Component, build it with
 > `defineListConfig` from **`listkit/server`** (not the main entry).
-> The main entry pulls in client context (`createContext`) and would crash the
-> RSC render. Both the server page and the client list view can import the same
-> config module when it's defined this way.
+> The main entry, `/next`, `/react-router` and `/react-query` ship with a
+> `'use client'` banner: everything they export is a client reference, so a
+> shared config module the server evaluates may still import a component from
+> the main entry — `RowActions` in a card renderer, say — and render it as JSX.
+> What it may not do is _call_ a function from there during the RSC render;
+> `defineListConfig`, `resolveListConfig` and `ListSkeleton` have `/server`
+> twins for exactly that. Both the server page and the client list view can
+> import the same config module when it's defined this way.
 
 ```tsx
 // config.ts — shared by the server page and the client list view
@@ -1338,13 +1427,14 @@ The same server action (`listOrders`) powers both the server's first page and th
 Three helpers cover the wiring every SSR/Next app would otherwise hand-roll:
 
 - **`NextListView`** (`listkit/next`) — `<ListView>` pre-wired with the App Router adapter, so search/page/filters/sort sync to the URL. No manual `ListKitProvider` + `useNextRouterAdapter`. Pass `theme` here, or set it once on a root `<ListKitProvider theme={…}>` and `NextListView` inherits it (a provider inherits any prop you don't pass).
+- **`useNextHistoryRouterAdapter`** (`listkit/next`) — the App Router adapter that writes through `history.replaceState` instead of `router.replace`. A `router.replace` onto the current page is a same-page navigation, and Next refetches the page's RSC segment for those — every filter, search keystroke or page change re-renders the server page and remounts the list (skeleton flash, lost scroll). Next keeps `useSearchParams` in sync with the History API, so the list still re-queries through its adapter; only the server round-trip goes. Also the adapter for a list mounted under a URL that carries more than its own params (a detail overlay's `/items/{id}`), where a router navigation would render that route on top of the live list. Pass it to `ListKitProvider`; `NextListView` keeps `useNextRouterAdapter`.
 - **`loadInitialList(config, searchParams, fetcher)`** (`listkit/server`) — wraps `buildListQuery` + the first-page fetch and degrades to a client fetch on error. Returns `{ initialData, initialQuery }`.
 - **`ListSkeleton`** — a ready-made `<Suspense>` fallback (toolbar bar + skeleton table) for the streaming SSR pattern. Import it from `listkit/server` in a Server Component (the page), or from `listkit` in client code.
 
 ```tsx
 // app/orders/page.tsx — Server Component
 import { Suspense } from 'react'
-// Import both from /server in RSC — the main barrel pulls client context.
+// Import both from /server in RSC — the main barrel is a client boundary.
 import { ListSkeleton, loadInitialList } from 'listkit/server'
 import { ordersConfig } from './config'
 import { listOrders } from './actions'
@@ -1654,6 +1744,58 @@ const brand: ThemeClasses = {
 defineListConfig({ colorTheme: brand, /* … */ })
 ```
 
+#### Table & card tones
+
+`colorTheme` drives the accents; `tones` drives the neutral chrome — the
+table's header, dividers, row hover/selected states, and the panel around the
+table and the default cards. Pick a built-in preset (`'gray'` is the default,
+`'contrast'` inverts the header) or pass a full `SurfaceTones` object of
+Tailwind classes. The two axes compose: `colorTheme: 'teal', tones: 'slate'`.
+
+```tsx
+// preset: 'gray' | 'slate' | 'zinc' | 'contrast'
+defineListConfig({ tones: 'slate' /* … */ })
+
+// custom — keep every background opaque: pinned cells inherit the row's
+defineListConfig({
+	tones: {
+		container: 'border-indigo-100 bg-white shadow-sm',
+		headerBg: 'bg-indigo-50',
+		headerText: 'text-indigo-700',
+		headerDivider: 'border-indigo-200',
+		rowBg: 'bg-white',
+		rowHover: 'hover:bg-indigo-50',
+		rowSelected: 'bg-indigo-100 hover:bg-indigo-100',
+		divider: 'divide-indigo-100',
+	},
+	/* … */
+})
+```
+
+The `Table` primitive takes the same value as a `tones` prop for standalone
+use, and `getSurfaceTones` resolves a preset name if you need the classes
+yourself.
+
+#### Dark mode
+
+Every component ships additive `dark:` variants keyed on a `.dark` class on an
+ancestor (usually `<html>`) — not on `prefers-color-scheme` — so your app owns
+the toggle. `listkit/tailwind.css` registers the variant for you:
+
+```css
+@custom-variant dark (&:where(.dark, .dark *));
+```
+
+Importing that file is enough. Without it Tailwind v4 reads `dark:` as
+`prefers-color-scheme`, and a light-only app renders its lists dark for every
+reader whose OS is — the rest of the page unchanged.
+
+Toggle `document.documentElement.classList.toggle('dark')` and every list —
+table, cards, menus, filters, dialogs, skeletons — follows. The built-in
+palettes carry dark accent variants; a custom `ThemeClasses` can append its own
+`dark:` classes inside each field. Light rendering is untouched when the class
+is absent.
+
 ### Labels (i18n)
 
 Controls describable by an icon (view toggle, filter button, results count) are
@@ -1707,19 +1849,19 @@ for the full key list.
 
 ## Subpath Exports
 
-| Import path            | Contents                                                                                                                                                                                                  |
-| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types                                   |
-| `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                    |
-| `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                   |
-| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                              |
-| `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                                                         |
-| `listkit/query`        | `parseListkitQuery`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parse a request bag into a `ListQuery` and read its filters         |
-| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `textCondition`, `sqlFieldMapFromFilters` — Postgres query fragments + executor (pool injection, no driver dep)                        |
-| `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — MongoDB query objects (no driver) |
-| `listkit/mongoose`     | `executePaginatedListkitQuery` — runs the page query on Mongoose (optional, type-only `mongoose` peer dep)                                                                                                |
-| `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                                                                |
-| `listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                                                           |
+| Import path                        | Contents                                                                                                                                                                                                                      |
+| ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, `ListSkeleton`, `invalidateListCache`, `useLabels`, `DEFAULT_LABELS`/`ES_LABELS`, adapters, hooks, primitives, types                                                       |
+| `listkit/next`         | `useNextRouterAdapter`, `NextListView`                                                                                                                                                                                        |
+| `listkit/react-router` | `useReactRouterAdapter`                                                                                                                                                                                                       |
+| `listkit/adapters`     | `memoryAdapter`, `fetchAdapter`, `serverActionAdapter`, `createDexieAdapter`                                                                                                                                                  |
+| `listkit/server`       | `buildListQuery`, `loadInitialList`, `defineListConfig`, `ListSkeleton` — RSC-safe (no React/DOM)                                                                                                                             |
+| `listkit/query`        | `parseListkitQuery`, `parseSelectionDescriptor`, `filtersById`, `getString`/`getBoolean`/`getStringArray`/`getDateRange`/`getNumberRange`/`getText`, `paginate` — parse a request bag into a `ListQuery` and read its filters |
+| `listkit/sql`          | `executeSqlList`, `buildSqlFilter`, `buildSearch`, `buildOrderBy`, `sqlPaginate`, `textCondition`, `sqlFieldMapFromFilters` — Postgres query fragments + executor (pool injection, no driver dep)                             |
+| `listkit/mongo`        | `buildMongoQuery`, `buildMongoFilter`, `buildMongoSort`, `mongoPaginate`, `combineFilters`, `escapeRegex`, `mongoFieldMapFromFilters`, `filterConfigToMongoFieldMaps` — MongoDB query objects (no driver)                     |
+| `listkit/mongoose`     | `executePaginatedListkitQuery`, `executeAggregateListkitQuery`, `castFilterToSchema`, `resolveSelectionFilter` — runs the page query on Mongoose (optional, type-only `mongoose` peer dep)                                    |
+| `listkit/react-query`  | `useReactQueryListData`, `invalidateList`, `listQueryKey` — back lists with TanStack Query                                                                                                                                    |
+| `listkit/tailwind.css` | Tailwind v4 source registration                                                                                                                                                                                               |
 
 ---
 

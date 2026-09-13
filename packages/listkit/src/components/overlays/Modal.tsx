@@ -102,7 +102,7 @@ export type ModalProps = {
 }
 
 /**
- * listkit's internal dialog (ported, trimmed, from the pibytelabs UI kit).
+ * listkit's internal dialog.
  * Portals into `document.body`, animates in and out, locks background scroll
  * (reference counted, so overlapping overlays never wedge the page), traps
  * focus while open and restores it on close. Escape closes only the innermost
@@ -262,7 +262,7 @@ export function Modal({
 				tabIndex={-1}
 				aria-labelledby={title ? titleId : undefined}
 				className={cn(
-					'my-auto flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl outline-none',
+					'my-auto flex flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-2xl outline-none dark:border-gray-700 dark:bg-gray-800',
 					'transition duration-250 ease-out',
 					// Own compositor layer + a paint boundary, so the enter/exit
 					// scale animates without repainting the scrim behind it.
@@ -275,18 +275,20 @@ export function Modal({
 					className
 				)}
 			>
-				<div className='flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-6 py-4'>
+				<div className='flex shrink-0 items-start justify-between gap-4 border-b border-gray-200 px-6 py-4 dark:border-gray-700'>
 					<div className='min-w-0'>
 						{title && (
 							<h2
 								id={titleId}
-								className='truncate text-lg font-semibold tracking-tight text-gray-900'
+								className='truncate text-lg font-semibold tracking-tight text-gray-900 dark:text-gray-100'
 							>
 								{title}
 							</h2>
 						)}
 						{subtitle && (
-							<p className='mt-0.5 text-sm text-gray-500'>{subtitle}</p>
+							<p className='mt-0.5 text-sm text-gray-500 dark:text-gray-400'>
+								{subtitle}
+							</p>
 						)}
 					</div>
 					<button
@@ -295,7 +297,7 @@ export function Modal({
 						disabled={isLoading}
 						aria-label={labels.close}
 						className={cn(
-							'shrink-0 cursor-pointer rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600',
+							'shrink-0 cursor-pointer rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-400',
 							isLoading && 'cursor-not-allowed opacity-50'
 						)}
 					>
@@ -318,7 +320,7 @@ export function Modal({
 				</ScrollArea>
 
 				{footer && (
-					<div className='flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4'>
+					<div className='flex shrink-0 items-center justify-end gap-3 border-t border-gray-200 px-6 py-4 dark:border-gray-700'>
 						{footer}
 					</div>
 				)}

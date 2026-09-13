@@ -77,7 +77,7 @@ export function Toolbar({
 	const counter =
 		totalResults !== undefined ? (
 			<span
-				className='inline-flex shrink-0 items-center gap-1.5 text-sm text-gray-500'
+				className='inline-flex shrink-0 items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400'
 				aria-label={labels.results(totalResults)}
 				title={labels.results(totalResults)}
 			>

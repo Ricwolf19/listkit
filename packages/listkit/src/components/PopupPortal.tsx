@@ -18,7 +18,8 @@ export type PopupPortalProps = {
  * {@link useAnchoredPopup}, so no ancestor's `overflow` can clip it.
  *
  * @remarks
- * Sits above the filter sidebar (`z-50`) and the modal (`z-100`) on purpose: a
+ * Sits above the overlay tier (`z-100`: modal, filter sidebar, options sheet)
+ * on purpose: a
  * select opened inside either must paint over its panel. Returns `null` on the
  * server and until the position has been measured, so the first paint never
  * lands in the wrong place.

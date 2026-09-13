@@ -76,7 +76,7 @@ export function PinnedFilterChips<T>({
 							'inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition',
 							active
 								? cn(theme.chipBg, theme.chipBorder, theme.chipText)
-								: 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+								: 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
 						)}
 					>
 						{active && <Check className='h-3 w-3' />}

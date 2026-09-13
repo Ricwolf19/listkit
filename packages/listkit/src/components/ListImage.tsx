@@ -71,7 +71,7 @@ export function ListImage({
 	return (
 		<span
 			className={cn(
-				'relative inline-block shrink-0 overflow-hidden bg-gray-100 align-middle',
+				'relative inline-block shrink-0 overflow-hidden bg-gray-100 align-middle dark:bg-gray-800',
 				radius,
 				className
 			)}
@@ -79,7 +79,7 @@ export function ListImage({
 		>
 			{status === 'loading' && (
 				<span
-					className='absolute inset-0 animate-pulse bg-gray-200'
+					className='absolute inset-0 animate-pulse bg-gray-200 dark:bg-gray-700'
 					aria-hidden='true'
 				/>
 			)}

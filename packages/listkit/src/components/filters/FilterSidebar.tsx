@@ -77,7 +77,7 @@ function SectionFilters<T>({
 	return (
 		<section
 			key={section.id}
-			className='rounded-xl border border-gray-100 bg-gray-50/40 p-4'
+			className='rounded-xl border border-gray-100 bg-gray-50/40 p-4 dark:border-gray-700 dark:bg-gray-900/40'
 		>
 			{(section.title || section.description || collapsible) && (
 				<div className='flex items-center justify-between gap-2.5'>
@@ -85,12 +85,12 @@ function SectionFilters<T>({
 						<div className={cn('h-5 w-1 rounded-full', theme.primaryBg)} />
 						<div className='min-w-0'>
 							{section.title && (
-								<h3 className='truncate text-sm font-semibold text-gray-900'>
+								<h3 className='truncate text-sm font-semibold text-gray-900 dark:text-gray-100'>
 									{section.title}
 								</h3>
 							)}
 							{section.description && (
-								<p className='truncate text-xs text-gray-500'>
+								<p className='truncate text-xs text-gray-500 dark:text-gray-400'>
 									{section.description}
 								</p>
 							)}
@@ -154,11 +154,13 @@ function FilterField({
 				hasGrid && def.columns === 1 && 'col-span-2'
 			)}
 		>
-			<label className='block text-sm font-medium text-gray-700'>
+			<label className='block text-sm font-medium text-gray-700 dark:text-gray-300'>
 				{def.label}
 			</label>
 			{def.description && (
-				<p className='text-xs text-gray-500'>{def.description}</p>
+				<p className='text-xs text-gray-500 dark:text-gray-400'>
+					{def.description}
+				</p>
 			)}
 			<DynamicFilter
 				def={def}
@@ -334,8 +336,9 @@ export function FilterSidebar<T>({
 		onClose()
 	}
 
+	// z-100 is the overlay tier, shared with Modal. @see AGENTS.md invariant 12
 	return (
-		<div className='fixed inset-0 z-50 flex justify-end'>
+		<div className='fixed inset-0 z-100 flex justify-end'>
 			{/* Backdrop */}
 			<div
 				className={cn(
@@ -351,7 +354,7 @@ export function FilterSidebar<T>({
 			<div
 				ref={panelRef}
 				className={cn(
-					'relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl transition-transform',
+					'relative flex h-full w-full max-w-lg flex-col bg-white shadow-2xl transition-transform dark:bg-gray-800',
 					shown ? 'translate-x-0' : 'translate-x-full'
 				)}
 				style={{
@@ -362,7 +365,7 @@ export function FilterSidebar<T>({
 				aria-modal
 			>
 				{/* Header */}
-				<header className='flex items-center justify-between border-b border-gray-200 px-6 py-5'>
+				<header className='flex items-center justify-between border-b border-gray-200 px-6 py-5 dark:border-gray-700'>
 					<div className='flex items-center gap-3'>
 						<div
 							className={cn(
@@ -374,17 +377,19 @@ export function FilterSidebar<T>({
 							<SlidersHorizontal className='h-5 w-5' />
 						</div>
 						<div>
-							<h2 className='text-xl font-bold text-gray-900'>
+							<h2 className='text-xl font-bold text-gray-900 dark:text-gray-100'>
 								{title ?? labels.filters}
 							</h2>
-							<p className='text-xs text-gray-500'>{labels.filtersHint}</p>
+							<p className='text-xs text-gray-500 dark:text-gray-400'>
+								{labels.filtersHint}
+							</p>
 						</div>
 					</div>
 					<button
 						type='button'
 						onClick={onClose}
 						aria-label='Cerrar'
-						className='cursor-pointer rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600'
+						className='cursor-pointer rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-400'
 					>
 						<X className='h-5 w-5' />
 					</button>
@@ -404,7 +409,7 @@ export function FilterSidebar<T>({
 					<ScrollArea className='px-6 py-5' wrapperClassName='flex-1'>
 						{totalFilters >= 6 && (
 							<div className='relative mb-4'>
-								<Search className='pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400' />
+								<Search className='pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500' />
 								<input
 									ref={searchInputRef}
 									type='text'
@@ -413,7 +418,7 @@ export function FilterSidebar<T>({
 									placeholder={labels.searchFilters}
 									aria-label={labels.searchFilters}
 									className={cn(
-										'w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-9 text-sm text-gray-900 transition outline-none focus:ring-2',
+										'w-full rounded-lg border border-gray-300 bg-white py-2.5 pr-3 pl-9 text-sm text-gray-900 transition outline-none focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100',
 										theme.focusBorder,
 										theme.focusRing
 									)}
@@ -421,7 +426,7 @@ export function FilterSidebar<T>({
 							</div>
 						)}
 						{visibleSections.length === 0 ? (
-							<p className='py-10 text-center text-sm text-gray-500'>
+							<p className='py-10 text-center text-sm text-gray-500 dark:text-gray-400'>
 								{labels.noFilterMatches}
 							</p>
 						) : (
@@ -451,13 +456,13 @@ export function FilterSidebar<T>({
 					</ScrollArea>
 
 					{/* Footer inside form so the submit button is native */}
-					<footer className='flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.04)]'>
+					<footer className='flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-6 py-4 shadow-[0_-4px_20px_rgba(0,0,0,0.04)] dark:border-gray-700 dark:bg-gray-800'>
 						<Button
 							type='button'
 							variant='ghost'
 							size='md'
 							onClick={clear}
-							className='text-gray-500 hover:text-gray-700'
+							className='text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
 						>
 							{labels.clearFilters}
 						</Button>

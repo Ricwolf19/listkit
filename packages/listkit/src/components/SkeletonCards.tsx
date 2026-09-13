@@ -1,24 +1,11 @@
 import { cn } from '../utils/cn'
+import { shimmerStyle } from './shimmerStyle'
 
-/**
- *
- */
+/** Props for {@link SkeletonCards}. */
 export type SkeletonCardsProps = {
 	count?: number
 	gridCols?: string
 }
-
-const shimmerStyle = `
-  @keyframes lk-shimmer {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  .lk-shimmer {
-    background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
-    background-size: 200% 100%;
-    animation: lk-shimmer 1.5s infinite linear;
-  }
-`
 
 /** Shimmering placeholder grid shown while the cards view loads. */
 export function SkeletonCards({
@@ -31,7 +18,7 @@ export function SkeletonCards({
 			{Array.from({ length: count }, (_, i) => (
 				<div
 					key={i}
-					className='rounded-lg border border-gray-200 bg-white p-4 shadow-sm'
+					className='rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900'
 				>
 					<div className='mb-3 flex items-start justify-between'>
 						<div className='flex-1'>

@@ -62,7 +62,7 @@ export function Checkbox({
 						'peer h-full w-full appearance-none rounded-[5px] border transition-colors focus:outline-none focus-visible:ring-2',
 						filled
 							? cn(theme.primaryBg, 'border-transparent')
-							: 'border-gray-300 bg-white hover:border-gray-400',
+							: 'border-gray-300 bg-white hover:border-gray-400 dark:border-gray-600 dark:bg-gray-800 dark:hover:border-gray-500',
 						!disabled && 'cursor-pointer',
 						theme.focusRing
 					)}
@@ -85,7 +85,9 @@ export function Checkbox({
 				/>
 			</span>
 			{label != null && (
-				<span className='min-w-0 text-sm text-gray-700'>{label}</span>
+				<span className='min-w-0 text-sm text-gray-700 dark:text-gray-300'>
+					{label}
+				</span>
 			)}
 		</label>
 	)

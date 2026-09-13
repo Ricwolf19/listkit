@@ -61,6 +61,21 @@ const LEGENDS: Legend[] = [
 			'«Cancelar» ni aparece — hidden la quita por fila, en vez de mostrarla apagada.',
 	},
 	{
+		action: 'Barre el cursor de arriba a abajo sobre la columna del •••',
+		expect:
+			'ninguna estela: revelar la quick bar de una fila despide la anterior al instante, y sólo la fila activa espera el grace period.',
+	},
+	{
+		action: "Cambia reveal a 'row'",
+		expect:
+			'la quick bar aparece al entrar a cualquier punto de la fila, no sólo al •••: un paso menos de puntería (rowActionsQuickReveal).',
+	},
+	{
+		action: 'Abre el ••• y navega con las flechas',
+		expect:
+			'ArrowUp/ArrowDown recorren el menú con wrap, Home/End saltan a los extremos — patrón menu de WAI-ARIA.',
+	},
+	{
 		action: 'Cambia a variant inline',
 		expect:
 			'las acciones dejan de colapsar en el ••• y se vuelven botones en la celda; pasando maxInline el sobrante regresa al menú.',
@@ -69,6 +84,7 @@ const LEGENDS: Legend[] = [
 
 export function ActionsExample() {
 	const [variant, setVariant] = useState<'menu' | 'inline'>('menu')
+	const [reveal, setReveal] = useState<'trigger' | 'row'>('trigger')
 	const [downloadingId, setDownloadingId] = useState<string | null>(null)
 
 	/**
@@ -184,9 +200,12 @@ export function ActionsExample() {
 			searchPlaceholder: 'Buscar folio o cliente…',
 			getItemKey: i => i.id,
 			table: { columns },
-			...(variant === 'menu' && { rowActions }),
+			...(variant === 'menu' && {
+				rowActions,
+				rowActionsQuickReveal: reveal,
+			}),
 		})
-	}, [rowActions, variant])
+	}, [rowActions, variant, reveal])
 
 	return (
 		<ExampleShell
@@ -203,6 +222,16 @@ export function ActionsExample() {
 							{ value: 'inline', label: "variant 'inline'" },
 						]}
 					/>
+					{variant === 'menu' && (
+						<Segmented
+							value={reveal}
+							onChange={setReveal}
+							options={[
+								{ value: 'trigger', label: "reveal 'trigger'" },
+								{ value: 'row', label: "reveal 'row'" },
+							]}
+						/>
+					)}
 					<Hint>
 						La quick bar sólo existe en <code>menu</code>; <code>inline</code>{' '}
 						ya saca los iconos a la celda.

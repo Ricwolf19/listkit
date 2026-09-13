@@ -49,12 +49,12 @@ export function ColumnManagerPanel({
 	}
 
 	const arrow =
-		'flex h-6 w-6 items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30'
+		'flex h-6 w-6 items-center justify-center rounded text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600 dark:hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-30'
 
 	return (
 		<div>
 			<div className='flex items-center justify-between px-2 py-1'>
-				<span className='text-xs font-semibold tracking-wide text-gray-500 uppercase'>
+				<span className='text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400'>
 					{labels.columns}
 				</span>
 				<button
@@ -86,7 +86,7 @@ export function ColumnManagerPanel({
 								}}
 								onDragEnd={endDrag}
 								className={cn(
-									'relative flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50',
+									'relative flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700',
 									dragIndex === index && 'opacity-40'
 								)}
 							>
@@ -105,7 +105,7 @@ export function ColumnManagerPanel({
 									colorTheme={colorTheme}
 									aria-label={item.label}
 								/>
-								<span className='min-w-0 flex-1 truncate text-sm text-gray-700'>
+								<span className='min-w-0 flex-1 truncate text-sm text-gray-700 dark:text-gray-300'>
 									{item.label}
 								</span>
 								<button
@@ -158,13 +158,13 @@ export function ColumnManager(props: ColumnManagerProps) {
 				title={labels.columns}
 				aria-label={labels.columns}
 				aria-expanded={open}
-				className='flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50'
+				className='flex h-10 w-10 cursor-pointer items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700'
 			>
 				<Columns3 className='h-4 w-4' />
 			</button>
 
 			{open && (
-				<div className='absolute right-0 z-40 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-xl'>
+				<div className='absolute right-0 z-40 mt-2 w-72 rounded-xl border border-gray-200 bg-white p-2 shadow-xl dark:border-gray-700 dark:bg-gray-800'>
 					<ColumnManagerPanel {...props} />
 				</div>
 			)}

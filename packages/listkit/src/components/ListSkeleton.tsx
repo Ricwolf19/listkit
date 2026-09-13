@@ -27,8 +27,8 @@ export function ListSkeleton({ rows = 8, columns = 6 }: ListSkeletonProps) {
 	return (
 		<div aria-hidden>
 			<div className='mb-4 flex items-center justify-between gap-4'>
-				<div className='h-10 w-full max-w-md rounded-lg bg-gray-100' />
-				<div className='hidden h-10 w-40 rounded-lg bg-gray-100 sm:block' />
+				<div className='h-10 w-full max-w-md rounded-lg bg-gray-100 dark:bg-gray-800' />
+				<div className='hidden h-10 w-40 rounded-lg bg-gray-100 sm:block dark:bg-gray-800' />
 			</div>
 			<SkeletonTable rows={rows} columns={columns} />
 		</div>

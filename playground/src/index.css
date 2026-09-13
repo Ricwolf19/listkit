@@ -1,2 +1,9 @@
 @import 'tailwindcss';
 @source '../../packages/listkit/src';
+
+/*
+ * Class-driven dark mode (instead of the default `prefers-color-scheme`):
+ * the playground's toggle flips `.dark` on <html>, which is also how a
+ * consuming app is expected to opt lists into listkit's dark styles.
+ */
+@custom-variant dark (&:where(.dark, .dark *));

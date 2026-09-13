@@ -1,6 +1,13 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 /**
+ * Group shared by every list-level dropdown — the `•••` row menus and the
+ * toolbar overflow. One name in one place so joining the exclusivity is a
+ * matter of importing it, not matching a string.
+ */
+export const LIST_MENU_GROUP = 'list-menu'
+
+/**
  * The one menu currently open per group, as its dismiss callback.
  *
  * Module scope, not context: the coordination is between siblings rendered in a
@@ -56,12 +63,17 @@ export function useExclusiveMenu(
 		}
 	}, [group, open])
 
+	// Read through a ref so the callback's identity survives open/close — a
+	// consumer wiring it into an effect (the row-reveal listeners) would
+	// otherwise re-subscribe on every toggle.
+	const openRef = useRef(open)
+	openRef.current = open
 	const onTriggerEnter = useCallback(() => {
 		// Hovering the trigger of the menu that is already open must not dismiss
 		// it — only a menu belonging to another trigger.
-		if (open) return
+		if (openRef.current) return
 		openMenus.get(group)?.()
-	}, [group, open])
+	}, [group])
 
 	return { onTriggerEnter }
 }

@@ -33,15 +33,17 @@ export function ExampleShell({
 	return (
 		<div className='flex min-h-full flex-col gap-5'>
 			<header>
-				<h2 className='text-2xl font-bold tracking-tight text-gray-900'>
+				<h2 className='text-2xl font-bold tracking-tight text-gray-900 dark:text-gray-100'>
 					{title}
 				</h2>
-				<p className='mt-1 text-sm text-gray-600'>{subtitle}</p>
+				<p className='mt-1 text-sm text-gray-600 dark:text-gray-400'>
+					{subtitle}
+				</p>
 			</header>
 
 			{legends.length > 0 && (
-				<section className='rounded-xl border border-gray-200 bg-white p-4 shadow-sm'>
-					<h3 className='text-xs font-semibold tracking-wide text-gray-500 uppercase'>
+				<section className='rounded-xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900'>
+					<h3 className='text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400'>
 						Qué probar
 					</h3>
 					<ul className='mt-2.5 grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-3'>
@@ -52,13 +54,15 @@ export function ExampleShell({
 							>
 								<span
 									aria-hidden
-									className='mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300'
+									className='mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-gray-300 dark:bg-gray-600'
 								/>
 								<span>
-									<span className='font-medium text-gray-900'>
+									<span className='font-medium text-gray-900 dark:text-gray-100'>
 										{legend.action}
 									</span>{' '}
-									<span className='text-gray-500'>{legend.expect}</span>
+									<span className='text-gray-500 dark:text-gray-400'>
+										{legend.expect}
+									</span>
 								</span>
 							</li>
 						))}

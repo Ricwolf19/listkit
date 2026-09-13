@@ -19,15 +19,15 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 
 const variantClasses: Record<ButtonVariant, string> = {
 	default:
-		'bg-gray-900 text-white shadow-sm hover:bg-gray-800 focus-visible:ring-gray-900/20',
+		'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 shadow-sm hover:bg-gray-800 dark:hover:bg-gray-200 focus-visible:ring-gray-900/20',
 	outline:
-		'border border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50 focus-visible:ring-gray-900/15',
+		'border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500 hover:bg-gray-50 dark:hover:bg-gray-700 focus-visible:ring-gray-900/15',
 	ghost:
-		'text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus-visible:ring-gray-900/15',
+		'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-gray-100 focus-visible:ring-gray-900/15',
 	danger:
 		'bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:ring-red-500/30',
 	secondary:
-		'bg-gray-100 text-gray-900 hover:bg-gray-200 focus-visible:ring-gray-900/15',
+		'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 hover:bg-gray-200 dark:hover:bg-gray-700 focus-visible:ring-gray-900/15',
 	info: 'bg-blue-600 text-white shadow-sm hover:bg-blue-700 focus-visible:ring-blue-500/30',
 }
 

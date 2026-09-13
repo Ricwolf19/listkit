@@ -189,10 +189,12 @@ export function ExportDialog<T>({
 								className={cn(
 									'flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors',
 									active
-										? cn('border-gray-400 bg-gray-50 font-medium text-gray-900')
-										: 'border-gray-200 text-gray-700',
+										? cn(
+												'border-gray-400 bg-gray-50 font-medium text-gray-900 dark:border-gray-500 dark:bg-gray-700 dark:text-gray-100'
+											)
+										: 'border-gray-200 text-gray-700 dark:border-gray-700 dark:text-gray-300',
 									capability.enabled
-										? 'cursor-pointer hover:bg-gray-50'
+										? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700'
 										: 'cursor-not-allowed opacity-50'
 								)}
 							>
@@ -200,18 +202,18 @@ export function ExportDialog<T>({
 									<span
 										className={cn(
 											'h-2 w-2 rounded-full',
-											active ? theme.primaryBg : 'bg-gray-300'
+											active ? theme.primaryBg : 'bg-gray-300 dark:bg-gray-600'
 										)}
 										aria-hidden
 									/>
 									{scopeLabel[scope]}
 									{!capability.enabled && capability.reason && (
-										<span className='text-xs font-normal text-gray-400'>
+										<span className='text-xs font-normal text-gray-400 dark:text-gray-500'>
 											{capability.reason}
 										</span>
 									)}
 								</span>
-								<span className='text-xs text-gray-500 tabular-nums'>
+								<span className='text-xs text-gray-500 tabular-nums dark:text-gray-400'>
 									{scopeCount[scope].toLocaleString()}
 								</span>
 							</button>
@@ -220,7 +222,7 @@ export function ExportDialog<T>({
 				</div>
 
 				{truncatedNote && (
-					<p className='rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800'>
+					<p className='rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300'>
 						{truncatedNote}
 					</p>
 				)}
@@ -228,9 +230,9 @@ export function ExportDialog<T>({
 				{/* Column picking */}
 				<div>
 					<div className='mb-2 flex items-center justify-between gap-2'>
-						<p className='text-sm font-semibold text-gray-900'>
+						<p className='text-sm font-semibold text-gray-900 dark:text-gray-100'>
 							{labels.exportFields}{' '}
-							<span className='font-normal text-gray-500 tabular-nums'>
+							<span className='font-normal text-gray-500 tabular-nums dark:text-gray-400'>
 								({chosen.length}/{fields.length})
 							</span>
 						</p>
@@ -264,7 +266,7 @@ export function ExportDialog<T>({
 										)
 									)
 								}
-								className='cursor-pointer font-semibold text-gray-500 hover:underline'
+								className='cursor-pointer font-semibold text-gray-500 hover:underline dark:text-gray-400'
 							>
 								{labels.clearFilters}
 							</button>
@@ -272,7 +274,7 @@ export function ExportDialog<T>({
 					</div>
 
 					<div className='relative mb-3'>
-						<Search className='pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400' />
+						<Search className='pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500' />
 						<input
 							type='text'
 							value={state.filter}
@@ -280,7 +282,7 @@ export function ExportDialog<T>({
 							placeholder={labels.filterFields}
 							aria-label={labels.filterFields}
 							className={cn(
-								'w-full rounded-lg border border-gray-300 bg-white py-2 pr-3 pl-9 text-sm text-gray-900 transition outline-none focus:ring-2',
+								'w-full rounded-lg border border-gray-300 bg-white py-2 pr-3 pl-9 text-sm text-gray-900 transition outline-none focus:ring-2 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100',
 								theme.focusBorder,
 								theme.focusRing
 							)}
@@ -298,7 +300,7 @@ export function ExportDialog<T>({
 								<section key={section.id || '__ungrouped'}>
 									{section.label && (
 										<div className='mb-1.5 flex items-center justify-between'>
-											<p className='text-xs font-semibold tracking-wide text-gray-500 uppercase'>
+											<p className='text-xs font-semibold tracking-wide text-gray-500 uppercase dark:text-gray-400'>
 												{section.label}{' '}
 												<span className='font-normal normal-case tabular-nums'>
 													({counter?.selected ?? 0}/{counter?.total ?? 0})
@@ -328,7 +330,7 @@ export function ExportDialog<T>({
 										{sectionFields.map(field => (
 											<label
 												key={field.key}
-												className='flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50'
+												className='flex cursor-pointer items-center gap-2 rounded-md px-1 py-0.5 text-sm text-gray-700 hover:bg-gray-50 dark:text-gray-300 dark:hover:bg-gray-700'
 											>
 												<Checkbox
 													checked={state.selected.has(field.key)}
@@ -351,10 +353,10 @@ export function ExportDialog<T>({
 				{/* Order of the chosen columns */}
 				{chosen.length > 0 && (
 					<div>
-						<p className='mb-1.5 text-sm font-semibold text-gray-900'>
+						<p className='mb-1.5 text-sm font-semibold text-gray-900 dark:text-gray-100'>
 							{labels.exportOrder}
 						</p>
-						<ol className='divide-y divide-gray-100 rounded-lg border border-gray-200'>
+						<ol className='divide-y divide-gray-100 rounded-lg border border-gray-200 dark:divide-gray-800 dark:border-gray-700'>
 							{chosen.map((key, index) => {
 								const isDropTarget =
 									dragIndex !== null &&
@@ -377,7 +379,7 @@ export function ExportDialog<T>({
 										}}
 										onDragEnd={endDrag}
 										className={cn(
-											'relative flex cursor-grab items-center justify-between gap-2 px-3 py-1.5 text-sm text-gray-800 active:cursor-grabbing',
+											'relative flex cursor-grab items-center justify-between gap-2 px-3 py-1.5 text-sm text-gray-800 active:cursor-grabbing dark:text-gray-200',
 											dragIndex === index && 'opacity-40'
 										)}
 									>
@@ -390,8 +392,8 @@ export function ExportDialog<T>({
 											/>
 										)}
 										<span className='flex min-w-0 items-center gap-2'>
-											<GripVertical className='h-4 w-4 shrink-0 text-gray-300' />
-											<span className='text-xs text-gray-400 tabular-nums'>
+											<GripVertical className='h-4 w-4 shrink-0 text-gray-300 dark:text-gray-600' />
+											<span className='text-xs text-gray-400 tabular-nums dark:text-gray-500'>
 												{index + 1}.
 											</span>
 											<span className='min-w-0 truncate'>
@@ -406,7 +408,7 @@ export function ExportDialog<T>({
 												}
 												disabled={index === 0}
 												aria-label={labels.moveUp}
-												className='flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30'
+												className='flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-400'
 											>
 												<ChevronUp className='h-4 w-4' />
 											</button>
@@ -417,7 +419,7 @@ export function ExportDialog<T>({
 												}
 												disabled={index === chosen.length - 1}
 												aria-label={labels.moveDown}
-												className='flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30'
+												className='flex h-6 w-6 cursor-pointer items-center justify-center rounded text-gray-400 hover:bg-gray-100 hover:text-gray-600 disabled:cursor-not-allowed disabled:opacity-30 dark:text-gray-500 dark:hover:bg-gray-700 dark:hover:text-gray-400'
 											>
 												<ChevronDown className='h-4 w-4' />
 											</button>

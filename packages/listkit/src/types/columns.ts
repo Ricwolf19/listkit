@@ -1,4 +1,4 @@
-import type { Density } from './list'
+import type { Density, ViewType } from './list'
 
 /**
  * Persisted per-list table preferences: the visible/hidden set, the order, any
@@ -24,6 +24,14 @@ export type ColumnPrefs = {
 	pageSize?: number
 	/** Whether the quick-filter bar is shown (toggled from the options menu). */
 	quickFilters?: boolean
+	/**
+	 * Table or cards, as chosen from the view toggle on a desktop-width screen.
+	 *
+	 * Persisted so a remount — an edit, a modal, a route re-render — cannot throw
+	 * the reader back to the table. Narrow screens ignore it: a table does not
+	 * fit, so the viewport decides there.
+	 */
+	view?: ViewType
 }
 
 /**
@@ -69,6 +77,10 @@ export const localStorageColumns: ColumnStorage = {
 					density:
 						parsed.density === 'compact' || parsed.density === 'comfortable'
 							? parsed.density
+							: undefined,
+					view:
+						parsed.view === 'table' || parsed.view === 'cards'
+							? parsed.view
 							: undefined,
 				}
 			}

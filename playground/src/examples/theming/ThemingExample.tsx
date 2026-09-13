@@ -1,5 +1,6 @@
 import {
 	type BuiltInColorTheme,
+	type BuiltInSurfaceTone,
 	DEFAULT_LABELS,
 	defineListConfig,
 	ES_LABELS,
@@ -66,10 +67,18 @@ const LEGENDS: Legend[] = [
 		expect:
 			'es la revisión de contraste que justifica tener el selector — algunas paletas son más débiles sobre blanco.',
 	},
+	{
+		action: 'Cambia los tones (gray / slate / zinc / contrast)',
+		expect:
+			'config.tones cambia el chrome neutro — header, divisores, hover, selección y el panel — sin tocar los acentos de la paleta; contrast invierte el header.',
+	},
 ]
+
+const TONES: BuiltInSurfaceTone[] = ['gray', 'slate', 'zinc', 'contrast']
 
 export function ThemingExample() {
 	const [theme, setTheme] = useState<BuiltInColorTheme>('blue')
+	const [tone, setTone] = useState<BuiltInSurfaceTone>('gray')
 	const [lang, setLang] = useState<'es' | 'en'>('es')
 
 	const config = useMemo(
@@ -81,6 +90,7 @@ export function ThemingExample() {
 				search: { fields: ['number', 'customer.name'] },
 				getItemKey: i => i.id,
 				selection: true,
+				tones: tone,
 				table: {
 					columns: [
 						{
@@ -123,7 +133,7 @@ export function ThemingExample() {
 					},
 				],
 			}),
-		[lang]
+		[lang, tone]
 	)
 
 	return (
@@ -133,7 +143,7 @@ export function ThemingExample() {
 			legends={LEGENDS}
 			controls={
 				<>
-					<div className='inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm'>
+					<div className='inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm dark:border-gray-700 dark:bg-gray-800'>
 						{THEMES.map(name => (
 							<button
 								key={name}
@@ -144,12 +154,20 @@ export function ThemingExample() {
 								title={name}
 								className={`h-6 w-6 cursor-pointer rounded-md transition-transform ${SWATCH[name]} ${
 									theme === name
-										? 'scale-110 ring-2 ring-gray-900 ring-offset-1'
+										? 'scale-110 ring-2 ring-gray-900 ring-offset-1 dark:ring-gray-100 dark:ring-offset-gray-800'
 										: 'opacity-60 hover:opacity-100'
 								}`}
 							/>
 						))}
 					</div>
+					<Segmented
+						value={tone}
+						onChange={setTone}
+						options={TONES.map(name => ({
+							value: name,
+							label: `tones '${name}'`,
+						}))}
+					/>
 					<Segmented
 						value={lang}
 						onChange={setLang}
