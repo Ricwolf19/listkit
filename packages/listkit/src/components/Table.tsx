@@ -267,24 +267,6 @@ const SEAM_CLASS = {
  * `useIsNarrow` so the switch costs no re-render and holds during SSR, spelled
  * out at each use because Tailwind only emits classes it can literally see.
  */
-/**
- * The seam a pinned column leaves: a hairline divider at rest, a dark shadow
- * while content is scrolled underneath (`group-data-scroll-*`, published by
- * the enclosing `ScrollArea`). It rides the pinned cell itself so it stays
- * exactly on the boundary through a resize, reorder or hidden column — an
- * inset computed from declared widths drifts.
- */
-const SEAM_CLASS = {
-	left: cn(
-		'md:shadow-[1px_0_0_0_rgb(229,231,235)]',
-		'md:group-data-[scroll-left=true]/scroll:shadow-[1px_0_0_0_rgb(148,163,184),20px_0_28px_-4px_rgb(2_6_23/0.55)]'
-	),
-	right: cn(
-		'md:shadow-[-1px_0_0_0_rgb(229,231,235)]',
-		'md:group-data-[scroll-right=true]/scroll:shadow-[-1px_0_0_0_rgb(148,163,184),-20px_0_28px_-4px_rgb(2_6_23/0.55)]'
-	),
-} as const
-
 function stickyCell(
 	info: StickyInfo | undefined,
 	background: string,

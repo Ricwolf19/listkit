@@ -42,8 +42,6 @@ export function ToolbarOverflow({
 
 	const sections = sectionByGroup(actions, action => action.group)
 
-	const sections = sectionByGroup(actions, action => action.group)
-
 	return (
 		<>
 			<button

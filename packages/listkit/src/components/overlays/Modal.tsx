@@ -102,7 +102,7 @@ export type ModalProps = {
 }
 
 /**
- * listkit's internal dialog (ported, trimmed, from the pibytelabs UI kit).
+ * listkit's internal dialog.
  * Portals into `document.body`, animates in and out, locks background scroll
  * (reference counted, so overlapping overlays never wedge the page), traps
  * focus while open and restores it on close. Escape closes only the innermost
