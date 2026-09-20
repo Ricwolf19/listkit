@@ -1,5 +1,12 @@
 # listkit
 
+## [5.0.1](https://github.com/Ricwolf19/listkit/compare/listkit-5.0.0...listkit-5.0.1) (2026-09-20)
+
+
+### Documentation
+
+* translate the labels section into spanish ([0dd6400](https://github.com/Ricwolf19/listkit/commit/0dd64008f1d564eb47009cc8433ef26283729aed))
+
 ## [5.0.0](https://github.com/Ricwolf19/listkit/compare/listkit-4.3.0...listkit-5.0.0) (2026-09-13)
 
 
