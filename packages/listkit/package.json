@@ -23,7 +23,7 @@
 		"url": "git+https://github.com/Ricwolf19/listkit.git",
 		"directory": "packages/listkit"
 	},
-	"homepage": "https://github.com/Ricwolf19/listkit#readme",
+	"homepage": "https://thekits.dev/listkit",
 	"bugs": {
 		"url": "https://github.com/Ricwolf19/listkit/issues"
 	},

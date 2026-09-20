@@ -71,8 +71,8 @@ The playground resolves `listkit` to the package **source** through aliases in `
 
 Each is a separate, tree-shakeable entry. Keep them cohesive — don't leak DOM/React code into the server-safe ones (`/server`, `/query`, `/sql`, `/mongo`, `/mongoose`). `/mongoose` is server-safe too, but unlike `/mongo` it is typed against `mongoose` (an optional, type-only peer).
 
-| Import                             | Purpose                                                                                                             |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Import                 | Purpose                                                                                                             |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------- |
 | `listkit`              | `ListView`, `defineListConfig`, `ListKitProvider`, hooks, primitives, types                                         |
 | `listkit/next`         | Next.js router adapter + `NextListView`                                                                             |
 | `listkit/react-router` | React Router adapter                                                                                                |
@@ -166,6 +166,22 @@ These are the load-bearing decisions. Treat any change to one as a breaking/majo
 18. **A wire payload that drives a MUTATION fails closed.** The selection descriptor (`src/selection/wire.ts`) is the bulk-write counterpart of the export request, and it deliberately parses **stricter** than its sibling: `parseExportRequest` falls back to reading query keys off the body's own top level (a GET carries them inline), where a missing query costs an over-broad CSV; `parseSelectionDescriptor` requires the nested `query` object and returns `null` without it, because under `scope: 'all'` an invented empty query resolves to every row the base filter allows — and that descriptor feeds `updateMany`. The same rule holds downstream: `resolveSelectionFilter` returns `null` for an empty selection so the caller no-ops rather than passing a match-everything filter to a write. Keep both halves refusing rather than defaulting, and never resolve a selection without a `baseFilter` carrying the auth scope.
 
 ---
+
+### The READMEs are a published contract
+
+`packages/listkit/README.md` and `README.es.md` are the source of truth for
+[thekits.dev](https://thekits.dev/listkit), which generates its docs pages from
+them at build time and joins Spanish to English **by position**. Two rules follow:
+
+- They must stay **structurally parallel** — same heading count, same depth
+  sequence, no duplicate heading text. `src/readme.parity.test.ts` enforces it, so
+  drift fails here rather than in a downstream build.
+- Both are in `.prettierignore`. Prettier collapses the elided-code placeholders
+  in the examples (`defineListConfig<Product>({ /* … */ })` onto one line), and
+  `lint-staged` would do that on any commit touching them.
+
+`package.json` `homepage` points at the docs site, which is what npm links from
+the package page.
 
 ## 9. Anti-patterns to avoid
 
