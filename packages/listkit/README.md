@@ -5,11 +5,15 @@
 **Standardized, responsive list views for React.**  
 Table / cards, search, advanced filters, pagination, sorting, SSR, and theming — out of the box.
 
+[![npm](https://img.shields.io/npm/v/listkit.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/listkit)
+[![downloads](https://img.shields.io/npm/dm/listkit.svg?color=cb3837)](https://www.npmjs.com/package/listkit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-339933.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/react-%5E18%20%7C%7C%20%5E19-61dafb.svg)](https://react.dev/)
 [![Tailwind](https://img.shields.io/badge/tailwindcss-v4-38bdf8.svg)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6.svg)](https://www.typescriptlang.org/)
+
+**[Documentation](https://thekits.dev/listkit)** · **[Playground](https://thekits.dev/listkit/playground)**
 
 🌐 **English** | [🇲🇽 Español](./README.es.md)
 
@@ -54,6 +58,7 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
   - [Complete example — built-in cache](#complete-example--without-react-query-built-in-cache)
   - [Complete example — with React Query](#complete-example--with-react-query)
   - [Theming](#theming)
+  - [Labels (i18n)](#labels-i18n)
 - [Subpath Exports](#subpath-exports)
 - [License](#license)
 

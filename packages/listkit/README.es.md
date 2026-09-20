@@ -5,11 +5,15 @@
 **Vistas de lista estandarizadas y responsivas para React.**  
 Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y theming — listo para usar.
 
+[![npm](https://img.shields.io/npm/v/listkit.svg?color=cb3837&logo=npm)](https://www.npmjs.com/package/listkit)
+[![downloads](https://img.shields.io/npm/dm/listkit.svg?color=cb3837)](https://www.npmjs.com/package/listkit)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](./LICENSE)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-339933.svg)](https://nodejs.org/)
 [![React](https://img.shields.io/badge/react-%5E18%20%7C%7C%20%5E19-61dafb.svg)](https://react.dev/)
 [![Tailwind](https://img.shields.io/badge/tailwindcss-v4-38bdf8.svg)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6.svg)](https://www.typescriptlang.org/)
+
+**[Documentación](https://thekits.dev/es/listkit)** · **[Playground](https://thekits.dev/es/listkit/playground)**
 
 [🇬🇧 English](./README.md) | **🇲🇽 Español**
 
@@ -54,6 +58,7 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
   - [Ejemplo completo — caché integrada](#ejemplo-completo--sin-react-query-caché-integrada)
   - [Ejemplo completo — con React Query](#ejemplo-completo--con-react-query)
   - [Theming](#theming)
+  - [Labels (i18n)](#labels-i18n)
 - [Subpath exports](#subpath-exports)
 - [Licencia](#licencia)
 
@@ -1790,6 +1795,56 @@ tarjetas, menús, filtros, diálogos, skeletons — lo sigue. Las paletas
 integradas traen acentos dark; un `ThemeClasses` propio puede agregar sus
 clases `dark:` dentro de cada campo. El render claro no cambia cuando la clase
 no está.
+
+### Labels (i18n)
+
+Los controles que un icono describe por sí solo (toggle de vista, botón de
+filtros, conteo de resultados) son solo-icono, así que se leen igual en
+cualquier idioma; sus nombres viven en `aria-label`/`title`. Todo el resto de
+los textos integrados sale de un objeto `labels` que **por defecto está en
+inglés** — sobreescríbelo para toda la app en el provider, o por lista con
+`config.labels`.
+
+Camino más corto — `DEFAULT_LABELS` (inglés) y `ES_LABELS` (español) cubren los
+casos comunes en una línea (encima puedes sobreescribir claves sueltas):
+
+```tsx
+import { ListKitProvider, ES_LABELS } from 'listkit'
+// toda la app en español (el inglés es el default, así que no necesita prop)
+;<ListKitProvider labels={ES_LABELS}>…</ListKitProvider>
+```
+
+O elige los textos a mano:
+
+```tsx
+// para toda la app (el idioma de la app)
+;<ListKitProvider
+	labels={{
+		tableView: 'Vista tabla',
+		cardsView: 'Vista tarjetas',
+		filters: 'Filtros',
+		applyFilters: 'Aplicar',
+		clearFilters: 'Limpiar',
+		empty: 'Sin resultados',
+		yes: 'Sí',
+		no: 'No',
+		results: n => `${n} resultado${n === 1 ? '' : 's'}`,
+	}}
+>
+	…
+</ListKitProvider>
+
+// o por lista (gana sobre el provider)
+defineListConfig({ labels: { empty: 'Sin pedidos' } /* … */ })
+```
+
+`NextListView` acepta la misma prop `labels` (y `theme`) y la reenvía a su
+provider interno: `<NextListView labels={ES_LABELS} config={…} adapter={…} />`.
+
+Orden de resolución: `config.labels` → `labels` del provider → `DEFAULT_LABELS`.
+Las props por elemento que ya existen siguen ganando donde aplican
+(`config.emptyMessage`, `config.filtersTitle`, el `trueLabel`/`falseLabel` de un
+filtro). Consulta `ListLabels` para la lista completa de claves.
 
 ---
 
