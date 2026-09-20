@@ -13,15 +13,33 @@ Tabla / tarjetas, búsqueda, filtros avanzados, paginación, ordenamiento, SSR y
 [![Tailwind](https://img.shields.io/badge/tailwindcss-v4-38bdf8.svg)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6.svg)](https://www.typescriptlang.org/)
 
-**[Documentación](https://thekits.dev/es/listkit)** · **[Playground](https://thekits.dev/es/listkit/playground)**
+**[Documentación](https://thekits.dev/es/listkit)** · **[Playground](https://thekits.dev/es/listkit/playground)** · **[Versiones](https://thekits.dev/es/listkit/versiones)** · **[npm](https://www.npmjs.com/package/listkit)**
 
-[🇬🇧 English](./README.md) | **🇲🇽 Español**
+[English](./README.md) · **Español**
 
 </div>
 
 ---
 
 ## Tabla de contenidos
+
+Cada sección de abajo es también una página con buscador en [thekits.dev](https://thekits.dev/es/listkit), en inglés y español.
+
+| Página de documentación | Contiene |
+| --- | --- |
+| [Vista general](https://thekits.dev/es/listkit) | Características |
+| [Primeros pasos](https://thekits.dev/es/listkit/docs/getting-started) | Inicio rápido, Instalación, Configuración de Tailwind v4 |
+| [Configuración](https://thekits.dev/es/listkit/docs/configuration) | Uso, 1. Conectar el provider (una vez, en la raíz de la app), 2. Renderizar una lista, Organizar la configuración: archivo vs inline |
+| [Filtros y ordenamiento](https://thekits.dev/es/listkit/docs/filtering-and-sorting) | Filtros avanzados, Valores por defecto de los filtros, Ordenamiento de columnas, Filtros rápidos, Chips de filtro fijados |
+| [Exportación](https://thekits.dev/es/listkit/docs/export) | Exportar a CSV, Exportación configurable (alcance, campos, orden) |
+| [Tabla y layout](https://thekits.dev/es/listkit/docs/table-and-layout) | Defaults de tabla y layout, UX de tabla: encabezado fijo, densidad, reordenar, redimensionar, Tamaño de columnas y truncado, Indicadores de scroll, Desplazar la barra de paginación |
+| [Acciones y selección](https://thekits.dev/es/listkit/docs/actions-and-selection) | Acciones de fila, Selección de filas y acciones masivas, Seleccionar todos los resultados |
+| [Tarjetas](https://thekits.dev/es/listkit/docs/cards) | Tarjetas sin escribir una tarjeta, Tarjetas personalizadas con acciones y tema, Tarjetas totalmente personalizadas (`bareCard`) |
+| [Datos y backends](https://thekits.dev/es/listkit/docs/data-and-backends) | Datos asíncronos (server-side), Backend PostgreSQL (`listkit/sql`), Backend MongoDB (`listkit/mongo`), Ejecutor de Mongoose (`listkit/mongoose`) |
+| [SSR y caché](https://thekits.dev/es/listkit/docs/ssr-and-caching) | Renderizado en servidor (`initialData`), Menos boilerplate (Next.js), Caché integrada (cero dependencias), El id de la lista identifica al dataset, no a la vista, Refrescar después de una mutación, y más |
+| [Ejemplos completos](https://thekits.dev/es/listkit/docs/examples) | Ejemplo completo — sin React Query (caché integrada), Ejemplo completo — con React Query |
+| [Theming y textos](https://thekits.dev/es/listkit/docs/theming) | Theming, Tones de tabla y cards, Dark mode, Labels (i18n) |
+| [Referencia](https://thekits.dev/es/listkit/docs/reference) | Diagnósticos, Estado vacío, Atajos de teclado, Preferencias de vista guardadas, Imágenes optimizadas (`ListImage`), y más |
 
 - [Características](#características)
 - [Inicio rápido](#inicio-rápido)
@@ -1023,7 +1041,7 @@ table: {
 - **Auto-ajuste:** con `resizable`, **doble clic en el handle de redimensionado** de una columna la ajusta a su celda visible más ancha (acotado por `maxWidth`). No necesitas adivinar un ancho fijo.
 - `width` es una pista en layout `auto` y autoritativo en `fixed`; es solo el tamaño **inicial** y nunca bloquea el redimensionado. `minWidth`/`maxWidth` (px) son topes **opcionales** para la celda y el handle (piso por defecto 48px, sin techo) — ojo: `maxWidth` también limita hasta dónde arrastra el handle, así que omítelo para resize sin tope.
 
-> **El toolbar se mantiene limpio.** Densidad, columnas y exportar no agregan un botón cada uno — `<ListView>` los pliega en un único menú de **opciones** (⚙), dejando inline solo lo esencial (toggle de vista, conteo de resultados). Es responsivo (disponible también en móvil) y en vista de tarjetas muestra solo exportar. Los componentes `DensityToggle`, `ColumnManager`, `ExportButton` y `TableOptionsMenu` se exportan por si construyes tu propio toolbar.
+> **El toolbar se mantiene limpio.** Densidad, columnas y exportar no agregan un botón cada uno — `<ListView>` los pliega en un único menú de **opciones**, dejando inline solo lo esencial (toggle de vista, conteo de resultados). Es responsivo (disponible también en móvil) y en vista de tarjetas muestra solo exportar. Los componentes `DensityToggle`, `ColumnManager`, `ExportButton` y `TableOptionsMenu` se exportan por si construyes tu propio toolbar.
 
 ### Tarjetas sin escribir una tarjeta
 

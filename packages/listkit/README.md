@@ -13,15 +13,35 @@ Table / cards, search, advanced filters, pagination, sorting, SSR, and theming �
 [![Tailwind](https://img.shields.io/badge/tailwindcss-v4-38bdf8.svg)](https://tailwindcss.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6.svg)](https://www.typescriptlang.org/)
 
-**[Documentation](https://thekits.dev/listkit)** · **[Playground](https://thekits.dev/listkit/playground)**
+**[Documentation](https://thekits.dev/listkit)** · **[Playground](https://thekits.dev/listkit/playground)** · **[Releases](https://thekits.dev/listkit/releases)** · **[npm](https://www.npmjs.com/package/listkit)**
 
-🌐 **English** | [🇲🇽 Español](./README.es.md)
+**English** · [Español](./README.es.md)
 
 </div>
 
 ---
 
 ## Table of Contents
+
+Every section below is also a searchable page on [thekits.dev](https://thekits.dev/listkit), in English and Spanish.
+
+| Docs page | Covers |
+| --- | --- |
+| [Overview](https://thekits.dev/listkit) | Features |
+| [Getting started](https://thekits.dev/listkit/docs/getting-started) | Quick Start, Installation, Tailwind v4 Setup |
+| [Configuration](https://thekits.dev/listkit/docs/configuration) | Usage, 1. Wire the provider (once, at the app root), 2. Render a list, Organizing the config: file vs inline |
+| [Filtering and sorting](https://thekits.dev/listkit/docs/filtering-and-sorting) | Advanced filters, Default filter values, Column sorting, Quick filters, Pinned filter chips |
+| [Export](https://thekits.dev/listkit/docs/export) | CSV export, Configurable export (scope, fields, order) |
+| [Table and layout](https://thekits.dev/listkit/docs/table-and-layout) | Table & layout defaults, Table UX: sticky header, density, reorder, resize, Column sizing & truncation, Scroll affordances, Pagination bar: fixed vs sticky |
+| [Row actions and selection](https://thekits.dev/listkit/docs/actions-and-selection) | Row actions, Row selection & bulk actions, Selecting every matching result |
+| [Cards](https://thekits.dev/listkit/docs/cards) | Cards without writing a card, Custom cards with actions and theme, Fully custom cards (`bareCard`) |
+| [Data and backends](https://thekits.dev/listkit/docs/data-and-backends) | Async data (server-side), PostgreSQL backend (`listkit/sql`), MongoDB backend (`listkit/mongo`), Mongoose executor (`listkit/mongoose`) |
+| [SSR and caching](https://thekits.dev/listkit/docs/ssr-and-caching) | Server-side rendering (`initialData`), Less boilerplate (Next.js), Built-in cache (zero dependencies), The list id identifies the dataset, not the view, Refreshing after a mutation, and more |
+| [Complete examples](https://thekits.dev/listkit/docs/examples) | Complete example — without React Query (built-in cache), Complete example — with React Query |
+| [Theming and labels](https://thekits.dev/listkit/docs/theming) | Theming, Table & card tones, Dark mode, Labels (i18n) |
+| [Reference](https://thekits.dev/listkit/docs/reference) | Diagnostics, Empty state, Keyboard shortcuts, Saved view preferences, Optimized images (`ListImage`), and more |
+
+**In this file**
 
 - [Features](#features)
 - [Quick Start](#quick-start)
@@ -1013,7 +1033,7 @@ table: {
 - **Auto-fit:** with `resizable`, **double-click a column's resize handle** to size it to its widest visible cell (clamped to `maxWidth`). No need to guess a fixed width.
 - `width` is a hint in `auto` layout and authoritative in `fixed`; it's just the **initial** size and never blocks resizing. `minWidth`/`maxWidth` (px) are **optional** caps for the cell and the resize handle (default floor 48px, no ceiling) — note `maxWidth` also caps how far the handle drags, so omit it for unbounded resize.
 
-> **Toolbar stays tidy.** Density, columns, and export don't each add a button — `<ListView>` folds them into a single **options** menu (⚙), leaving only the essentials (view toggle, result count) inline. It's responsive (available on mobile too), and in cards view it shows export only. The standalone `DensityToggle`, `ColumnManager`, `ExportButton`, and `TableOptionsMenu` are exported if you build your own toolbar.
+> **Toolbar stays tidy.** Density, columns, and export don't each add a button — `<ListView>` folds them into a single **options** menu, leaving only the essentials (view toggle, result count) inline. It's responsive (available on mobile too), and in cards view it shows export only. The standalone `DensityToggle`, `ColumnManager`, `ExportButton`, and `TableOptionsMenu` are exported if you build your own toolbar.
 
 ### Cards without writing a card
 
